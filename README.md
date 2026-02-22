@@ -183,4 +183,4 @@ If you encounter any issues, please file them in the [Issues](https://github.com
 
 ## 📧 Support
 
-For support, email your-email@example.com or open an issue in this repository.
+For support, email moumenabdou482@gmail.com or open an issue in this repository.
