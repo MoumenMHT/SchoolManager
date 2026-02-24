@@ -694,7 +694,7 @@ const createUserAccount = async () => {
             type="email"
             required 
             autofocus
-            :invalid="submitted && validationErrors.email" 
+            :invalid="submitted && !!validationErrors.email" 
             placeholder="Enter email address"
             @blur="validationErrors.email = validateEmail(accountData.email)"
           />
@@ -713,7 +713,7 @@ const createUserAccount = async () => {
             v-model="accountData.password" 
             required
             toggleMask
-            :invalid="submitted && validationErrors.password" 
+            :invalid="submitted && !!validationErrors.password" 
             placeholder="Enter password (min. 8 characters)"
             :feedback="true"
             @blur="validationErrors.password = validatePassword(accountData.password)"
@@ -733,7 +733,7 @@ const createUserAccount = async () => {
             v-model="accountData.confirmPassword" 
             required
             toggleMask
-            :invalid="submitted && validationErrors.confirmPassword" 
+            :invalid="submitted && !!validationErrors.confirmPassword" 
             placeholder="Confirm password"
             :feedback="false"
             @blur="validationErrors.confirmPassword = validateConfirmPassword(accountData.password, accountData.confirmPassword)"
@@ -755,7 +755,7 @@ const createUserAccount = async () => {
           label="Create Account" 
           icon="pi pi-check" 
           severity="success"
-          @click="createUserAccount" 
+          click="createUserAccount" 
         />
       </template>
     </Dialog>

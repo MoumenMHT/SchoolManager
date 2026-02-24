@@ -174,6 +174,8 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
   errors?: Record<string, string[]>;
+  error?: Record<string, string[]>;
+
 }
 
 // Auth Response Interface

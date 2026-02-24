@@ -34,7 +34,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::apiResource('users', UserController::class);
+        
+        // Student management - specific routes MUST come before apiResource
+        Route::get('/students/without-class', [StudentController::class, 'studentsWithoutClass']);
         Route::apiResource('students', StudentController::class);
+        
         Route::apiResource('teachers', TeacherController::class);
         Route::apiResource('classes', ClassController::class);
         Route::apiResource('subjects', SubjectController::class);
@@ -44,6 +48,9 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // Dashboard statistics
         Route::get('/dashboard/stats', [DashboardController::class, 'index']);
+
+        // Class management
+        Route::put('/classes/remove-from-class/{id}', [ClassController::class, 'removeStudentFromClass']);
         
         // Teacher-Subject Management
         Route::get('/teacher-subjects', [TeacherSubjectController::class, 'index']);
@@ -54,18 +61,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/teachers/{teacher}/subjects', [TeacherSubjectController::class, 'getTeacherSubjects']);
         Route::get('/subjects/{subject}/teachers', [TeacherSubjectController::class, 'getSubjectTeachers']);
         
-        // Subject Coefficient Management
-        Route::apiResource('subject-coefficients', SubjectCoefficientController::class);
+        // Subject Coefficient Management - specific routes MUST come before apiResource
         Route::post('/subject-coefficients/bulk', [SubjectCoefficientController::class, 'bulkStore']);
-        Route::get('/subjects/{subject}/coefficients', [SubjectCoefficientController::class, 'getSubjectCoefficients']);
         Route::post('/subject-coefficients/get', [SubjectCoefficientController::class, 'getCoefficient']);
         Route::post('/subject-coefficients/getByLevel', [SubjectCoefficientController::class, 'getCoefficientByclassLevel']);
+        Route::get('/subjects/{subject}/coefficients', [SubjectCoefficientController::class, 'getSubjectCoefficients']);
+        Route::apiResource('subject-coefficients', SubjectCoefficientController::class);
         
-        // Class-Subject-Teacher Assignment Management
-        Route::apiResource('class-assignments', ClassSubjectTeacherController::class);
-        Route::get('/classes/{class}/assignments', [ClassSubjectTeacherController::class, 'getClassAssignments']);
+        // Class-Subject-Teacher Assignment Management - specific routes MUST come before apiResource
         Route::post('/class-assignments/available-teachers', [ClassSubjectTeacherController::class, 'getAvailableTeachers']);
         Route::post('/class-assignments/coefficient-preview', [ClassSubjectTeacherController::class, 'getCoefficientPreview']);
+        Route::get('/classes/{class}/assignments', [ClassSubjectTeacherController::class, 'getClassAssignments']);
+        Route::apiResource('class-assignments', ClassSubjectTeacherController::class);
         
         // Schedule Management
         // Schedule routes - specific routes MUST come before resource routes
@@ -83,8 +90,9 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Teacher routes
     Route::middleware('role:teacher,admin')->group(function () {
-        Route::apiResource('grades', GradeController::class);
+        // Grade Management - specific routes MUST come before apiResource
         Route::post('/grades/bulk', [GradeController::class, 'bulkStore']);
+        Route::apiResource('grades', GradeController::class);
         Route::apiResource('attendances', AttendanceController::class);
         
         // Grade specific endpoints

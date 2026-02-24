@@ -25,6 +25,16 @@ const router = createRouter({
                     component: () => import('@/views/Parents.vue')
                 },
                 {
+                    path: '/teachers',
+                    name: 'teachers',
+                    component: () => import('@/views/Teachers.vue')
+                },
+                {
+                    path: '/classes',
+                    name: 'classes',
+                    component: () => import('@/views/Classes.vue')
+                },
+                {
                     path: '/uikit/input',
                     name: 'input',
                     component: () => import('@/views/uikit/InputDoc.vue')

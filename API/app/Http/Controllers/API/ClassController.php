@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SchoolClass;
+use App\Models\Student;
 use Illuminate\Support\Facades\Validator;
 
 class ClassController extends Controller
@@ -15,8 +16,60 @@ class ClassController extends Controller
     public function index()
     {
         try {
-            $classes = SchoolClass::with('mainTeacher')->get();
+            $classes = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects'])
+                ->get()
+                ->map(function ($class) {
+                    $studentsData = [];
+                    if ($class->students) {
+                        foreach ($class->students as $student) {
+                            $studentsData[] = [
+                                'id' => $student->id,
+                                'first_name' => $student->first_name ?? '',
+                                'last_name' => $student->last_name ?? '',
+                                'code' => $student->code ?? '',
+                                'birth_date' => $student->birth_date ? $student->birth_date->format('Y-m-d') : null,
+                                'mdical_info' => $student->medical_info ?? null,
+                            ];
+                        }
+                    }
 
+                    $teachersData = [];
+                    if ($class->teachers) {
+                        foreach ($class->teachers as $teacher) {
+                            $teachersData[] = [
+                                'name' => ($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? ''),
+                            ];
+                        }
+                    }
+
+                    $subjectsData = [];
+                    if ($class->subjects) {
+                        foreach ($class->subjects as $subject) {
+                            $subjectsData[] = [
+                                'name' => $subject->name ?? '',
+                                'discription' => $subject->description ?? '',
+                            ];
+                        }
+                    }
+
+                    return [
+                        'id' => $class->id,
+                        'name' => $class->name,
+                        'level' => $class->level,
+                        'academic_year' => $class->academic_year,
+                        'capacity' => $class->capacity,
+                        'main_teacher_id' => $class->main_teacher_id,
+                        'is_active' => $class->is_active,
+                        'created_at' => $class->created_at,
+                        'updated_at' => $class->updated_at,
+                        'students_count' => $class->students ? $class->students->count() : 0,
+                        'teachers_count' => $class->teachers ? $class->teachers->count() : 0,
+                        'students' => $studentsData,
+                        'teachers' => $teachersData,
+                        'subjects' => $subjectsData,
+                    ];
+                });
+                
             return response()->json([
                 'success' => true,
                 'data' => $classes
@@ -47,8 +100,8 @@ class ClassController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255|unique:classes,name',
                 'level' => 'required|string|max:255',
-                'academic_year' => 'required|string|max:255',
-                'capacity' => 'required|integer|min:1',
+                'academic_year' => 'nullable|string|max:255',
+                'capacity' => 'nullable|integer|min:1',
                 'main_teacher_id' => 'nullable|exists:teachers,id',
             ]);
             
@@ -91,7 +144,7 @@ class ClassController extends Controller
     public function show(string $id)
     {
         try {
-            $class = SchoolClass::with('mainTeacher')->find($id);
+            $class = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects'])->find($id);
             
             if (!$class) {
                 return response()->json([
@@ -100,9 +153,59 @@ class ClassController extends Controller
                 ], 404);
             }
             
+            $studentsData = [];
+            if ($class->students) {
+                foreach ($class->students as $student) {
+                    $studentsData[] = [
+                        'id' => $student->id,
+                        'first_name' => $student->first_name ?? '',
+                        'last_name' => $student->last_name ?? '',
+                        'code' => $student->code ?? '',
+                        'birth_date' => $student->birth_date ? $student->birth_date->format('Y-m-d') : null,
+                        'mdical_info' => $student->medical_info ?? null,
+                    ];
+                }
+            }
+
+            $teachersData = [];
+            if ($class->teachers) {
+                foreach ($class->teachers as $teacher) {
+                    $teachersData[] = [
+                        'name' => ($teacher->first_name ?? '') . ' ' . ($teacher->last_name ?? ''),
+                    ];
+                }
+            }
+
+            $subjectsData = [];
+            if ($class->subjects) {
+                foreach ($class->subjects as $subject) {
+                    $subjectsData[] = [
+                        'name' => $subject->name ?? '',
+                        'discription' => $subject->description ?? '',
+                    ];
+                }
+            }
+            
+            $data = [
+                'id' => $class->id,
+                'name' => $class->name,
+                'level' => $class->level,
+                'academic_year' => $class->academic_year,
+                'capacity' => $class->capacity,
+                'main_teacher_id' => $class->main_teacher_id,
+                'is_active' => $class->is_active,
+                'created_at' => $class->created_at,
+                'updated_at' => $class->updated_at,
+                'students_count' => $class->students ? $class->students->count() : 0,
+                'teachers_count' => $class->teachers ? $class->teachers->count() : 0,
+                'sudents' => $studentsData,
+                'teachers' => $teachersData,
+                'subjects' => $subjectsData,
+            ];
+            
             return response()->json([
                 'success' => true,
-                'data' => $class
+                'data' => $data
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -139,8 +242,8 @@ class ClassController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255|unique:classes,name,' . $id,
                 'level' => 'sometimes|required|string|max:255',
-                'academic_year' => 'sometimes|required|string|max:255',
-                'capacity' => 'sometimes|required|integer|min:1',
+                'academic_year' => 'sometimes|nullable|string|max:255',
+                'capacity' => 'sometimes|nullable|integer|min:1',
                 'main_teacher_id' => 'nullable|exists:teachers,id',
             ]);
             
@@ -212,5 +315,24 @@ class ClassController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * remove student from a class
+     */
+
+    public function removeStudentFromClass($studentId){
+        
+
+        $student = Student::findOrFail($studentId);
+        $student->class_id = null;
+        $student->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Student removed from class successfully',
+            'data' => $student
+        ]);
+
     }
 }

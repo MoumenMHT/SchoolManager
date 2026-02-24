@@ -93,6 +93,8 @@ class AuthController extends Controller
             'role' => 'required|in:admin,teacher,parent',
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
+            'teacher_id' => 'required_if:role,teacher|exists:teachers,id',
+            'parent_id' => 'required_if:role,parent|exists:parents,id',
         ]);
 
         if ($validator->fails()) {
@@ -100,6 +102,25 @@ class AuthController extends Controller
                 'success' => false,
                 'errors' => $validator->errors()
             ], 422);
+        }
+
+        // Check if teacher/parent already has an account
+        if ($request->role === 'teacher') {
+            $teacher = Teacher::find($request->teacher_id);
+            if ($teacher->user_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This teacher already has an account'
+                ], 409);
+            }
+        } elseif ($request->role === 'parent') {
+            $parent = ParentModel::find($request->parent_id);
+            if ($parent->user_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This parent already has an account'
+                ], 409);
+            }
         }
 
         $user = User::create([
@@ -112,6 +133,28 @@ class AuthController extends Controller
             'is_active' => true,
         ]);
 
+        // Link user account to existing teacher/parent record and return the updated record
+        if ($user->role === 'teacher') {
+            $teacher = Teacher::find($request->teacher_id);
+            $teacher->update(['user_id' => $user->id]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User registered successfully',
+                'data' => $teacher->fresh()
+            ], 201);
+        } elseif ($user->role === 'parent') {
+            $parent = ParentModel::find($request->parent_id);
+            $parent->update(['user_id' => $user->id]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'User registered successfully',
+                'data' => $parent->fresh()
+            ], 201);
+        }
+
+        // For admin role, return user object
         return response()->json([
             'success' => true,
             'message' => 'User registered successfully',

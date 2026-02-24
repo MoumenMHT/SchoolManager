@@ -16,6 +16,19 @@ class TeacherController extends Controller
     public function index()
     {
         $teachers = Teacher::all();
+        $teachers->load('user:id,email,phone'); // Load email and phone fields from the related user
+        $teachers->load('teachableSubjects'); // Load subjects relationship
+        $teachers->loadCount('classes'); // Load count of related classes
+        $teachers->load('classes'); // Load count of related students
+
+        $teachers->each(function ($teacher) {
+            $teacher->email = $teacher->user ? $teacher->user->email : null; // Add email attribute to teacher
+            $teacher->phone = $teacher->user ? $teacher->user->phone : null; // Add phone attribute to teacher
+            unset($teacher->user); // Remove the user relationship to avoid confusion
+            $teacher->subjects = $teacher->teachableSubjects; // Add subjects to the teacher object
+            unset($teacher->teachableSubjects); // Remove the original relationship name
+            $teacher->classes = $teacher->classes->pluck('name'); // Add classes to the teacher object
+        });
         return response()->json([
             'success' => true,
             'data' => $teachers
@@ -57,7 +70,6 @@ class TeacherController extends Controller
         }
 
         $teacher = Teacher::create([
-            'user_id' => auth()->id(),
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'birth_date' => $request->birth_date,

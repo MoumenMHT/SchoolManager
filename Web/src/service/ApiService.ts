@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import type { ApiResponse, AuthResponse } from '@/types';
 import config from '@/config';
+import { Message } from 'primevue';
 
 class ApiService {
   private api: AxiosInstance;
@@ -107,8 +108,8 @@ class ApiService {
     return response.data;
   }
 
-  async delete<T>(url: string): Promise<ApiResponse<T>> {
-    const response = await this.api.delete<ApiResponse<T>>(url);
+  async delete<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+    const response = await this.api.delete<ApiResponse<T>>(url, { data });
     return response.data;
   }
 

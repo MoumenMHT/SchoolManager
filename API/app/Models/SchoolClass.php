@@ -45,14 +45,14 @@ class SchoolClass extends Model
 
     public function teachers(): BelongsToMany
     {
-        return $this->belongsToMany(Teacher::class, 'class_subject_teacher')
+        return $this->belongsToMany(Teacher::class, 'class_subject_teacher', 'class_id', 'teacher_id')
             ->withPivot('subject_id', 'academic_year')
             ->withTimestamps();
     }
 
     public function subjects(): BelongsToMany
     {
-        return $this->belongsToMany(Subject::class, 'class_subject_teacher')
+        return $this->belongsToMany(Subject::class, 'class_subject_teacher', 'class_id', 'subject_id')
             ->withPivot('teacher_id', 'academic_year')
             ->withTimestamps();
     }

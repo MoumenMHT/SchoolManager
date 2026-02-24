@@ -20,6 +20,16 @@ const model = ref([
                 label: 'Parents',
                 icon: 'pi pi-fw pi-users',
                 to: '/parents'
+            },
+            {
+                label: 'Teachers',
+                icon: 'pi pi-fw pi-users',
+                to: '/teachers'
+            },
+            {
+                label: 'Classes',
+                icon: 'pi pi-fw pi-users',
+                to: '/classes'
             }
         ]
     },

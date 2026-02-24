@@ -267,4 +267,20 @@ class StudentController extends Controller
             ], 500);
         }
     }
+
+    public function studentsWithoutClass()
+    {
+        $students = Student::with('parent')
+            ->where(function($query) {
+                $query->whereNull('class_id')
+                      ->orWhere('class_id', '');
+            })
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $students,
+            'count' => $students->count()
+        ]);
+    }
 } 
