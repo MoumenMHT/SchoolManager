@@ -16,6 +16,12 @@ class ParentController extends Controller
     public function index()
     {
         $parents = ParentModel::withCount('students')->get();
+        $parents->load('user:id,email,phone'); // Load email and phone fields from the related user
+         $parents->each(function ($parent) {
+            $parent->email = $parent->user ? $parent->user->email : null; // Add email attribute to parent
+            $parent->phone = $parent->user ? $parent->user->phone : null; // Add phone attribute to parent
+            unset($parent->user); // Remove the user relationship to avoid confusion
+        });
         return response()->json([
             'success' => true,
             'data' => $parents

@@ -18,7 +18,7 @@ const formatDate = (date: string) => {
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'MAD',
+    currency: 'DZD',
     minimumFractionDigits: 2
   }).format(amount);
 };

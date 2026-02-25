@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Schedule;
 use App\Models\ClassSubjectTeacher;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -180,17 +181,15 @@ class scheduleController extends Controller
     public function store(Request $request)
     {
         try {
+            // Normalize day to capitalize first letter BEFORE validation (database expects "Monday" not "monday")
+            $request->merge(['day' => ucfirst(strtolower($request->day))]);
+
             $validator = Validator::make($request->all(), [
                 'class_subject_teacher_id' => 'required|exists:class_subject_teacher,id',
                 'day' => [
                     'required',
                     'string',
-                    function ($attribute, $value, $fail) {
-                        $validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-                        if (!in_array(strtolower($value), $validDays)) {
-                            $fail('The selected ' . $attribute . ' is invalid.');
-                        }
-                    }
+                    Rule::in(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
                 ],
                 'start_time' => 'required|date_format:H:i',
                 'end_time' => 'required|date_format:H:i|after:start_time',
@@ -204,9 +203,6 @@ class scheduleController extends Controller
                     'errors' => $validator->errors()
                 ], 422);
             }
-
-            // Normalize day to capitalize first letter (database expects "Monday" not "monday")
-            $request->merge(['day' => ucfirst(strtolower($request->day))]);
 
             // Check if assignment exists
             $assignment = ClassSubjectTeacher::with(['class', 'subject', 'teacher'])->find($request->class_subject_teacher_id);
@@ -316,9 +312,18 @@ class scheduleController extends Controller
         try {
             $schedule = Schedule::findOrFail($id);
 
+            // Normalize day to capitalize first letter if provided (database expects "Monday" not "monday")
+            if ($request->has('day')) {
+                $request->merge(['day' => ucfirst(strtolower($request->day))]);
+            }
+
             $validator = Validator::make($request->all(), [
                 'class_subject_teacher_id' => 'sometimes|exists:class_subject_teacher,id',
-                'day' => 'sometimes|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
+                'day' => [
+                    'sometimes',
+                    'string',
+                    Rule::in(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+                ],
                 'start_time' => 'sometimes|date_format:H:i',
                 'end_time' => 'sometimes|date_format:H:i|after:start_time',
                 'room' => 'nullable|string|max:50',
@@ -440,8 +445,16 @@ class scheduleController extends Controller
      */
     public function getClassSchedule(Request $request, $classId)
     {
+        
         try {
             $academicYear = $request->get('academic_year', date('Y') . '-' . (date('Y') + 1));
+            
+            \Log::info('getClassSchedule called', [
+                'class_id' => $classId,
+                'academic_year_param' => $request->get('academic_year'),
+                'academic_year_used' => $academicYear,
+                'all_params' => $request->all()
+            ]);
 
             $query = Schedule::with(['assignment.subject', 'assignment.teacher'])
                 ->whereHas('assignment', function ($q) use ($classId, $academicYear) {
@@ -451,6 +464,14 @@ class scheduleController extends Controller
             
             $this->orderByDayOfWeek($query);
             $schedules = $query->orderBy('start_time')->get();
+            
+            \Log::info('Schedules found', ['count' => $schedules->count()]);
+
+            // Normalize day to lowercase for frontend compatibility
+            $schedules->transform(function ($schedule) {
+                $schedule->day = strtolower($schedule->day);
+                return $schedule;
+            });
 
             // Group by day
             $groupedSchedules = $schedules->groupBy('day');

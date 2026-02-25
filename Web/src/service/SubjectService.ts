@@ -91,7 +91,6 @@ class SubjectService {
      */
     async getSubjectsByTeacher(teacherId: number): Promise<Subject[]> {
         const response = await ApiService.get<Subject[]>(`/teachers/${teacherId}/subjects`);
-        console.log('Fetched subjects for teacher:', response.data);
         return response.data || [];
     }
 
@@ -100,7 +99,6 @@ class SubjectService {
      */
     async getTeachersBySubject(subjectId: number): Promise<any[]> {
         const response = await ApiService.get<any[]>(`/subjects/${subjectId}/teachers`);
-        console.log('Fetched teachers for subject:', response.data);
         return response.data || [];
     }
      

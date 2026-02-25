@@ -75,7 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('class-assignments', ClassSubjectTeacherController::class);
         
         // Schedule Management
-        // Schedule routes - specific routes MUST come before resource routes
+        // Schedule routes s
         Route::post('/schedules/bulk', [ScheduleController::class, 'bulkStore']);
         Route::post('/schedules/check-conflicts', [ScheduleController::class, 'checkConflicts']);
         Route::get('/schedules/available-slots', [ScheduleController::class, 'getAvailableSlots']);

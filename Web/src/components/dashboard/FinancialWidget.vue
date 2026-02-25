@@ -15,7 +15,7 @@ const props = defineProps<Props>();
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'MAD',
+    currency: 'DZD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(amount);

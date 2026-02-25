@@ -23,12 +23,17 @@ const model = ref([
             },
             {
                 label: 'Teachers',
-                icon: 'pi pi-fw pi-users',
+                icon: 'pi pi-fw pi-id-card',
                 to: '/teachers'
             },
             {
+                label: 'Students',
+                icon: 'pi pi-fw pi-graduation-cap',
+                to: '/students'
+            },
+            {
                 label: 'Classes',
-                icon: 'pi pi-fw pi-users',
+                icon: 'pi pi-fw pi-building',
                 to: '/classes'
             }
         ]

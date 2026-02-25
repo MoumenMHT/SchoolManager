@@ -6,6 +6,7 @@ import ClassesService, { type SchoolClass, type CreateTeacherDTO, type UpdateTea
 import TeacherService, { type Teacher } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
 import StudentService, { type Student } from '@/service/StudentService';
+import ScheduleService, { type Schedule, type CreateScheduleDTO } from '@/service/ScheduleService';
 
 const toast = useToast();
 const dt = ref();
@@ -44,6 +45,30 @@ const removeTeacherConfirmDialog = ref(false);
 const teacherToRemove = ref<{ teacherId: number; subjectId: number } | null>(null);
 const removeStudentConfirmDialog = ref(false);
 const studentToRemove = ref<number | null>(null);
+
+// Schedule dialog states
+const scheduleDialog = ref(false);
+const selectedClassForSchedule = ref<SchoolClass | null>(null);
+const classSchedules = ref<{ [day: string]: Schedule[] }>({});
+const scheduleLoading = ref(false);
+const scheduleEditDialog = ref(false);
+const selectedScheduleSlot = ref<{ day: string; hour: number } | null>(null);
+const scheduleToEdit = ref<Partial<Schedule> | null>(null);
+const scheduleSubmitted = ref(false);
+
+// Days and hours for schedule grid
+const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const schoolHours = [
+  { hour: 8, label: '8:00 - 9:00' },
+  { hour: 9, label: '9:00 - 10:00' },
+  { hour: 10, label: '10:00 - 11:00' },
+  { hour: 11, label: '11:00 - 12:00' },
+  { hour: 12, label: '12:00 - 13:00' },
+  { hour: 13, label: '13:00 - 14:00' },
+  { hour: 14, label: '14:00 - 15:00' },
+  { hour: 15, label: '15:00 - 16:00' },
+  { hour: 16, label: '16:00 - 17:00' }
+];
 
 // Computed properties
 const currentYear = computed(() => new Date().getFullYear());
@@ -102,7 +127,6 @@ const loadClasses = async () => {
       detail: error.response?.data?.message || 'Failed to load classes',
       life: 3000
     });
-    console.log('Error fetching classes:', error.response?.data?.message);
   } finally {
     loading.value = false;
   }
@@ -131,8 +155,7 @@ const openNew = () => {
   submitted.value = false;
   classDialog.value = true;
 };
-
-// Hide dialog
+ 
 const hideDialog = () => {
   classDialog.value = false;
   submitted.value = false;
@@ -569,6 +592,212 @@ const removeStudentFromClass = async () => {
     });
   }
 };
+
+// Schedule Management Functions
+
+// Open schedule dialog for a class
+const viewSchedule = async (classToView: SchoolClass) => {
+  try {
+    scheduleLoading.value = true;
+    selectedClassForSchedule.value = classToView;
+    
+    // Fetch class schedule with academic year filter
+    const academic_year = classToView.academic_year || `${currentYear.value}-${currentYear.value + 1}`;
+    const scheduleData = await ScheduleService.getClassSchedule(classToView.id, academic_year);
+    
+    // If scheduleData is an object with day keys, use it directly
+    // If it's an array, we need to organize it by day
+    if (Array.isArray(scheduleData)) {
+      // Organize schedules by day
+      const organizedSchedules: { [day: string]: Schedule[] } = {};
+      scheduleData.forEach((schedule: Schedule) => {
+        const dayKey = schedule.day.toLowerCase();
+        if (!organizedSchedules[dayKey]) {
+          organizedSchedules[dayKey] = [];
+        }
+        organizedSchedules[dayKey].push(schedule);
+      });
+      classSchedules.value = organizedSchedules;
+    } else {
+      // It's already organized by day
+      classSchedules.value = scheduleData;
+    }
+    
+    // Load class assignments (teacher-subject mappings) for the schedule edit dialog
+    const assignmentsData = await ClassesService.getClassAssignments(classToView.id);
+    classAssignments.value = assignmentsData.assignments || [];
+    
+    scheduleDialog.value = true;
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to load class schedule',
+      life: 3000
+    });
+  } finally {
+    scheduleLoading.value = false;
+  }
+};
+
+// Get schedule for a specific day and hour
+const getScheduleForSlot = (day: string, hour: number): Schedule | null => {
+  const dayKey = day.toLowerCase();
+  const daySchedules = classSchedules.value[dayKey] || [];
+  const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
+  const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
+  
+  const found = daySchedules.find(schedule => {
+    const scheduleStart = schedule.start_time;
+    const scheduleEnd = schedule.end_time;
+    const matches = scheduleStart <= startTime && scheduleEnd > startTime;
+    return matches;
+  }) || null;
+  
+  return found;
+};
+
+// Handle clicking on a schedule slot
+const handleSlotClick = (day: string, hour: number) => {
+  const existingSchedule = getScheduleForSlot(day, hour);
+  
+  if (existingSchedule) {
+    // Edit existing schedule
+    scheduleToEdit.value = { ...existingSchedule };
+  } else {
+    // Create new schedule
+    const startTime = `${hour.toString().padStart(2, '0')}:00`;
+    const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+    
+    scheduleToEdit.value = {
+      day: day.toLowerCase(),
+      start_time: startTime,
+      end_time: endTime,
+      room: '',
+      notes: '',
+      academic_year: selectedClassForSchedule.value?.academic_year || null
+    };
+  }
+  
+  selectedScheduleSlot.value = { day, hour };
+  scheduleSubmitted.value = false;
+  scheduleEditDialog.value = true;
+};
+
+// Save schedule (create or update)
+const saveSchedule = async () => {
+  scheduleSubmitted.value = true;
+  
+  if (!scheduleToEdit.value || !selectedClassForSchedule.value) return;
+  
+  // Validate that a teacher-subject assignment is selected
+  if (!scheduleToEdit.value.class_subject_teacher_id) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: 'Please select a subject and teacher',
+      life: 3000
+    });
+    return;
+  }
+  
+  try {
+    scheduleLoading.value = true;
+    
+    const scheduleData: CreateScheduleDTO = {
+      class_subject_teacher_id: scheduleToEdit.value.class_subject_teacher_id,
+      day: scheduleToEdit.value.day!,
+      start_time: scheduleToEdit.value.start_time!,
+      end_time: scheduleToEdit.value.end_time!,
+      room: scheduleToEdit.value.room || null,
+      notes: scheduleToEdit.value.notes || null,
+      academic_year: scheduleToEdit.value.academic_year || null
+    };
+    
+    if (scheduleToEdit.value.id) {
+      // Update existing schedule
+      await ScheduleService.updateSchedule(scheduleToEdit.value.id, scheduleData);
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Schedule updated successfully',
+        life: 3000
+      });
+    } else {
+      // Create new schedule
+      await ScheduleService.createSchedule(scheduleData);
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Schedule created successfully',
+        life: 3000
+      });
+    }
+    
+    // Reload schedule
+    await viewSchedule(selectedClassForSchedule.value);
+    
+    scheduleEditDialog.value = false;
+    scheduleToEdit.value = null;
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to save schedule',
+      life: 3000
+    });
+  } finally {
+    scheduleLoading.value = false;
+  }
+};
+
+// Delete schedule
+const deleteSchedule = async () => {
+  if (!scheduleToEdit.value?.id) return;
+  
+  try {
+    scheduleLoading.value = true;
+    await ScheduleService.deleteSchedule(scheduleToEdit.value.id);
+    
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Schedule deleted successfully',
+      life: 3000
+    });
+    
+    // Reload schedule
+    if (selectedClassForSchedule.value) {
+      await viewSchedule(selectedClassForSchedule.value);
+    }
+    
+    scheduleEditDialog.value = false;
+    scheduleToEdit.value = null;
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to delete schedule',
+      life: 3000
+    });
+  } finally {
+    scheduleLoading.value = false;
+  }
+};
+
+// Close schedule dialogs
+const hideScheduleDialog = () => {
+  scheduleDialog.value = false;
+  selectedClassForSchedule.value = null;
+  classSchedules.value = {};
+};
+
+const hideScheduleEditDialog = () => {
+  scheduleEditDialog.value = false;
+  scheduleToEdit.value = null;
+  selectedScheduleSlot.value = null;
+  scheduleSubmitted.value = false;
+};
 </script>
 
 <template>
@@ -711,6 +940,15 @@ const removeStudentFromClass = async () => {
 
       <Column :exportable="false" style="min-width: 12rem">
         <template #body="{ data }">
+          <Button 
+            icon="pi pi-calendar" 
+            outlined 
+            rounded 
+            severity="success"
+            class="mr-2" 
+            @click="viewSchedule(data)" 
+            v-tooltip.top="'View Schedule'"
+          />
           <Button 
             icon="pi pi-eye" 
             outlined 
@@ -1383,6 +1621,187 @@ const removeStudentFromClass = async () => {
         />
       </template>
     </Dialog>
+
+    <!-- Schedule View Dialog -->
+    <Dialog 
+      v-model:visible="scheduleDialog" 
+      :style="{ width: '95vw', maxWidth: '1200px' }" 
+      :header="'Schedule - ' + (selectedClassForSchedule?.name || '')" 
+      :modal="true"
+      @hide="hideScheduleDialog"
+    >
+      <div v-if="scheduleLoading" class="flex justify-center items-center p-8">
+        <i class="pi pi-spin pi-spinner text-4xl"></i>
+      </div>
+      
+      <div v-else class="schedule-container">
+        <div class="mb-4 p-3 border border-surface rounded-lg bg-blue-50 dark:bg-blue-900/20">
+          <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+            <i class="pi pi-info-circle"></i>
+            <span>Click on any time slot to add or edit the schedule</span>
+          </div>
+        </div>
+
+        <div class="overflow-auto">
+          <table class="schedule-table w-full border-collapse">
+            <thead>
+              <tr>
+                <th class="schedule-header time-column">Time</th>
+                <th 
+                  v-for="day in weekDays" 
+                  :key="day" 
+                  class="schedule-header"
+                >
+                  {{ day }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="timeSlot in schoolHours" :key="timeSlot.hour">
+                <td class="time-column font-semibold text-sm">
+                  {{ timeSlot.label }}
+                </td>
+                <td 
+                  v-for="day in weekDays" 
+                  :key="day"
+                  class="schedule-cell"
+                  @click="handleSlotClick(day, timeSlot.hour)"
+                >
+                  <template v-if="getScheduleForSlot(day, timeSlot.hour)">
+                    <div class="schedule-content has-schedule">
+                      <div class="font-semibold text-sm">
+                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name }}
+                      </div>
+                      <div class="text-xs mt-1">
+                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.first_name }} {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.last_name }}
+                      </div>
+                      <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
+                        <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day, timeSlot.hour)?.room }}
+                      </div>
+                    </div>
+                  </template>
+                  <div v-else class="schedule-content empty-schedule">
+                    <i class="pi pi-plus text-muted-color"></i>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Close" 
+          icon="pi pi-times" 
+          @click="hideScheduleDialog" 
+        />
+      </template>
+    </Dialog>
+
+    <!-- Schedule Edit Dialog -->
+    <Dialog 
+      v-model:visible="scheduleEditDialog" 
+      :style="{ width: '550px' }" 
+      :header="scheduleToEdit?.id ? 'Edit Schedule' : 'Add Schedule'" 
+      :modal="true"
+      class="p-fluid"
+      @hide="hideScheduleEditDialog"
+    >
+      <div v-if="scheduleToEdit" class="flex flex-col gap-6">
+        <!-- Day and Time Info -->
+        <div class="p-3 border border-surface rounded-lg bg-surface-100 dark:bg-surface-800">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="pi pi-calendar text-primary"></i>
+            <span class="font-semibold">{{ scheduleToEdit.day ? scheduleToEdit.day.charAt(0).toUpperCase() + scheduleToEdit.day.slice(1) : '' }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <i class="pi pi-clock text-primary"></i>
+            <span>{{ scheduleToEdit.start_time }} - {{ scheduleToEdit.end_time }}</span>
+          </div>
+        </div>
+
+        <!-- Subject and Teacher Selection -->
+        <div>
+          <label for="assignment" class="block font-semibold mb-2">
+            Subject & Teacher <span class="text-red-500">*</span>
+          </label>
+          <Select 
+            id="assignment" 
+            v-model="scheduleToEdit.class_subject_teacher_id" 
+            :options="classAssignments" 
+            optionValue="id"
+            placeholder="Select subject and teacher"
+            :invalid="scheduleSubmitted && !scheduleToEdit.class_subject_teacher_id"
+          >
+            <template #option="{ option }">
+              <div class="flex flex-col">
+                <span class="font-semibold">{{ option.subject?.name || 'N/A' }}</span>
+                <span class="text-sm text-muted-color">{{ option.teacher?.first_name }} {{ option.teacher?.last_name }}</span>
+              </div>
+            </template>
+            <template #value="{ value }">
+              <div v-if="value">
+                <span class="font-semibold">{{ classAssignments.find(a => a.id === value)?.subject?.name }}</span>
+                <span class="text-sm text-muted-color ml-2">- {{ classAssignments.find(a => a.id === value)?.teacher?.first_name }} {{ classAssignments.find(a => a.id === value)?.teacher?.last_name }}</span>
+              </div>
+              <span v-else>Select subject and teacher</span>
+            </template>
+          </Select>
+          <small v-if="scheduleSubmitted && !scheduleToEdit.class_subject_teacher_id" class="text-red-500">
+            Subject and teacher selection is required.
+          </small>
+        </div>
+
+        <!-- Room -->
+        <div>
+          <label for="room" class="block font-semibold mb-2">
+            Room
+          </label>
+          <InputText 
+            id="room" 
+            v-model="scheduleToEdit.room" 
+            placeholder="e.g., Room 101, Lab A"
+          />
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label for="notes" class="block font-semibold mb-2">
+            Notes
+          </label>
+          <Textarea 
+            id="notes" 
+            v-model="scheduleToEdit.notes" 
+            rows="3"
+            placeholder="Additional notes or comments"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <Button 
+          v-if="scheduleToEdit?.id"
+          label="Delete" 
+          icon="pi pi-trash" 
+          severity="danger"
+          text
+          @click="deleteSchedule" 
+        />
+        <Button 
+          label="Cancel" 
+          icon="pi pi-times" 
+          text 
+          @click="hideScheduleEditDialog" 
+        />
+        <Button 
+          label="Save" 
+          icon="pi pi-check" 
+          :loading="scheduleLoading"
+          @click="saveSchedule" 
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -1393,4 +1812,90 @@ const removeStudentFromClass = async () => {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* Schedule Table Styles */
+.schedule-table {
+  min-width: 100%;
+  background: var(--surface-card);
+}
+
+.schedule-header {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid var(--surface-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.time-column {
+  background: var(--surface-100);
+  min-width: 100px;
+  text-align: center;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border);
+  position: sticky;
+  left: 0;
+  z-index: 5;
+}
+
+.schedule-cell {
+  border: 1px solid var(--surface-border);
+  padding: 0;
+  min-width: 120px;
+  height: 80px;
+  cursor: pointer;
+  transition: all 0.2s;
+  vertical-align: top;
+}
+
+.schedule-cell:hover {
+  background: var(--primary-50);
+}
+
+.schedule-content {
+  padding: 0.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.has-schedule {
+  background: linear-gradient(135deg, var(--primary-100) 0%, var(--primary-50) 100%);
+  border-left: 3px solid var(--primary-color);
+}
+
+.empty-schedule {
+  opacity: 0.3;
+}
+
+.empty-schedule:hover {
+  opacity: 0.7;
+}
+
+.schedule-container {
+  margin: 0 -1.5rem;
+  padding: 0 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .schedule-table {
+    font-size: 0.875rem;
+  }
+  
+  .schedule-cell {
+    min-width: 100px;
+    height: 70px;
+  }
+  
+  .schedule-content {
+    padding: 0.25rem;
+  }
+}
 </style>
+

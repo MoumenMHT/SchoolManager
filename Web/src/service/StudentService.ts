@@ -1,5 +1,7 @@
 import apiService from './ApiService';
 import type { ApiResponse } from '@/types';
+import type { SchoolClass } from './ClassesService';
+import type { Parent } from './ParentService';
 
 export interface Student {
   id: number;
@@ -15,6 +17,9 @@ export interface Student {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Relationships
+  class?: SchoolClass;
+  parent?: Parent;
 }
 
 export interface CreateStudentDTO {

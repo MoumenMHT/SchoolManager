@@ -4,6 +4,7 @@ import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import TeacherService, { type Teacher, type CreateTeacherDTO, type UpdateTeacherDTO } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
+import ScheduleService, { type Schedule } from '@/service/ScheduleService';
 import { Column } from 'primevue';
 
 const toast = useToast();
@@ -41,6 +42,28 @@ const teacherSubjects = ref<Subject[]>([]);
 const subjectsLoading = ref(false);
 // For adding new teacher with subjects
 const newTeacherSubjects = ref<Subject[]>([]);
+
+// Schedule dialog states
+const scheduleDialog = ref(false);
+const selectedTeacherForSchedule = ref<Teacher | null>(null);
+const teacherSchedules = ref<{ [day: string]: Schedule[] }>({});
+const scheduleLoading = ref(false);
+const selectedAcademicYear = ref<string>('');
+const availableAcademicYears = ref<string[]>([]);
+
+// Days and hours for schedule grid
+const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const schoolHours = [
+  { hour: 8, label: '08:00 - 09:00' },
+  { hour: 9, label: '09:00 - 10:00' },
+  { hour: 10, label: '10:00 - 11:00' },
+  { hour: 11, label: '11:00 - 12:00' },
+  { hour: 12, label: '12:00 - 13:00' },
+  { hour: 13, label: '13:00 - 14:00' },
+  { hour: 14, label: '14:00 - 15:00' },
+  { hour: 15, label: '15:00 - 16:00' },
+  { hour: 16, label: '16:00 - 17:00' }
+];
 
 // Load teachers on mount
 onMounted(async () => {
@@ -520,6 +543,141 @@ const saveSubjectAssignments = async () => {
     subjectsLoading.value = false;
   }
 };
+
+// Schedule Management Functions
+
+// Calculate current academic year
+const getCurrentAcademicYear = (): string => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-11
+  
+  // If we're past September (month 8), academic year is current-next
+  // Otherwise it's previous-current
+  if (currentMonth >= 8) {
+    return `${currentYear}-${currentYear + 1}`;
+  } else {
+    return `${currentYear - 1}-${currentYear}`;
+  }
+};
+
+// Open schedule dialog for a teacher
+const viewSchedule = async (teacherToView: Teacher) => {
+  selectedTeacherForSchedule.value = teacherToView;
+  
+  // Get unique academic years from teacher's classes
+  const uniqueYears = new Set<string>();
+  if (teacherToView.classes && Array.isArray(teacherToView.classes)) {
+    teacherToView.classes.forEach((cls: any) => {
+      if (cls.academic_year) {
+        uniqueYears.add(cls.academic_year);
+      }
+    });
+  }
+  
+  // Convert to array and sort (most recent first)
+  availableAcademicYears.value = Array.from(uniqueYears).sort().reverse();
+  
+  // Set default academic year to current year or first available
+  const currentYear = getCurrentAcademicYear();
+  if (availableAcademicYears.value.includes(currentYear)) {
+    selectedAcademicYear.value = currentYear;
+  } else if (availableAcademicYears.value.length > 0) {
+    selectedAcademicYear.value = availableAcademicYears.value[0];
+  } else {
+    selectedAcademicYear.value = currentYear;
+    availableAcademicYears.value = [currentYear];
+  }
+  
+  // Load schedule for selected year
+  await loadTeacherSchedule();
+  
+  scheduleDialog.value = true;
+};
+
+// Load teacher schedule for selected academic year
+const loadTeacherSchedule = async () => {
+  if (!selectedTeacherForSchedule.value) return;
+  
+  try {
+    scheduleLoading.value = true;
+    
+    const response = await ScheduleService.getTeacherSchedule(
+      selectedTeacherForSchedule.value.id,
+      selectedAcademicYear.value 
+    );
+    
+    
+    // Extract the data from response
+    const scheduleData = (response as any).data || response;
+    
+    
+    // The API returns data grouped by day with capitalized day names
+    // We need to normalize to lowercase for consistent access
+    if (scheduleData && typeof scheduleData === 'object' && !Array.isArray(scheduleData)) {
+      // Convert keys to lowercase for consistent access
+      const normalizedSchedules: { [day: string]: Schedule[] } = {};
+      Object.keys(scheduleData).forEach(day => {
+        const dayKey = day.toLowerCase();
+        normalizedSchedules[dayKey] = scheduleData[day];
+      });
+      teacherSchedules.value = normalizedSchedules;
+    } else if (Array.isArray(scheduleData)) {
+      // If it's an array, organize by day
+      const organizedSchedules: { [day: string]: Schedule[] } = {};
+      scheduleData.forEach((schedule: Schedule) => {
+        const dayKey = schedule.day.toLowerCase();
+        if (!organizedSchedules[dayKey]) {
+          organizedSchedules[dayKey] = [];
+        }
+        organizedSchedules[dayKey].push(schedule);
+      });
+      teacherSchedules.value = organizedSchedules;
+    } else {
+      teacherSchedules.value = {};
+    }
+    
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to load teacher schedule',
+      life: 3000
+    });
+  } finally {
+    scheduleLoading.value = false;
+  }
+};
+
+// Handler for academic year change
+const onAcademicYearChange = async () => {
+  await loadTeacherSchedule();
+};
+
+// Get schedule for a specific day and hour
+const getScheduleForSlot = (day: string, hour: number): Schedule | null => {
+  const dayKey = day.toLowerCase();
+  const daySchedules = teacherSchedules.value[dayKey] || [];
+  const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
+  const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
+  
+  const found = daySchedules.find(schedule => {
+    const scheduleStart = schedule.start_time;
+    const scheduleEnd = schedule.end_time;
+    return scheduleStart <= startTime && scheduleEnd > startTime;
+  }) || null;
+  
+  return found;
+};
+
+// Hide schedule dialog
+const hideScheduleDialog = () => {
+  scheduleDialog.value = false;
+  selectedTeacherForSchedule.value = null;
+  teacherSchedules.value = {};
+  selectedAcademicYear.value = '';
+  availableAcademicYears.value = [];
+};
 </script>
 
 <template>
@@ -666,7 +824,7 @@ const saveSubjectAssignments = async () => {
         </template>
       </Column>
 
-      <Column :exportable="false" style="min-width: 13rem">
+      <Column :exportable="false" style="min-width: 16rem">
         <template #body="{ data }">
          
           <Button 
@@ -678,6 +836,15 @@ const saveSubjectAssignments = async () => {
             class="mr-2" 
             @click="openCreateAccount(data)" 
             v-tooltip.top="'Create Account'"
+          />
+          <Button 
+            icon="pi pi-calendar" 
+            outlined 
+            rounded 
+            severity="info"
+            class="mr-2" 
+            @click="viewSchedule(data)" 
+            v-tooltip.top="'View Schedule'"
           />
           <Button 
             icon="pi pi-book" 
@@ -844,6 +1011,7 @@ const saveSubjectAssignments = async () => {
             id="subjects"
             v-model="newTeacherSubjects"
             :options="availableSubjects"
+            dataKey="id"
             optionLabel="name"
             placeholder="Select subjects to assign"
             :maxSelectedLabels="3"
@@ -1080,10 +1248,11 @@ const saveSubjectAssignments = async () => {
             id="subjects"
             v-model="selectedSubjects"
             :options="availableSubjects"
+            dataKey="id"
             optionLabel="name"
             placeholder="Select subjects to assign"
             :loading="subjectsLoading"
-            :maxSelectedLabels="3"
+            :maxSelectedLabels="10"
             class="w-full"
             display="chip"
           >
@@ -1130,8 +1299,159 @@ const saveSubjectAssignments = async () => {
         />
       </template>
     </Dialog>
+
+    <!-- View Teacher Schedule Dialog (Read-Only) -->
+    <Dialog 
+      v-model:visible="scheduleDialog" 
+      :style="{ width: '95vw', maxWidth: '1200px' }" 
+      :header="selectedTeacherForSchedule ? `Schedule - ${selectedTeacherForSchedule.first_name} ${selectedTeacherForSchedule.last_name}` : 'Schedule'" 
+      :modal="true"
+      maximizable
+    >
+      <div v-if="scheduleLoading" class="text-center py-8">
+        <i class="pi pi-spin pi-spinner text-4xl text-primary mb-3"></i>
+        <p class="text-muted-color">Loading schedule...</p>
+      </div>
+
+      <div v-else>
+        <div class="mb-4 p-3 bg-surface-50 dark:bg-surface-800 rounded-border">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div v-if="selectedTeacherForSchedule?.specialization" class="flex items-center gap-2">
+              <i class="pi pi-briefcase text-primary"></i>
+              <span class="font-semibold">Specialization:</span>
+              <span>{{ selectedTeacherForSchedule.specialization }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <label for="academicYear" class="font-semibold whitespace-nowrap">
+                <i class="pi pi-calendar text-primary mr-1"></i>
+                Academic Year:
+              </label>
+              <Select 
+                id="academicYear"
+                v-model="selectedAcademicYear" 
+                :options="availableAcademicYears" 
+                placeholder="Select year"
+                @change="onAcademicYearChange"
+                class="w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="schedule-container" style="overflow-x: auto;">
+          <table class="schedule-table">
+            <thead>
+              <tr>
+                <th class="schedule-header time-column">Time</th>
+                <th 
+                  v-for="day in weekDays" 
+                  :key="day" 
+                  class="schedule-header"
+                >
+                  {{ day }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="timeSlot in schoolHours" :key="timeSlot.hour">
+                <td class="time-column font-semibold text-sm">
+                  {{ timeSlot.label }}
+                </td>
+                <td 
+                  v-for="day in weekDays" 
+                  :key="day"
+                  class="schedule-cell"
+                >
+                  <template v-if="getScheduleForSlot(day, timeSlot.hour)">
+                    <div class="schedule-content has-schedule">
+                      <div class="font-semibold text-sm">
+                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name }}
+                      </div>
+                      <div class="text-xs mt-1">
+                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.class?.name }}
+                      </div>
+                      <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
+                        <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day, timeSlot.hour)?.room }}
+                      </div>
+                    </div>
+                  </template>
+                  <div v-else class="schedule-content empty-schedule">
+                    <span class="text-muted-color text-xs">-</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Close" 
+          icon="pi pi-times" 
+          @click="hideScheduleDialog" 
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
+
+<style scoped>
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.schedule-header {
+  background: var(--primary-color);
+  color: white;
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid var(--surface-border);
+}
+
+.time-column {
+  background: var(--surface-50);
+  color: var(--text-color);
+  width: 120px;
+  text-align: center;
+}
+
+.schedule-cell {
+  border: 1px solid var(--surface-border);
+  padding: 4px;
+  height: 80px;
+  vertical-align: top;
+  background: var(--surface-0);
+}
+
+.schedule-content {
+  height: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.has-schedule {
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  color: var(--primary-700);
+}
+
+.empty-schedule {
+  background: transparent;
+  color: var(--text-color-secondary);
+}
+
+:deep(.p-dialog-content) {
+  padding-top: 0;
+}
+</style>
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
