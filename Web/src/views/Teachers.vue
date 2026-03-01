@@ -726,6 +726,7 @@ const hideScheduleDialog = () => {
       exportFilename="teachers"
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       :rowsPerPageOptions="[5, 10, 25, 50]"
+      
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} teachers"
       class="p-datatable-sm"
     >
@@ -762,11 +763,7 @@ const hideScheduleDialog = () => {
         </template>
       </Column>
 
-      <Column field="cin" header="CIN" sortable style="min-width: 10rem">
-        <template #body="{ data }">
-          <span class="text-muted-color">{{ data.cin || 'N/A' }}</span>
-        </template>
-      </Column>
+    
 
       <Column field="phone" header="Phone" sortable style="min-width: 12rem">
         <template #body="{ data }">
@@ -788,29 +785,7 @@ const hideScheduleDialog = () => {
         </template>
       </Column>
 
-      <Column field="specialization" header="Specialization" sortable style="min-width: 12rem">
-        <template #body="{ data }">
-          <span>{{ data.specialization || 'N/A' }}</span>
-        </template>
-      </Column>
-
-      <Column field="has_account" header="Account Status" sortable style="min-width: 12rem">
-        <template #body="{ data }">
-          <Tag 
-            :value="getAccountStatusLabel(data.has_account)" 
-            :severity="getAccountStatusSeverity(data.has_account)" 
-          />
-        </template>
-      </Column>
-
-      <Column field="classes_count" header="Classes number" sortable style="min-width: 8rem">
-        <template #body="{ data }">
-          <Badge 
-            :value="data.classes_count || 0" 
-            :severity="data.classes_count > 0 ? 'info' : 'secondary'" 
-          />
-        </template>
-      </Column>
+      
 
       <Column field="classes_text" header="Classes" style="min-width: 15rem">
         <template #body="{ data }">
@@ -824,7 +799,7 @@ const hideScheduleDialog = () => {
         </template>
       </Column>
 
-      <Column :exportable="false" style="min-width: 16rem">
+      <Column header="Actions" :exportable="false" style="min-width: 16rem">
         <template #body="{ data }">
          
           <Button 

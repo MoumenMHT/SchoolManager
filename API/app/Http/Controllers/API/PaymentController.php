@@ -112,7 +112,7 @@ class PaymentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         try {
             $payment = Payment::with('student')->findOrFail($id);

@@ -160,8 +160,9 @@ class ScheduleService {
   /**
    * Get student schedule (through their class)
    */
-  async getStudentSchedule(studentId: number): Promise<any> {
-    const response = await this.api.get(`/parent/students/${studentId}/schedule`);
+  async getStudentSchedule(classId: number, academic_year?: any): Promise<any> {
+    const response = await this.api.get(`/classes/${classId}/schedule`, { academic_year });
+    console.log(`Fetched schedule for class ID ${classId} and academic year ${academic_year}:`, response.data);
     return (response.data as any).data || response.data;
   }
 }

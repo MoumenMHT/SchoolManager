@@ -3,6 +3,9 @@ import { ref, onMounted, computed } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import ParentService, { type Parent, type CreateParentDTO, type UpdateParentDTO } from '@/service/ParentService';
+import StudentService, { type CreateStudentDTO } from '@/service/StudentService';
+import ScheduleService from '@/service/ScheduleService';
+import ClassesService from '@/service/ClassesService';
 
 const toast = useToast();
 const dt = ref();
@@ -28,11 +31,47 @@ const validationErrors = ref({
   password: '',
   confirmPassword: ''
 });
+const parentDetailsDialog = ref(false);
+const selectedParentDetails = ref<any>(null);
+const loadingDetails = ref(false);
+const studentDetailsDialog = ref(false);
+const selectedStudentDetails = ref<any>(null);
+const studentSchedule = ref<any>(null);
+const loadingStudentDetails = ref(false);
+const addChildDialog = ref(false);
+const newChild = ref<any>({});
+const addChildSubmitted = ref(false);
+const availableClasses = ref<any[]>([]);
+
+// Days and hours for schedule grid
+const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const schoolHours = [
+  { hour: 8, label: '08:00 - 09:00' },
+  { hour: 9, label: '09:00 - 10:00' },
+  { hour: 10, label: '10:00 - 11:00' },
+  { hour: 11, label: '11:00 - 12:00' },
+  { hour: 12, label: '12:00 - 13:00' },
+  { hour: 13, label: '13:00 - 14:00' },
+  { hour: 14, label: '14:00 - 15:00' },
+  { hour: 15, label: '15:00 - 16:00' },
+  { hour: 16, label: '16:00 - 17:00' },
+  { hour: 17, label: '17:00 - 18:00' },
+];
 
 // Load parents on mount
 onMounted(async () => {
   await loadParents();
+  await loadClasses();
 });
+
+// Load available classes
+const loadClasses = async () => {
+  try {
+    availableClasses.value = await ClassesService.getClasses();
+  } catch (error: any) {
+    console.error('Failed to load classes:', error);
+  }
+};
 
 // Load all parents
 const loadParents = async () => {
@@ -270,6 +309,148 @@ const validateConfirmPassword = (password: string, confirmPassword: string): str
   return '';
 };
 
+// Show parent details
+const showParentDetails = async (parentData: Parent) => {
+  try {
+    loadingDetails.value = true;
+    parentDetailsDialog.value = true;
+    
+    // Fetch full parent details with children
+    const response = await ParentService.getParent(parentData.id);
+    selectedParentDetails.value = response;
+    selectedParentDetails.value.students?.forEach((student: any) => {
+      student.birth_date = student.birth_date ? new Date(student.birth_date).toLocaleDateString() : null;
+    });
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to load parent details',
+      life: 3000
+    });
+    parentDetailsDialog.value = false;
+  } finally {
+    loadingDetails.value = false;
+  }
+};
+
+// Show student details
+const showStudentDetails = async (student: any) => {
+  try {
+    loadingStudentDetails.value = true;
+    studentDetailsDialog.value = true;
+    
+    // Fetch full student details and schedule
+    const [studentDetails, scheduleData] = await Promise.all([
+      StudentService.getStudent(student.id),
+      ScheduleService.getStudentSchedule(student.class?.id, student.class?.academic_year) // Pass class ID and academic year to get the schedule
+    ]);
+    
+    selectedStudentDetails.value = studentDetails;
+    
+    // Organize schedule data
+    if (Array.isArray(scheduleData)) {
+      const organizedSchedules: { [day: string]: any[] } = {};
+      scheduleData.forEach((schedule: any) => {
+        const dayKey = schedule.day.toLowerCase();
+        if (!organizedSchedules[dayKey]) {
+          organizedSchedules[dayKey] = [];
+        }
+        organizedSchedules[dayKey].push(schedule);
+      });
+      studentSchedule.value = organizedSchedules;
+    } else {
+      studentSchedule.value = scheduleData;
+    }
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to load student details',
+      life: 3000
+    });
+    studentDetailsDialog.value = false;
+  } finally {
+    loadingStudentDetails.value = false;
+  }
+};
+
+// Open add child dialog
+const openAddChildDialog = () => {
+  newChild.value = {
+    parent_id: selectedParentDetails.value.id,
+    is_active: true
+  };
+  addChildSubmitted.value = false;
+  addChildDialog.value = true;
+};
+
+// Save new child
+const saveNewChild = async () => {
+  addChildSubmitted.value = true;
+
+  if (!newChild.value.first_name?.trim() || !newChild.value.last_name?.trim() || !newChild.value.code?.trim()) {
+    return;
+  }
+
+  try {
+    const childData: CreateStudentDTO = {
+      first_name: newChild.value.first_name,
+      last_name: newChild.value.last_name,
+      code: newChild.value.code,
+      birth_date: newChild.value.birth_date,
+      gender: newChild.value.gender,
+      class_id: newChild.value.class_id,
+      parent_id: selectedParentDetails.value.id,
+      enrollment_date: newChild.value.enrollment_date,
+      medical_info: newChild.value.medical_info,
+      is_active: true
+    };
+
+    const created = await StudentService.createStudent(childData);
+    
+    // Refresh parent details to show the new child
+    const updatedParent = await ParentService.getParent(selectedParentDetails.value.id);
+    selectedParentDetails.value = updatedParent;
+    selectedParentDetails.value.students?.forEach((student: any) => {
+      student.birth_date = student.birth_date ? new Date(student.birth_date).toLocaleDateString() : null;
+    });
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Child added successfully',
+      life: 3000
+    });
+
+    addChildDialog.value = false;
+    newChild.value = {};
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to add child',
+      life: 3000
+    });
+  }
+};
+
+// Get schedule for a specific day and hour
+const getScheduleForSlot = (day: string, hour: number): any | null => {
+  const dayKey = day.toLowerCase();
+  const daySchedules = studentSchedule.value?.[dayKey] || [];
+  const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
+  const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
+  
+  const found = daySchedules.find((schedule: any) => {
+    const scheduleStart = schedule.start_time;
+    const scheduleEnd = schedule.end_time;
+    return scheduleStart <= startTime && scheduleEnd > startTime;
+  }) || null;
+  
+  return found;
+};
+
 // Create user account for parent
 const createUserAccount = async () => {
   submitted.value = true;
@@ -388,7 +569,8 @@ const createUserAccount = async () => {
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       :rowsPerPageOptions="[5, 10, 25, 50]"
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} parents"
-      class="p-datatable-sm"
+      class="p-datatable-sm "
+      @row-click="showParentDetails($event.data)"
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -423,11 +605,6 @@ const createUserAccount = async () => {
         </template>
       </Column>
 
-      <Column field="cin" header="CIN" sortable style="min-width: 10rem">
-        <template #body="{ data }">
-          <span class="text-muted-color">{{ data.cin || 'N/A' }}</span>
-        </template>
-      </Column>
 
       <Column field="phone" header="Phone" sortable style="min-width: 12rem">
         <template #body="{ data }">
@@ -439,21 +616,7 @@ const createUserAccount = async () => {
         </template>
       </Column>
 
-      <Column field="email" header="Email" sortable style="min-width: 14rem">
-        <template #body="{ data }">
-          <div v-if="data.email" class="flex items-center gap-2">
-            <i class="pi pi-envelope text-sm text-muted-color"></i>
-            <span>{{ data.email }}</span>
-          </div>
-          <span v-else class="text-muted-color">N/A</span>
-        </template>
-      </Column>
-
-      <Column field="profession" header="Profession" sortable style="min-width: 12rem">
-        <template #body="{ data }">
-          <span>{{ data.profession || 'N/A' }}</span>
-        </template>
-      </Column>
+      
 
       <Column field="has_account" header="Account Status" sortable style="min-width: 12rem">
         <template #body="{ data }">
@@ -473,7 +636,7 @@ const createUserAccount = async () => {
         </template>
       </Column>
 
-      <Column :exportable="false" style="min-width: 13rem">
+      <Column header="Actions" :exportable="false" style="min-width: 13rem">
         <template #body="{ data }">
           <Button 
             v-if="!data.has_account"
@@ -608,6 +771,8 @@ const createUserAccount = async () => {
       </template>
     </Dialog>
 
+    
+
     <!-- Delete Parent Confirmation Dialog -->
     <Dialog 
       v-model:visible="deleteParentDialog" 
@@ -660,6 +825,380 @@ const createUserAccount = async () => {
           icon="pi pi-check" 
           severity="danger"
           @click="deleteSelectedParents" 
+        />
+      </template>
+    </Dialog>
+
+    <!-- Parent Details Dialog -->
+    <Dialog 
+      v-model:visible="parentDetailsDialog" 
+      :style="{ width: '700px' }" 
+      header="Parent Details" 
+      :modal="true"
+    >
+      <div v-if="loadingDetails" class="flex justify-center items-center py-8">
+        <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+      </div>
+      
+      <div v-else-if="selectedParentDetails" class="flex flex-col gap-6">
+        <!-- Parent Information Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-user text-primary"></i>
+            Personal Information
+          </h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-muted-color">Full Name</label>
+              <p class="font-semibold">{{ selectedParentDetails.first_name }} {{ selectedParentDetails.last_name }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">CIN</label>
+              <p class="font-semibold">{{ selectedParentDetails.cin || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Phone</label>
+              <p class="font-semibold">
+                <i class="pi pi-phone text-sm mr-2"></i>
+                {{ selectedParentDetails.phone || 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Email</label>
+              <p class="font-semibold">
+                <i class="pi pi-envelope text-sm mr-2"></i>
+                {{ selectedParentDetails.email || 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Profession</label>
+              <p class="font-semibold">{{ selectedParentDetails.profession || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Account Status</label>
+              <p>
+                <Tag 
+                  :value="getAccountStatusLabel(!!selectedParentDetails.user_id)" 
+                  :severity="getAccountStatusSeverity(!!selectedParentDetails.user_id)" 
+                />
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Children Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold flex items-center gap-2">
+              <i class="pi pi-users text-primary"></i>
+              Children
+              <Badge :value="selectedParentDetails.students?.length || 0" severity="info" />
+            </h3>
+            <Button 
+              icon="pi pi-plus" 
+              label="Add Child"
+              size="small"
+              @click="openAddChildDialog" 
+              v-tooltip.top="'Add New Child'"
+            />
+          </div>
+          
+          <div v-if="selectedParentDetails.students && selectedParentDetails.students.length > 0" class="flex flex-col gap-3">
+            <div 
+              v-for="student in selectedParentDetails.students" 
+              :key="student.id"
+              class="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+              @click="showStudentDetails(student)"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <i class="pi pi-user text-primary"></i>
+                </div>
+                <div>
+                  <p class="font-semibold">{{ student.first_name }} {{ student.last_name }}</p>
+                  <p class="text-sm text-muted-color">{{ student.class.name || 'No class assigned' }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-sm text-muted-color">Date of Birth</p>
+                <p class="font-semibold">{{ student.birth_date || 'N/A' }}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="text-center py-6">
+            <i class="pi pi-users text-4xl text-muted-color mb-2 block"></i>
+            <p class="text-muted-color">No children registered</p>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Close" 
+          icon="pi pi-times" 
+          @click="parentDetailsDialog = false" 
+        />
+      </template>
+    </Dialog>
+
+    <!-- Add Child Dialog -->
+    <Dialog 
+      v-model:visible="addChildDialog" 
+      :style="{ width: '600px' }" 
+      header="Add New Child" 
+      :modal="true"
+      class="p-fluid"
+    >
+      <div class="flex flex-col gap-6">
+        <!-- Name Fields -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="child_first_name" class="block font-semibold mb-2">
+              First Name <span class="text-red-500">*</span>
+            </label>
+            <InputText 
+              id="child_first_name" 
+              v-model="newChild.first_name" 
+              required 
+              autofocus 
+              :invalid="addChildSubmitted && !newChild.first_name" 
+              placeholder="Enter first name"
+            />
+            <small v-if="addChildSubmitted && !newChild.first_name" class="text-red-500">
+              First name is required.
+            </small>
+          </div>
+          
+          <div>
+            <label for="child_last_name" class="block font-semibold mb-2">
+              Last Name <span class="text-red-500">*</span>
+            </label>
+            <InputText 
+              id="child_last_name" 
+              v-model="newChild.last_name" 
+              required 
+              :invalid="addChildSubmitted && !newChild.last_name" 
+              placeholder="Enter last name"
+            />
+            <small v-if="addChildSubmitted && !newChild.last_name" class="text-red-500">
+              Last name is required.
+            </small>
+          </div>
+        </div>
+
+        <!-- Code and Gender -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="child_code" class="block font-semibold mb-2">
+              Student Code <span class="text-red-500">*</span>
+            </label>
+            <InputText 
+              id="child_code" 
+              v-model="newChild.code" 
+              required 
+              :invalid="addChildSubmitted && !newChild.code" 
+              placeholder="Enter student code"
+            />
+            <small v-if="addChildSubmitted && !newChild.code" class="text-red-500">
+              Student code is required.
+            </small>
+          </div>
+          
+          <div>
+            <label for="child_gender" class="block font-semibold mb-2">Gender</label>
+            <Select 
+              id="child_gender" 
+              v-model="newChild.gender" 
+              :options="[{label: 'Male', value: 'male'}, {label: 'Female', value: 'female'}]" 
+              optionLabel="label" 
+              optionValue="value"
+              placeholder="Select gender"
+            />
+          </div>
+        </div>
+
+        <!-- Dates -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="child_birth_date" class="block font-semibold mb-2">Date of Birth</label>
+            <DatePicker 
+              id="child_birth_date" 
+              v-model="newChild.birth_date" 
+              dateFormat="yy-mm-dd"
+              placeholder="Select date of birth"
+            />
+          </div>
+          
+          <div>
+            <label for="child_enrollment_date" class="block font-semibold mb-2">Enrollment Date</label>
+            <DatePicker 
+              id="child_enrollment_date" 
+              v-model="newChild.enrollment_date" 
+              dateFormat="yy-mm-dd"
+              placeholder="Select enrollment date"
+            />
+          </div>
+        </div>
+
+        <!-- Class -->
+        <div>
+          <label for="child_class" class="block font-semibold mb-2">Class</label>
+          <Select 
+            id="child_class" 
+            v-model="newChild.class_id" 
+            :options="availableClasses" 
+            optionLabel="name" 
+            optionValue="id"
+            placeholder="Select class"
+            filter
+            showClear
+          />
+        </div>
+
+        <!-- Medical Info -->
+        <div>
+          <label for="child_medical_info" class="block font-semibold mb-2">Medical Information</label>
+          <Textarea 
+            id="child_medical_info" 
+            v-model="newChild.medical_info" 
+            rows="3"
+            placeholder="Enter any medical information or notes"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Cancel" 
+          icon="pi pi-times" 
+          text 
+          @click="addChildDialog = false" 
+        />
+        <Button 
+          label="Add Child" 
+          icon="pi pi-check" 
+          @click="saveNewChild" 
+        />
+      </template>
+    </Dialog>
+
+    <!-- Student Details Dialog -->
+    <Dialog 
+      v-model:visible="studentDetailsDialog" 
+      :style="{ width: '800px', maxHeight: '90vh' }" 
+      header="Student Details" 
+      :modal="true"
+    >
+      <div v-if="loadingStudentDetails" class="flex justify-center items-center py-8">
+        <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+      </div>
+      
+      <div v-else-if="selectedStudentDetails" class="flex flex-col gap-6">
+        <!-- Student Information Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-user text-primary"></i>
+            Personal Information
+          </h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-muted-color">Full Name</label>
+              <p class="font-semibold">{{ selectedStudentDetails.first_name }} {{ selectedStudentDetails.last_name }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Student Code</label>
+              <p class="font-semibold">{{ selectedStudentDetails.code || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Date of Birth</label>
+              <p class="font-semibold">{{ selectedStudentDetails.birth_date ? new Date(selectedStudentDetails.birth_date).toLocaleDateString() : 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Gender</label>
+              <p class="font-semibold">{{ selectedStudentDetails.gender || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Class</label>
+              <p class="font-semibold">{{ selectedStudentDetails.class?.name || 'No class assigned' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Enrollment Date</label>
+              <p class="font-semibold">{{ selectedStudentDetails.enrollment_date ? new Date(selectedStudentDetails.enrollment_date).toLocaleDateString() : 'N/A' }}</p>
+            </div>
+            <div class="col-span-2">
+              <label class="text-sm text-muted-color">Medical Information</label>
+              <p class="font-semibold">{{ selectedStudentDetails.medical_info || 'N/A' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-calendar text-primary"></i>
+            Weekly Schedule
+          </h3>
+          
+          <div v-if="studentSchedule && Object.keys(studentSchedule).length > 0" class="overflow-x-auto">
+            <table class="schedule-table w-full border-collapse   ">
+              <thead>
+                <tr>
+                  <th class="schedule-header time-column">Time</th>
+                  <th 
+                    v-for="day in weekDays" 
+                    :key="day" 
+                    class="schedule-header"
+                  >
+                    {{ day }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="timeSlot in schoolHours" :key="timeSlot.hour">
+                  <td class="time-column font-semibold text-sm">
+                    {{ timeSlot.label }}
+                  </td>
+                  <td 
+                    v-for="day in weekDays" 
+                    :key="day"
+                    class="schedule-cell"
+                  >
+                    <template v-if="getScheduleForSlot(day, timeSlot.hour)">
+                      <div class="schedule-content has-schedule">
+                        <div class="font-semibold text-sm">
+                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name || getScheduleForSlot(day, timeSlot.hour)?.subject?.name }}
+                        </div>
+                        <div class="text-xs mt-1 text-muted-color">
+                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.first_name }} 
+                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.last_name }}
+                        </div>
+                        <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
+                          <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day, timeSlot.hour)?.room }}
+                        </div>
+                      </div>
+                    </template>
+                    <div v-else class="schedule-content empty-schedule">
+                      <span class="text-muted-color text-xs">-</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div v-else class="text-center py-6">
+            <i class="pi pi-calendar-times text-4xl text-muted-color mb-2 block"></i>
+            <p class="text-muted-color">No schedule available</p>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Close" 
+          icon="pi pi-times" 
+          @click="studentDetailsDialog = false" 
         />
       </template>
     </Dialog>
@@ -769,7 +1308,61 @@ const createUserAccount = async () => {
   font-weight: 600;
 }
 
+:deep(.p-datatable .p-datatable-tbody > tr) {
+  cursor: pointer;
+}
+
 :deep(.p-datatable .p-datatable-tbody > tr:hover) {
   background-color: var(--surface-100);
+}
+
+/* Schedule Table Styles */
+.schedule-table {
+  min-width: 100%;
+  background: var(--surface-card);
+  grid: 100% / auto;
+}
+
+.schedule-header {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid var(--surface-border);
+}
+
+.time-column {
+  background: var(--surface-100);
+  min-width: 100px;
+  text-align: center;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border);
+}
+
+.schedule-cell {
+  border: 1px solid var(--surface-border);
+  padding: 0;
+  min-width: 120px;
+  height: 80px;
+  vertical-align: top;
+}
+
+.schedule-content {
+  padding: 0.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.has-schedule {
+  background: linear-gradient(135deg, var(--primary-100) 0%, var(--primary-50) 100%);
+  border-left: 3px solid var(--primary-color);
+}
+
+.empty-schedule {
+  opacity: 0.3;
 }
 </style>

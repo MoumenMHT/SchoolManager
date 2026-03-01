@@ -30,6 +30,9 @@ const scheduleDialog = ref(false);
 const selectedStudentForSchedule = ref<Student | null>(null);
 const studentSchedules = ref<{ [day: string]: Schedule[] }>({});
 const scheduleLoading = ref(false);
+const studentDetailsDialog = ref(false);
+const selectedStudentDetails = ref<Student | null>(null);
+const loadingDetails = ref(false);
 
 // Days and hours for schedule grid
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -391,6 +394,50 @@ const hideScheduleDialog = () => {
   selectedStudentForSchedule.value = null;
   studentSchedules.value = {};
 };
+
+// Show student details with schedule
+const showStudentDetails = async (studentData: Student) => {
+  try {
+    loadingDetails.value = true;
+    studentDetailsDialog.value = true;
+    
+    // Fetch full student details
+    const studentDetails = await StudentService.getStudent(studentData.id);
+    selectedStudentDetails.value = studentDetails;
+    
+    // Fetch schedule if student has a class
+    if (studentDetails.class_id) {
+      const scheduleData = await ScheduleService.getClassSchedule(studentDetails.class_id, studentDetails.class?.academic_year);
+      
+      // Organize schedule data
+      if (Array.isArray(scheduleData)) {
+        const organizedSchedules: { [day: string]: Schedule[] } = {};
+        scheduleData.forEach((schedule: Schedule) => {
+          const dayKey = schedule.day.toLowerCase();
+          if (!organizedSchedules[dayKey]) {
+            organizedSchedules[dayKey] = [];
+          }
+          organizedSchedules[dayKey].push(schedule);
+        });
+        studentSchedules.value = organizedSchedules;
+      } else {
+        studentSchedules.value = scheduleData;
+      }
+    } else {
+      studentSchedules.value = {};
+    }
+  } catch (error: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to load student details',
+      life: 3000
+    });
+    studentDetailsDialog.value = false;
+  } finally {
+    loadingDetails.value = false;
+  }
+};
 </script>
 
 <template>
@@ -441,6 +488,7 @@ const hideScheduleDialog = () => {
       :rowsPerPageOptions="[5, 10, 25, 50]"
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} students"
       class="p-datatable-sm"
+      @row-click="showStudentDetails($event.data)"
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -481,26 +529,6 @@ const hideScheduleDialog = () => {
         </template>
       </Column>
 
-      <Column field="birth_date" header="Birth Date" sortable style="min-width: 12rem">
-        <template #body="{ data }">
-          <div v-if="data.birth_date" class="flex items-center gap-2">
-            <i class="pi pi-calendar text-sm text-muted-color"></i>
-            <span>{{ new Date(data.birth_date).toLocaleDateString() }}</span>
-          </div>
-          <span v-else class="text-muted-color">N/A</span>
-        </template>
-      </Column>
-
-      <Column field="gender" header="Gender" sortable style="min-width: 8rem">
-        <template #body="{ data }">
-          <Tag 
-            v-if="data.gender"
-            :value="getGenderLabel(data.gender)" 
-            :severity="getGenderSeverity(data.gender)" 
-          />
-          <span v-else class="text-muted-color">N/A</span>
-        </template>
-      </Column>
 
       <Column field="class_name" header="Class" sortable style="min-width: 10rem">
         <template #body="{ data }">
@@ -516,15 +544,7 @@ const hideScheduleDialog = () => {
         </template>
       </Column>
 
-      <Column field="enrollment_date" header="Enrollment Date" sortable style="min-width: 12rem">
-        <template #body="{ data }">
-          <div v-if="data.enrollment_date" class="flex items-center gap-2">
-            <i class="pi pi-calendar text-sm text-muted-color"></i>
-            <span>{{ new Date(data.enrollment_date).toLocaleDateString() }}</span>
-          </div>
-          <span v-else class="text-muted-color">N/A</span>
-        </template>
-      </Column>
+      
 
       <Column field="is_active" header="Status" sortable style="min-width: 8rem">
         <template #body="{ data }">
@@ -760,6 +780,186 @@ const hideScheduleDialog = () => {
       </template>
     </Dialog>
 
+    <!-- Student Details Dialog -->
+    <Dialog 
+      v-model:visible="studentDetailsDialog" 
+      :style="{ width: '900px', maxHeight: '90vh' }" 
+      header="Student Details" 
+      :modal="true"
+    >
+      <div v-if="loadingDetails" class="flex justify-center items-center py-8">
+        <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+      </div>
+      
+      <div v-else-if="selectedStudentDetails" class="flex flex-col gap-6">
+        <!-- Student Information Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-user text-primary"></i>
+            Personal Information
+          </h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-muted-color">Full Name</label>
+              <p class="font-semibold">{{ selectedStudentDetails.first_name }} {{ selectedStudentDetails.last_name }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Student Code</label>
+              <p class="font-semibold">{{ selectedStudentDetails.code || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Date of Birth</label>
+              <p class="font-semibold">{{ selectedStudentDetails.birth_date ? new Date(selectedStudentDetails.birth_date).toLocaleDateString() : 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Gender</label>
+              <p class="font-semibold">{{ selectedStudentDetails.gender || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Class</label>
+              <p class="font-semibold">{{ selectedStudentDetails.class?.name || 'No class assigned' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Parent</label>
+              <p class="font-semibold">
+                {{ selectedStudentDetails.parent ? `${selectedStudentDetails.parent.first_name} ${selectedStudentDetails.parent.last_name}` : 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Enrollment Date</label>
+              <p class="font-semibold">{{ selectedStudentDetails.enrollment_date ? new Date(selectedStudentDetails.enrollment_date).toLocaleDateString() : 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Status</label>
+              <p>
+                <Tag 
+                  :value="getStatusLabel(selectedStudentDetails.is_active)" 
+                  :severity="getStatusSeverity(selectedStudentDetails.is_active)" 
+                />
+              </p>
+            </div>
+            <div class="col-span-2">
+              <label class="text-sm text-muted-color">Medical Information</label>
+              <p class="font-semibold">{{ selectedStudentDetails.medical_info || 'N/A' }}</p>
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Student Parent Information Section -->
+
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-user text-primary"></i>
+            Parent Information
+          </h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-muted-color">Full Name</label>
+              <p class="font-semibold">{{ selectedStudentDetails.parent?.first_name }} {{ selectedStudentDetails.parent?.last_name }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">CIN</label>
+              <p class="font-semibold">{{ selectedStudentDetails.parent?.cin || 'N/A' }}</p>
+            </div>
+            
+            <div>
+              <label class="text-sm text-muted-color">Email</label>
+              <p class="font-semibold">{{ selectedStudentDetails.parent?.email || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Phone</label>
+              <p class="font-semibold">{{ selectedStudentDetails.parent?.phone || 'N/A' }}</p>
+            </div>
+            
+            
+            <div>
+              <label class="text-sm text-muted-color">Account Status</label>
+              <p>
+                <Tag 
+                  :value="getStatusLabel(selectedStudentDetails.is_active)" 
+                  :severity="getStatusSeverity(selectedStudentDetails.is_active)" 
+                />
+              </p>
+            </div>
+            <div class="col-span-2">
+              <label class="text-sm text-muted-color">Medical Information</label>
+              <p class="font-semibold">{{ selectedStudentDetails.medical_info || 'N/A' }}</p>
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Schedule Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-calendar text-primary"></i>
+            Weekly Schedule
+          </h3>
+          
+          <div v-if="studentSchedules && Object.keys(studentSchedules).length > 0" class="overflow-x-auto">
+            <table class="schedule-table w-full border-collapse">
+              <thead>
+                <tr>
+                  <th class="schedule-header time-column">Time</th>
+                  <th 
+                    v-for="day in weekDays" 
+                    :key="day" 
+                    class="schedule-header"
+                  >
+                    {{ day }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="timeSlot in schoolHours" :key="timeSlot.hour">
+                  <td class="time-column font-semibold text-sm">
+                    {{ timeSlot.label }}
+                  </td>
+                  <td 
+                    v-for="day in weekDays" 
+                    :key="day"
+                    class="schedule-cell"
+                  >
+                    <template v-if="getScheduleForSlot(day, timeSlot.hour)">
+                      <div class="schedule-content has-schedule">
+                        <div class="font-semibold text-sm">
+                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name || getScheduleForSlot(day, timeSlot.hour)?.subject?.name }}
+                        </div>
+                        <div class="text-xs mt-1 text-muted-color">
+                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.first_name }} 
+                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.last_name }}
+                        </div>
+                        <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
+                          <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day, timeSlot.hour)?.room }}
+                        </div>
+                      </div>
+                    </template>
+                    <div v-else class="schedule-content empty-schedule">
+                      <span class="text-muted-color text-xs">-</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div v-else class="text-center py-6">
+            <i class="pi pi-calendar-times text-4xl text-muted-color mb-2 block"></i>
+            <p class="text-muted-color">No schedule available</p>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Close" 
+          icon="pi pi-times" 
+          @click="studentDetailsDialog = false" 
+        />
+      </template>
+    </Dialog>
+
     <!-- Delete Student Dialog -->
     <Dialog 
       v-model:visible="deleteStudentDialog" 
@@ -948,6 +1148,10 @@ const hideScheduleDialog = () => {
 .empty-schedule {
   background: transparent;
   color: var(--text-color-secondary);
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr) {
+  cursor: pointer;
 }
 
 :deep(.p-dialog-content) {

@@ -1,6 +1,18 @@
 import apiService from './ApiService';
 import type { ApiResponse } from '@/types';
 
+export interface Student {
+  id: number;
+  first_name: string;
+  last_name: string;
+  date_of_birth?: string;
+  class_name?: string;
+  class?: {
+    id: number;
+    name: string;
+  };
+}
+
 export interface Parent {
   id: number;
   user_id: number | null;
@@ -18,6 +30,7 @@ export interface Parent {
   contact_phone?: string;
   has_account?: boolean;
   students_count?: number;
+  students?: Student[];
 }
 
 export interface CreateParentDTO {
@@ -44,6 +57,7 @@ class ParentService {
    */
   async getParents(): Promise<Parent[]> {
     const response = await apiService.get<Parent[]>('/parents');
+    console.log('Fetched parents:', response.data);
     return response.data || [];
   }
 
@@ -52,6 +66,7 @@ class ParentService {
    */
   async getParent(id: number): Promise<Parent> {
     const response = await apiService.get<Parent>(`/parents/${id}`);
+    console.log(`Fetched parent with ID ${id}:`, response.data);
     return response.data!;
   }
 

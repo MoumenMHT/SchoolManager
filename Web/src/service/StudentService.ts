@@ -63,6 +63,7 @@ class StudentService {
    */
   async getStudent(id: number): Promise<Student> {
     const response = await apiService.get<Student>(`/students/${id}`);
+    console.log('student data', response.data)
     return response.data!;
   }
 

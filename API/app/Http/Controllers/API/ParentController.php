@@ -17,6 +17,7 @@ class ParentController extends Controller
     {
         $parents = ParentModel::withCount('students')->get();
         $parents->load('user:id,email,phone'); // Load email and phone fields from the related user
+
          $parents->each(function ($parent) {
             $parent->email = $parent->user ? $parent->user->email : null; // Add email attribute to parent
             $parent->phone = $parent->user ? $parent->user->phone : null; // Add phone attribute to parent
@@ -84,7 +85,15 @@ class ParentController extends Controller
      */
     public function show(string $id)
     {
-        $parent = ParentModel::find($id);
+        $parent = ParentModel::with(['students.class'])->find($id);
+        $parent->load('user:id,email,phone'); // Load email and phone fields from the related user
+
+        $parent->email = $parent->user ? $parent->user->email : null; // Add email attribute to parent
+        $parent->phone = $parent->user ? $parent->user->phone : null; // Add phone attribute to parent
+        unset($parent->user); // Remove the user relationship to avoid confusion
+        
+
+        
         if (!$parent) {
             return response()->json([
                 'success' => false,

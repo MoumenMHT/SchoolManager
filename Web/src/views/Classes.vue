@@ -848,6 +848,8 @@ const hideScheduleEditDialog = () => {
       :rowsPerPageOptions="[5, 10, 25, 50]"
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} classes"
       class="p-datatable-sm"
+      @row-click="viewClass($event.data)"
+
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -930,13 +932,7 @@ const hideScheduleEditDialog = () => {
         </template>
       </Column>
 
-      <Column field="updated_at" header="Last Updated" sortable style="min-width: 12rem">
-        <template #body="{ data }">
-          <span class="text-sm text-muted-color">
-            {{ new Date(data.updated_at).toLocaleDateString() }}
-          </span>
-        </template>
-      </Column>
+      
 
       <Column :exportable="false" style="min-width: 12rem">
         <template #body="{ data }">
@@ -1881,6 +1877,10 @@ const hideScheduleEditDialog = () => {
 .schedule-container {
   margin: 0 -1.5rem;
   padding: 0 1.5rem;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr) {
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
