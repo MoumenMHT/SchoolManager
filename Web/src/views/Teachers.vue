@@ -11,6 +11,7 @@ const toast = useToast();
 const dt = ref();
 const teachers = ref<Teacher[]>([]);
 const teacherDialog = ref(false);
+const parentDetailsDialog = ref(false);
 const deleteTeacherDialog = ref(false);
 const deleteTeachersDialog = ref(false);
 const teacher = ref<Partial<Teacher>>({});
@@ -35,11 +36,14 @@ const validationErrors = ref({
   role: 'teacher',
   username: ''
 });
+
+const selectedTeacherData = ref<any>(null);
 const manageSubjectsDialog = ref(false);
 const availableSubjects = ref<Subject[]>([]);
 const selectedSubjects = ref<Subject[]>([]);
 const teacherSubjects = ref<Subject[]>([]);
 const subjectsLoading = ref(false);
+const teacherLoading = ref(false);
 // For adding new teacher with subjects
 const newTeacherSubjects = ref<Subject[]>([]);
 
@@ -227,6 +231,34 @@ const editTeacher = async (teacherToEdit: Teacher) => {
   // Load available subjects for editing
   await loadAvailableSubjects();
 };
+
+//Teacher details
+const showTeacherDetails = async(teacherData: Teacher) =>{
+  try{
+    teacherLoading.value = true;
+
+    //get teacher detail with schedule
+    const response = await TeacherService.getTeacher(teacherData.id);
+    console.log('Raw API response:', response);
+
+    
+    
+    selectedTeacherData.value = response; 
+    
+    // Open dialog AFTER data is loaded
+    parentDetailsDialog.value = true;
+  }catch (error: any){
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.message || 'Failed to load teacher data',
+      life: 3000
+    })
+  }finally{
+    teacherLoading.value = false
+  }
+  
+}
 
 // Confirm delete teacher
 const confirmDeleteTeacher = (teacherToDelete: Teacher) => {
@@ -729,6 +761,7 @@ const hideScheduleDialog = () => {
       
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} teachers"
       class="p-datatable-sm"
+      @row-click="showTeacherDetails($event.data)"
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -1368,6 +1401,97 @@ const hideScheduleDialog = () => {
         />
       </template>
     </Dialog>
+
+    <!-- Teacher Details Dialog -->
+    <Dialog 
+      v-model:visible="parentDetailsDialog" 
+      :style="{ width: '700px' }" 
+      header="Teacher Details" 
+      :modal="true"
+    >
+      <div v-if="teacherLoading" class="flex justify-center items-center py-8">
+        <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+      </div>
+      
+      <div v-else-if="selectedTeacherData" class="flex flex-col gap-6">
+        <!-- Parent Information Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-user text-primary"></i>
+            Personal Information
+          </h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-muted-color">Full Name</label>
+              <p class="font-semibold">{{ selectedTeacherData.first_name }} {{ selectedTeacherData.last_name }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">CIN</label>
+              <p class="font-semibold">{{ selectedTeacherData.cin || 'N/A' }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Phone</label>
+              <p class="font-semibold">
+                <i class="pi pi-phone text-sm mr-2"></i>
+                {{ selectedTeacherData.user?.phone || 'N/A' }}
+              </p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Email</label>
+              <p class="font-semibold">
+                <i class="pi pi-envelope text-sm mr-2"></i>
+                {{ selectedTeacherData.user?.email || 'N/A' }}
+              </p>
+            </div>
+            
+            <div>
+              <label class="text-sm text-muted-color">Account Status</label>
+              <p>
+                <Tag 
+                  :value="getAccountStatusLabel(!!selectedTeacherData.user_id)" 
+                  :severity="getAccountStatusSeverity(!!selectedTeacherData.user_id)" 
+                />
+              </p>
+            </div>
+
+            
+          </div>
+          <Divider />
+          <!-- Subjects Section -->
+          <div class="mt-6">
+            <h6 class="text-sm font-semibold text-muted-color mb-3 ">
+              <i class="pi pi-book mr-2"></i>Subjects
+            </h6>
+            <div v-if="Array.isArray(selectedTeacherData.teachable_subjects) && selectedTeacherData.teachable_subjects.length > 0">
+              <div class="grid grid-cols-2 gap-2">
+                <Tag 
+                  v-for="(subject, index) in selectedTeacherData.teachable_subjects" 
+                  :key="subject.id || index"
+                  :value="subject.name"
+                  severity="info"
+                />
+              </div>
+            </div>
+            <p v-else class="text-muted-color">No subjects assigned</p>
+          </div>
+          <Divider />
+
+
+        </div>
+        
+
+
+       
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Close" 
+          icon="pi pi-times" 
+          @click="parentDetailsDialog = false" 
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -1437,5 +1561,8 @@ const hideScheduleDialog = () => {
 
 :deep(.p-datatable .p-datatable-tbody > tr:hover) {
   background-color: var(--surface-100);
+}
+:deep(.p-datatable .p-datatable-tbody > tr) {
+  cursor: pointer;
 }
 </style>

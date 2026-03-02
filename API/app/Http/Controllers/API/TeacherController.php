@@ -92,6 +92,8 @@ class TeacherController extends Controller
     {
         //
         $teacher = Teacher::find($id);
+        $teacher->load('user:id,email,phone'); // Load email and phone fields from the related user
+        $teacher->load('teachableSubjects'); // Load subjects relationship
         if (!$teacher) {
             return response()->json([
                 'success' => false,

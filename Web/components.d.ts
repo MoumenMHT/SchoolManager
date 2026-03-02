@@ -21,6 +21,7 @@ declare module 'vue' {
     FeaturesWidget: typeof import('./src/components/landing/FeaturesWidget.vue')['default']
     FinancialWidget: typeof import('./src/components/dashboard/FinancialWidget.vue')['default']
     FloatingConfigurator: typeof import('./src/components/FloatingConfigurator.vue')['default']
+    Fluid: typeof import('primevue/fluid')['default']
     FooterWidget: typeof import('./src/components/landing/FooterWidget.vue')['default']
     HeroWidget: typeof import('./src/components/landing/HeroWidget.vue')['default']
     HighlightsWidget: typeof import('./src/components/landing/HighlightsWidget.vue')['default']

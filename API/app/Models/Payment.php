@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Carbon\Carbon;
 
 class Payment extends Model
 {
@@ -52,6 +53,6 @@ class Payment extends Model
     // Helper methods
     public function isLate()
     {
-        return $this->status === 'pending' && $this->due_date->isPast();
+        return $this->status === 'pending' && Carbon::parse($this->due_date)->isPast();
     }
 }
