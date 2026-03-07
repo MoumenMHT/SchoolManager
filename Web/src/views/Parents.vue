@@ -1294,7 +1294,7 @@ const createUserAccount = async () => {
           label="Create Account" 
           icon="pi pi-check" 
           severity="success"
-          click="createUserAccount" 
+          @click="createUserAccount" 
         />
       </template>
     </Dialog>

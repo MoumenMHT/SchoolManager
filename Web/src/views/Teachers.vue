@@ -482,6 +482,9 @@ const createUserAccount = async () => {
         life: 3000
       });
     }
+  }finally {
+    submitted.value = false;
+    await loadTeachers();
   }
 };
 

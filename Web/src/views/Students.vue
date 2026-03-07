@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
-import StudentService, { type Student, type CreateStudentDTO, type UpdateStudentDTO } from '@/service/StudentService';
+import StudentService, { type Student, type CreateStudentDTO, type UpdateStudentDTO, type StudentHistory } from '@/service/StudentService';
 import ParentService, { type Parent } from '@/service/ParentService';
 import ClassesService, { type SchoolClass } from '@/service/ClassesService';
 import ScheduleService, { type Schedule } from '@/service/ScheduleService';
@@ -33,6 +33,9 @@ const scheduleLoading = ref(false);
 const studentDetailsDialog = ref(false);
 const selectedStudentDetails = ref<Student | null>(null);
 const loadingDetails = ref(false);
+
+// History dialog states
+const studentHistory = ref<StudentHistory[]>([]);
 
 // Days and hours for schedule grid
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -400,15 +403,20 @@ const showStudentDetails = async (studentData: Student) => {
   try {
     loadingDetails.value = true;
     studentDetailsDialog.value = true;
-    
-    // Fetch full student details
-    const studentDetails = await StudentService.getStudent(studentData.id);
+    studentHistory.value = [];
+
+    // Fetch full student details and history in parallel
+    const [studentDetails, history] = await Promise.all([
+      StudentService.getStudent(studentData.id),
+      StudentService.getStudentHistory(studentData.id)
+    ]);
     selectedStudentDetails.value = studentDetails;
-    
+    studentHistory.value = history;
+
     // Fetch schedule if student has a class
     if (studentDetails.class_id) {
       const scheduleData = await ScheduleService.getClassSchedule(studentDetails.class_id, studentDetails.class?.academic_year);
-      
+
       // Organize schedule data
       if (Array.isArray(scheduleData)) {
         const organizedSchedules: { [day: string]: Schedule[] } = {};
@@ -709,6 +717,7 @@ const showStudentDetails = async (studentData: Student) => {
               optionValue="id"
               placeholder="Select parent"
               filter
+              :filterFields="['first_name', 'last_name']"
               showClear
             >
               <template #option="{ option }">
@@ -882,10 +891,7 @@ const showStudentDetails = async (studentData: Student) => {
                 />
               </p>
             </div>
-            <div class="col-span-2">
-              <label class="text-sm text-muted-color">Medical Information</label>
-              <p class="font-semibold">{{ selectedStudentDetails.medical_info || 'N/A' }}</p>
-            </div>
+           
           </div>
           
         </div>
@@ -949,6 +955,50 @@ const showStudentDetails = async (studentData: Student) => {
             <p class="text-muted-color">No schedule available</p>
           </div>
         </div>
+
+        <!-- Class History Section -->
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-history text-primary"></i>
+            Class History
+          </h3>
+
+          <div v-if="studentHistory.length > 0">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-surface-200 dark:border-surface-700">
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Academic Year</th>
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Class</th>
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Level</th>
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Enrolled</th>
+                  <th class="text-left py-2 font-semibold text-muted-color">Left</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="record in studentHistory"
+                  :key="record.id"
+                  class="border-b border-surface-100 dark:border-surface-800"
+                >
+                  <td class="py-2 pr-4 font-semibold">{{ record.academic_year }}</td>
+                  <td class="py-2 pr-4">{{ record.school_class?.name || 'N/A' }}</td>
+                  <td class="py-2 pr-4">{{ record.school_class?.level || 'N/A' }}</td>
+                  <td class="py-2 pr-4">{{ new Date(record.enrolled_at).toLocaleDateString() }}</td>
+                  <td class="py-2">
+                    <Tag v-if="!record.left_at" value="Current" severity="success" />
+                    <span v-else>{{ new Date(record.left_at).toLocaleDateString() }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-else class="text-center py-6">
+            <i class="pi pi-inbox text-4xl text-muted-color mb-2 block"></i>
+            <p class="text-muted-color">No class history available</p>
+          </div>
+        </div>
+
       </div>
 
       <template #footer>

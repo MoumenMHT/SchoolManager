@@ -55,6 +55,11 @@ class Student extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function history(): HasMany
+    {
+        return $this->hasMany(StudentHistory::class);
+    }
+
     // Helper methods
     public function getFullNameAttribute()
     {

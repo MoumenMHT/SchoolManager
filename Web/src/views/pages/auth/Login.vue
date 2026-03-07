@@ -86,9 +86,10 @@ const handleLogin = async () => {
         localStorage.removeItem('remember_me');
       }
       
-      // Redirect to dashboard
+      // Redirect based on role
       setTimeout(() => {
-        router.push('/');
+        const role = response.user?.role;
+        router.push(role === 'teacher' ? '/teacher/portal' : '/');
       }, 500);
     }
   } catch (error: any) {

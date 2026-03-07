@@ -40,6 +40,21 @@ const router = createRouter({
                     component: () => import('@/views/Students.vue')
                 },
                 {
+                    path: '/teacher/portal',
+                    name: 'teacher-portal',
+                    component: () => import('@/views/TeacherPortal.vue')
+                },
+                {
+                    path: '/teacher/classes/:classId',
+                    name: 'teacher-class',
+                    component: () => import('@/views/TeacherClassDetail.vue')
+                },
+                {
+                    path: '/attendance',
+                    name: 'attendance',
+                    component: () => import('@/views/AdminAttendance.vue')
+                },
+                {
                     path: '/uikit/input',
                     name: 'input',
                     component: () => import('@/views/uikit/InputDoc.vue')
@@ -168,16 +183,24 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
     const isAuthenticated = apiService.isAuthenticated();
     const isAuthRoute = to.path.startsWith('/auth/');
+    const userRole = apiService.getUser()?.role ?? null;
 
-    // If trying to access auth page while logged in, redirect to dashboard
+    // If trying to access auth page while logged in, redirect to role home
     if (isAuthRoute && isAuthenticated) {
-        next('/');
+        next(userRole === 'teacher' ? '/teacher/portal' : '/');
         return;
     }
 
     // If trying to access protected route while not logged in, redirect to login
     if (!isAuthRoute && !isAuthenticated && to.path !== '/landing') {
         next('/auth/login');
+        return;
+    }
+
+    // If teacher tries to access admin-only pages, redirect to their portal
+    const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/attendance'];
+    if (isAuthenticated && userRole === 'teacher' && adminOnlyPaths.includes(to.path)) {
+        next('/teacher/portal');
         return;
     }
 

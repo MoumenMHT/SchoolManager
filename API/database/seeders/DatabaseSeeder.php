@@ -5,6 +5,19 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\Parent as ParentModel;
+use App\Models\Student;
+use App\Models\Teacher;
+use App\Models\Subject;
+use App\Models\ClassModel;
+use App\Models\Fee;
+use App\Models\Contract;
+use App\Models\Bill;
+use App\Models\Payment;
+use App\Models\PaymentAllocation;
+use App\Models\ParentFee;
+use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
@@ -202,35 +215,42 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Creating schedules...');
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         $rooms = ['Room 101', 'Room 102', 'Room 103', 'Room 201', 'Room 202', 'Room 203', 'Lab 1', 'Lab 2'];
-        
+        $schedulesByAssignment = [];
+
         foreach ($assignments as $assignment) {
             // Create 2 schedule slots per assignment
             for ($i = 0; $i < 2; $i++) {
                 $startHour = rand(8, 14);
-                \App\Models\Schedule::create([
+                $schedule = \App\Models\Schedule::create([
                     'class_subject_teacher_id' => $assignment->id,
                     'day' => $days[array_rand($days)],
                     'start_time' => sprintf('%02d:00', $startHour),
-                    'end_time' => sprintf('%02d:00', $startHour + 2),
+                    'end_time' => sprintf('%02d:00', $startHour + 1),
                     'room' => $rooms[array_rand($rooms)],
                 ]);
+                $schedulesByAssignment[$assignment->id][] = $schedule;
             }
         }
 
-        // Create attendance records (300 records)
+        // Create attendance records (300 records) — linked to schedule slots
         $this->command->info('Creating 300 attendance records...');
         foreach ($students as $student) {
             for ($i = 0; $i < 2; $i++) {
                 $classAssignment = $assignments[array_rand($assignments)];
-                
+                $slots = $schedulesByAssignment[$classAssignment->id] ?? [];
+                $slot  = !empty($slots) ? $slots[array_rand($slots)] : null;
+
                 \App\Models\Attendance::create([
-                    'student_id' => $student->id,
-                    'subject_id' => $classAssignment->subject_id,
-                    'teacher_id' => $classAssignment->teacher_id,
-                    'date' => fake()->dateTimeBetween('-3 months', 'now')->format('Y-m-d'),
-                    'status' => fake()->randomElement(['present', 'absent', 'late', 'excused']),
-                    'time' => fake()->time('H:i'),
-                    'reason' => fake()->optional(0.3)->sentence(),
+                    'student_id'  => $student->id,
+                    'subject_id'  => $classAssignment->subject_id,
+                    'teacher_id'  => $classAssignment->teacher_id,
+                    'schedule_id' => $slot?->id,
+                    'date'        => $slot
+                        ? $this->recentDateForDay($slot->day)
+                        : fake()->dateTimeBetween('-3 months', 'now')->format('Y-m-d'),
+                    'status'      => fake()->randomElement(['present', 'present', 'present', 'absent', 'late', 'excused']),
+                    'time'        => $slot ? $slot->start_time->format('H:i') : fake()->time('H:i'),
+                    'reason'      => fake()->optional(0.2)->sentence(),
                 ]);
             }
         }
@@ -258,51 +278,354 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        // Create payments (100 payment records)
-        $this->command->info('Creating 100 payment records...');
-        $paymentTypes = ['Tuition Fee', 'Registration Fee', 'Books', 'Activities', 'Transport', 'Cafeteria'];
-        $months = ['September', 'October', 'November', 'December', 'January', 'February', 'March', 'April', 'May', 'June'];
-        
-        foreach ($students as $student) {
-            if (rand(1, 2) == 1) {
-                $dueDate = fake()->dateTimeBetween('-6 months', '+1 month');
-                $status = fake()->randomElement(['paid', 'pending', 'late']);
-                $paidDate = null;
-                
-                if ($status === 'paid' && $dueDate < new \DateTime()) {
-                    $paidDate = fake()->dateTimeBetween($dueDate, 'now')->format('Y-m-d');
-                }
-                
-                \App\Models\Payment::create([
-                    'student_id' => $student->id,
-                    'amount' => fake()->randomFloat(2, 500, 5000),
-                    'due_date' => $dueDate->format('Y-m-d'),
-                    'paid_date' => $paidDate,
-                    'status' => $status,
-                    'payment_type' => $paymentTypes[array_rand($paymentTypes)],
-                    'academic_year' => '2025-2026',
-                    'month' => $months[array_rand($months)],
-                    'notes' => fake()->optional(0.3)->sentence(),
-                ]);
-            }
+
+
+        // ============================================================
+        // PAYMENT SYSTEM SEED DATA  –  Academic Year 2025-2026
+        // ============================================================
+        $this->command->info('Setting up payment system...');
+
+        // ── Phase 1: Fees ─────────────────────────────────────────
+        // Current year (active)
+        $feeTuition  = Fee::create(['name' => 'Tuition Fee',    'description' => 'Monthly academic tuition',          'base_amount' => 3500.00, 'academic_year' => '2025-2026', 'is_active' => true]);
+        $feeTransport = Fee::create(['name' => 'Transportation', 'description' => 'School bus transportation service', 'base_amount' => 800.00,  'academic_year' => '2025-2026', 'is_active' => true]);
+        $feeLunch    = Fee::create(['name' => 'Lunch Program',   'description' => 'Daily cafeteria meals program',     'base_amount' => 600.00,  'academic_year' => '2025-2026', 'is_active' => true]);
+        $feeActivity = Fee::create(['name' => 'Activity Fee',   'description' => 'Sports and extracurricular',        'base_amount' => 400.00,  'academic_year' => '2025-2026', 'is_active' => true]);
+        $feeLibrary  = Fee::create(['name' => 'Library Fee',    'description' => 'Library access and materials',      'base_amount' => 250.00,  'academic_year' => '2025-2026', 'is_active' => true]);
+
+        // Previous year (archived / inactive)
+        foreach ([
+            ['Tuition Fee',    3200.00],
+            ['Transportation', 700.00],
+            ['Lunch Program',  550.00],
+            ['Activity Fee',   350.00],
+            ['Library Fee',    200.00],
+        ] as [$fname, $famount]) {
+            Fee::create(['name' => $fname, 'description' => $fname, 'base_amount' => $famount, 'academic_year' => '2024-2025', 'is_active' => false]);
         }
 
+        // ── Phase 2: Academic-year helpers ────────────────────────
+        $academicYear  = '2025-2026';
+        $contractStart = Carbon::parse('2025-09-01');
+        $contractEnd   = Carbon::parse('2026-06-30');
+        $totalMonths   = 10;
+
+        // Build the 10 billing months: [Sep 2025 … Jun 2026]
+        $billMonths = [];
+        for ($m = 0; $m < $totalMonths; $m++) {
+            $billMonths[] = $contractStart->copy()->addMonths($m)->startOfMonth();
+        }
+
+        // ── Phase 3: Seed-contract helper closure ─────────────────
+        // WithoutModelEvents disables the Contract boot() auto-generator,
+        // so we generate contract_number explicitly via a shared counter.
+        $contractSeq = 0;
+
+        /**
+         * Creates one contract + 10 bills + payment transactions + allocations.
+         *
+         * @param $parent          Eloquent Parent model
+         * @param array  $fees     Array of Fee models included in this contract
+         * @param float  $discPct  Discount percentage (0 = none)
+         * @param ?string $discReason
+         * @param int    $paidFull  How many monthly bills are fully paid (0-10)
+         * @param ?array $partial   null  OR  [absoluteMonthIndex, fraction]
+         *                          e.g. [2, 0.5] = month index 2 is 50 % paid
+         * @param bool   $advanceFull  true = one single advance payment covers all 10 months
+         * @param float  $overpay  Extra DZD added on top of the last payment (stored in balance)
+         * @param string $notes
+         * @param string $method   Payment type string
+         */
+        $seedContract = function (
+            $parent,
+            array $fees,
+            float $discPct,
+            ?string $discReason,
+            int   $paidFull,
+            ?array $partial,
+            bool  $advanceFull,
+            float $overpay,
+            string $notes,
+            string $method
+        ) use ($billMonths, $academicYear, $contractStart, $contractEnd, $totalMonths, &$contractSeq) {
+
+            $grossMonthly = (float) array_sum(array_map(fn($f) => (float) $f->base_amount, $fees));
+            $grossTotal   = $grossMonthly * $totalMonths;
+            $discAmt      = round($grossTotal * $discPct / 100, 2);
+            $netTotal     = $grossTotal - $discAmt;
+            $netMonthly   = round($netTotal / $totalMonths, 2);
+
+            // Calculate paid_amount and balance
+            $paidFromBills = $advanceFull
+                ? $netTotal
+                : $netMonthly * $paidFull + ($partial ? round($netMonthly * $partial[1], 2) : 0);
+            $paidAmount = $paidFromBills + $overpay;
+
+            $contract = Contract::create([
+                'parent_id'        => $parent->id,
+                'contract_number'  => 'CNT-2025-' . str_pad(++$contractSeq, 6, '0', STR_PAD_LEFT),
+                'academic_year'    => $academicYear,
+                'total_fees'       => $grossTotal,
+                'discount_type'    => $discPct > 0 ? 'percentage' : null,
+                'discount_value'   => $discAmt,
+                'discount_reason'  => $discReason,
+                'monthly_amount'   => $netMonthly,
+                'paid_amount'      => $paidAmount,
+                'remaining_amount' => max(0, $netTotal - $paidFromBills),
+                'balance'          => $overpay,
+                'start_date'       => $contractStart,
+                'end_date'         => $contractEnd,
+                'status'           => 'active',
+                'notes'            => $notes,
+            ]);
+
+            // Parent ↔ Fee link
+            foreach ($fees as $fee) {
+                ParentFee::create(['parent_id' => $parent->id, 'fee_id' => $fee->id]);
+            }
+
+            // Bills
+            $bills = [];
+            $now = Carbon::now();
+            foreach ($billMonths as $i => $month) {
+                $dueDate   = $month->copy()->endOfMonth();
+                $isPastDue = $dueDate->lt($now);
+
+                if ($advanceFull || $i < $paidFull) {
+                    $amtPaid = $netMonthly;
+                    $status  = 'paid';
+                } elseif ($partial && $i === $partial[0]) {
+                    $amtPaid = round($netMonthly * $partial[1], 2);
+                    $status  = 'partial';
+                } else {
+                    $amtPaid = 0;
+                    $status  = $isPastDue ? 'late' : 'unpaid';
+                }
+
+                $bills[] = Bill::create([
+                    'contract_id' => $contract->id,
+                    'month_year'  => $month->format('F Y'),
+                    'amount_due'  => $netMonthly,
+                    'amount_paid' => $amtPaid,
+                    'balance'     => $netMonthly - $amtPaid,
+                    'status'      => $status,
+                    'due_date'    => $dueDate,
+                ]);
+            }
+
+            // Payments & allocations
+            $allocate = function ($paymentId, $bill, $amount) {
+                PaymentAllocation::create([
+                    'payment_id' => $paymentId,
+                    'bill_id'    => $bill->id,
+                    'amount'     => $amount,
+                ]);
+            };
+
+            if ($advanceFull) {
+                // One lump-sum advance at the start of the year
+                $p = Payment::create([
+                    'contract_id'  => $contract->id,
+                    'amount'       => $netTotal,
+                    'payment_type' => $method,
+                    'paid_date'    => $billMonths[0]->copy()->setDay(3),
+                    'status'       => 'completed',
+                    'note'         => 'Full advance payment – entire academic year',
+                ]);
+                foreach ($bills as $bill) {
+                    $allocate($p->id, $bill, $netMonthly);
+                }
+
+            } elseif ($paidFull > 3) {
+                // Advance for first 3 months, then individual monthly payments
+                $p1 = Payment::create([
+                    'contract_id'  => $contract->id,
+                    'amount'       => $netMonthly * 3,
+                    'payment_type' => $method,
+                    'paid_date'    => $billMonths[0]->copy()->setDay(5),
+                    'status'       => 'completed',
+                    'note'         => 'Advance payment – 3 months (Sep–Nov)',
+                ]);
+                for ($i = 0; $i < 3; $i++) {
+                    $allocate($p1->id, $bills[$i], $netMonthly);
+                }
+                for ($i = 3; $i < $paidFull; $i++) {
+                    $isLast    = ($i === $paidFull - 1);
+                    $extraAmt  = $isLast ? $overpay : 0;
+                    $p = Payment::create([
+                        'contract_id'  => $contract->id,
+                        'amount'       => $netMonthly + $extraAmt,
+                        'payment_type' => $method,
+                        'paid_date'    => $billMonths[$i]->copy()->setDay(5),
+                        'status'       => 'completed',
+                        'note'         => 'Monthly payment – ' . $billMonths[$i]->format('F Y')
+                            . ($extraAmt > 0 ? ' (includes credit)' : ''),
+                    ]);
+                    $allocate($p->id, $bills[$i], $netMonthly);
+                }
+
+            } elseif ($paidFull > 0) {
+                // One payment covers all fully-paid months
+                $p = Payment::create([
+                    'contract_id'  => $contract->id,
+                    'amount'       => $netMonthly * $paidFull + $overpay,
+                    'payment_type' => $method,
+                    'paid_date'    => $billMonths[0]->copy()->setDay(5),
+                    'status'       => 'completed',
+                    'note'         => $paidFull === 1
+                        ? 'First month payment – ' . $billMonths[0]->format('F Y')
+                        : 'Payment for ' . $paidFull . ' months',
+                ]);
+                for ($i = 0; $i < $paidFull; $i++) {
+                    $allocate($p->id, $bills[$i], $netMonthly);
+                }
+            }
+
+            // Partial month payment (separate transaction)
+            if ($partial) {
+                $pi   = $partial[0];      // absolute month index
+                $frac = $partial[1];
+                $partAmt = round($netMonthly * $frac, 2);
+                $pp = Payment::create([
+                    'contract_id'  => $contract->id,
+                    'amount'       => $partAmt,
+                    'payment_type' => $method,
+                    'paid_date'    => $billMonths[$pi]->copy()->setDay(8),
+                    'status'       => 'completed',
+                    'note'         => 'Partial payment – ' . $billMonths[$pi]->format('F Y'),
+                ]);
+                $allocate($pp->id, $bills[$pi], $partAmt);
+            }
+
+            return $contract;
+        };
+
+        // ── Phase 4: 20 Contracts ─────────────────────────────────
+        $this->command->info('Creating 20 contracts with payment history...');
+
+        /**
+         * Scenario columns:
+         * [parentIdx, fees[], discPct, discReason, paidFull, partial, advanceFull, overpay, notes, method]
+         *
+         * today = 2026-03-06
+         * Past-due months: Sep–Feb (indices 0–5), future: Mar–Jun (indices 6–9)
+         *
+         * Groups:
+         *  G1 (idx 0-4)   Fully up-to-date  – paid Sep … Feb (6 months)
+         *  G2 (idx 5-8)   Slightly behind   – paid Sep … Jan (5), Feb late
+         *  G3 (idx 9-12)  Significantly behind – paid Sep–Oct (2), Nov–Feb late
+         *  G4 (idx 13-15) Minimal payers    – paid Sep only (1), Oct–Feb late
+         *  G5 (idx 16-17) Advance all-year  – paid all 10 months upfront
+         *  G6 (idx 18)    Partial payment   – Sep–Oct full, Nov half, Dec–Feb late
+         *  G7 (idx 19)    Overpayment       – paid Sep–Feb + 600 DZD credit
+         */
+        $scenarios = [
+            // ── G1: Up-to-date ──────────────────────────────────────────────────────────────────────────────────────────────── paidFull  partial  adv    overpay
+            [0,  [$feeTuition, $feeTransport, $feeLunch],                           0,    null,                            6, null,     false, 0.0,   'Contract: tuition + transport + lunch – paid up to date',     'bank_transfer'],
+            [1,  [$feeTuition, $feeTransport, $feeLunch],                          10,    'Sibling discount – 2 enrolled', 6, null,     false, 0.0,   '10 % sibling discount – 2 children',                          'cash'],
+            [2,  [$feeTuition, $feeTransport],                                      0,    null,                            6, null,     false, 0.0,   'Tuition + transport – monthly bank transfer',                  'cheque'],
+            [3,  [$feeTuition, $feeLunch],                                          0,    null,                            6, null,     false, 0.0,   'Tuition + lunch program – up to date',                         'bank_transfer'],
+            [4,  [$feeTuition, $feeTransport, $feeLunch, $feeActivity],             0,    null,                            6, null,     false, 0.0,   'Full service contract – 4 fees, up to date',                   'online'],
+
+            // ── G2: Slightly behind (missing Feb) ───────────────────────────────────────────────────────────────────────────
+            [5,  [$feeTuition, $feeTransport, $feeLunch],                           0,    null,                            5, null,     false, 0.0,   'Behind 1 month – February overdue',                            'cash'],
+            [6,  [$feeTuition, $feeTransport],                                      0,    null,                            5, null,     false, 0.0,   'Tuition + transport – missing February',                        'bank_transfer'],
+            [7,  [$feeTuition, $feeLunch],                                          0,    null,                            5, null,     false, 0.0,   'Tuition + lunch – missing February',                           'cash'],
+            [8,  [$feeTuition, $feeActivity],                                       0,    null,                            5, null,     false, 0.0,   'Tuition + activity – missing February',                        'cheque'],
+
+            // ── G3: Significantly behind (Nov–Feb overdue) ──────────────────────────────────────────────────────────────────
+            [9,  [$feeTuition, $feeTransport, $feeLunch],                           5,    'Financial hardship assistance', 2, null,     false, 0.0,   '5 % hardship discount – 4 months overdue',                     'cash'],
+            [10, [$feeTuition, $feeTransport],                                      0,    null,                            2, null,     false, 0.0,   'Tuition + transport – 4 months overdue',                       'cash'],
+            [11, [$feeTuition],                                                     0,    null,                            2, null,     false, 0.0,   'Tuition only – 4 months overdue',                              'cash'],
+            [12, [$feeTuition, $feeLunch],                                          0,    null,                            2, null,     false, 0.0,   'Tuition + lunch – 4 months overdue',                           'cash'],
+
+            // ── G4: Minimal payers (Oct–Feb overdue) ────────────────────────────────────────────────────────────────────────
+            [13, [$feeTuition, $feeTransport, $feeLunch],                           0,    null,                            1, null,     false, 0.0,   'Only first month paid – 5 months overdue',                     'cash'],
+            [14, [$feeTuition],                                                     0,    null,                            1, null,     false, 0.0,   'Tuition only – 5 months overdue',                              'cash'],
+            [15, [$feeTuition, $feeTransport],                                      0,    null,                            1, null,     false, 0.0,   'Tuition + transport – 5 months overdue',                       'bank_transfer'],
+
+            // ── G5: Advance full payment ─────────────────────────────────────────────────────────────────────────────────────
+            [16, [$feeTuition, $feeTransport, $feeLunch, $feeActivity, $feeLibrary], 0,   null,                           10, null,     true,  0.0,   'Full advance – all 5 services paid for the year',              'bank_transfer'],
+            [17, [$feeTuition, $feeTransport, $feeLunch],                            0,   null,                           10, null,     true,  0.0,   'Full advance – 3 services paid for the year',                  'cheque'],
+
+            // ── G6: Partial payment ──────────────────────────────────────────────────────────────────────────────────────────
+            // paidFull=2 (Sep+Oct), then partial on month index 2 (Nov, 50%)
+            [18, [$feeTuition, $feeTransport, $feeLunch],                           15,   'Financial assistance grant',   2, [2, 0.5], false, 0.0,   '15 % discount – partial payment on November',                  'cash'],
+
+            // ── G7: Overpayment (600 DZD credit balance) ────────────────────────────────────────────────────────────────────
+            [19, [$feeTuition, $feeTransport, $feeLunch],                           10,   'Sibling discount',             6, null,     false, 600.0, '10 % sibling discount – overpaid by 600 DZD',                  'bank_transfer'],
+        ];
+
+        $contractCount = 0;
+        foreach ($scenarios as $s) {
+            [
+                $pIdx, $fees, $discPct, $discReason, $paidFull,
+                $partial, $advanceFull, $overpay, $notes, $method
+            ] = $s;
+
+            $seedContract(
+                $parents[$pIdx], $fees, $discPct, $discReason,
+                $paidFull, $partial, $advanceFull, $overpay, $notes, $method
+            );
+            $contractCount++;
+        }
+
+        // ── Summary ───────────────────────────────────────────────
+        $totalContracts = Contract::count();
+        $totalPayments  = Payment::count();
+        $totalBills     = Bill::count();
+
+        $this->command->info('');
         $this->command->info('✅ Database seeded successfully!');
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('📊 Summary:');
         $this->command->info('   • 1 Admin user');
         $this->command->info('   • 20 Teachers');
-        $this->command->info('   • 50 Parents (25 with accounts)');
-        $this->command->info('   • 150 Students');
-        $this->command->info('   • 10 Subjects');
-        $this->command->info('   • 8 Classes');
-        $this->command->info('   • 300+ Attendance records');
-        $this->command->info('   • 450+ Grade records');
-        $this->command->info('   • 100+ Payment records');
+        $this->command->info('   • 50 Parents (25 with portal accounts)');
+        $this->command->info('   • 150 Students across 8 classes');
+        $this->command->info('   • 10 Subjects with coefficients');
+        $this->command->info('   • 300 Attendance records');
+        $this->command->info('   • 450 Grade records');
+        $this->command->info('   • 5 Fees (2025-2026) + 5 archived (2024-2025)');
+        $this->command->info('   • ' . $totalContracts . ' Contracts  (' . $contractCount . ' created this run)');
+        $this->command->info('   • ' . $totalBills     . ' Bills');
+        $this->command->info('   • ' . $totalPayments  . ' Payment transactions');
+        $this->command->info('');
+        $this->command->info('📋 Contract scenarios seeded:');
+        $this->command->info('   G1 (5 contracts) – Fully up-to-date, Sep–Feb paid');
+        $this->command->info('   G2 (4 contracts) – Slightly behind, Feb overdue');
+        $this->command->info('   G3 (4 contracts) – 4 months overdue (Nov–Feb)');
+        $this->command->info('   G4 (3 contracts) – 5 months overdue (Oct–Feb)');
+        $this->command->info('   G5 (2 contracts) – Advance payment, all 10 months');
+        $this->command->info('   G6 (1 contract)  – Partial payment on November');
+        $this->command->info('   G7 (1 contract)  – Overpayment, 600 DZD credit');
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('🔐 Login credentials:');
-        $this->command->info('   Admin: admin@schoolmanager.com / password123');
-        $this->command->info('   Teachers: teacher1-20@schoolmanager.com / password123');
-        $this->command->info('   Parents: parent1-25@schoolmanager.com / password123');
+        $this->command->info('   Admin:    admin@schoolmanager.com / password123');
+        $this->command->info('   Teachers: teacher1-20@schoolmanager.com  / password123');
+        $this->command->info('   Parents:  parent1-25@schoolmanager.com   / password123');
+    }
+
+    /**
+     * Return a recent date (within the last 4 weeks) that falls on the given day name.
+     */
+    private function recentDateForDay(string $day): string
+    {
+        $dayMap = [
+            'Monday'    => 1,
+            'Tuesday'   => 2,
+            'Wednesday' => 3,
+            'Thursday'  => 4,
+            'Friday'    => 5,
+            'Saturday'  => 6,
+        ];
+
+        $targetDow  = $dayMap[$day] ?? 1;
+        $weeksBack  = rand(1, 4);
+        $base       = Carbon::now()->subWeeks($weeksBack);
+        $currentDow = $base->dayOfWeek === 0 ? 7 : $base->dayOfWeek; // 1=Mon … 7=Sun
+        $diff       = $targetDow - $currentDow;
+
+        return $base->addDays($diff)->format('Y-m-d');
     }
 }

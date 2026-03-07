@@ -1,34 +1,45 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import StatsWidget from '@/components/dashboard/StatsWidget.vue';
-import RecentPaymentsWidget from '@/components/dashboard/RecentPaymentsWidget.vue';
 import StudentsByClassWidget from '@/components/dashboard/StudentsByClassWidget.vue';
-import FinancialWidget from '@/components/dashboard/FinancialWidget.vue';
 import AttendanceWidget from '@/components/dashboard/AttendanceWidget.vue';
+import PaymentStatsWidget from '@/components/dashboard/PaymentStatsWidget.vue';
+import PaymentByTypeWidget from '@/components/dashboard/PaymentByTypeWidget.vue';
+import ContractPaymentWidget from '@/components/dashboard/ContractPaymentWidget.vue';
+import MonthlyRevenueWidget from '@/components/dashboard/MonthlyRevenueWidget.vue';
+import BillStatusWidget from '@/components/dashboard/BillStatusWidget.vue';
+import OverdueBillsWidget from '@/components/dashboard/OverdueBillsWidget.vue';
+import TopDebtorsWidget from '@/components/dashboard/TopDebtorsWidget.vue';
+import UpcomingDuesWidget from '@/components/dashboard/UpcomingDuesWidget.vue';
+import PaymentHistoryWidget from '@/components/dashboard/PaymentHistoryWidget.vue';
 import dashboardService from '@/service/DashboardService';
-import type { DashboardStats } from '@/types';
+import type { DashboardStats, FinancialReport, BillRecord, PaymentRecord } from '@/types';
 
-const dashboardStats = ref<DashboardStats | null>(null);
-const loading = ref(true);
-const error = ref<string | null>(null);
+const dashboardStats   = ref<DashboardStats | null>(null);
+const financialReport  = ref<FinancialReport | null>(null);
+const allBills         = ref<BillRecord[]>([]);
+const allPayments      = ref<PaymentRecord[]>([]);
+
+const loading         = ref(true);
+const paymentLoading  = ref(true);
+const billsLoading    = ref(true);
+
+const error           = ref<string | null>(null);
+const paymentError    = ref<string | null>(null);
+const billsError      = ref<string | null>(null);
+
+const getAcademicYear = () => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const startYear = now.getMonth() < 8 ? currentYear - 1 : currentYear;
+  return `${startYear}-${startYear + 1}`;
+};
 
 const loadDashboardData = async () => {
   try {
     loading.value = true;
     error.value = null;
-    
-    // Generate academic year in format "2025-2026"
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-11 (0 = January)
-    
-    // Academic year typically starts in September (month 8)
-    // If we're before September, use previous year, otherwise use current year
-    const startYear = currentMonth < 8 ? currentYear - 1 : currentYear;
-    const endYear = startYear + 1;
-    const academicYear = `${startYear}-${endYear}`;
-    
-    dashboardStats.value = await dashboardService.getStats(academicYear);
+    dashboardStats.value = await dashboardService.getStats(getAcademicYear());
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load dashboard data';
     console.error('Dashboard error:', err);
@@ -37,8 +48,41 @@ const loadDashboardData = async () => {
   }
 };
 
+const loadPaymentReport = async () => {
+  try {
+    paymentLoading.value = true;
+    paymentError.value = null;
+    financialReport.value = await dashboardService.getFinancialReports({ academic_year: getAcademicYear() });
+  } catch (err: any) {
+    paymentError.value = err.response?.data?.message || 'Failed to load payment data';
+    console.error('Payment report error:', err);
+  } finally {
+    paymentLoading.value = false;
+  }
+};
+
+const loadBillsAndPayments = async () => {
+  try {
+    billsLoading.value = true;
+    billsError.value = null;
+    const [bills, payments] = await Promise.all([
+      dashboardService.getAllBills(),
+      dashboardService.getAllPayments(),
+    ]);
+    allBills.value    = bills;
+    allPayments.value = payments;
+  } catch (err: any) {
+    billsError.value = err.response?.data?.message || 'Failed to load bills/payments data';
+    console.error('Bills/payments error:', err);
+  } finally {
+    billsLoading.value = false;
+  }
+};
+
 onMounted(() => {
   loadDashboardData();
+  loadPaymentReport();
+  loadBillsAndPayments();
 });
 </script>
 
@@ -68,16 +112,102 @@ onMounted(() => {
       <StatsWidget :stats="dashboardStats.overview" />
 
       <div class="col-span-12 xl:col-span-6">
-        <RecentPaymentsWidget :payments="dashboardStats.recent_payments" />
         <StudentsByClassWidget :data="dashboardStats.students_by_class" />
       </div>
-      
+
       <div class="col-span-12 xl:col-span-6">
-        <FinancialWidget :financial="dashboardStats.financial" />
-        <AttendanceWidget 
+        <AttendanceWidget
           :attendance-rate="dashboardStats.academic.attendance_rate"
           :breakdown="dashboardStats.attendance_breakdown"
         />
+      </div>
+    </template>
+
+    <!-- ─── Payment Dashboard Section ─────────────────── -->
+    <div class="col-span-12">
+      <div class="flex items-center gap-3 mb-2">
+        <i class="pi pi-credit-card text-2xl text-primary"></i>
+        <h4 class="text-2xl font-semibold">Payment Dashboard</h4>
+      </div>
+      <Divider />
+    </div>
+
+    <!-- Payment Loading -->
+    <div v-if="paymentLoading" class="col-span-12 text-center py-6">
+      <i class="pi pi-spin pi-spinner text-3xl text-primary"></i>
+      <p class="mt-3 text-muted-color">Loading payment data...</p>
+    </div>
+
+    <!-- Payment Error -->
+    <div v-else-if="paymentError" class="col-span-12">
+      <div class="card bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+        <div class="flex items-center gap-3">
+          <i class="pi pi-exclamation-circle text-orange-600 text-2xl"></i>
+          <div>
+            <h3 class="text-orange-900 dark:text-orange-100 font-semibold">Payment Data Unavailable</h3>
+            <p class="text-orange-700 dark:text-orange-300">{{ paymentError }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 1: Summary stats -->
+    <template v-else-if="financialReport">
+      <PaymentStatsWidget :report="financialReport" />
+
+      <!-- Row 2: Payment method breakdown + contract table -->
+      <div class="col-span-12 xl:col-span-5">
+        <PaymentByTypeWidget :report="financialReport" />
+      </div>
+      <div class="col-span-12 xl:col-span-7">
+        <ContractPaymentWidget :report="financialReport" />
+      </div>
+    </template>
+
+    <!-- Bills & Payments loading -->
+    <div v-if="billsLoading" class="col-span-12 flex items-center justify-center gap-3 py-4">
+      <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
+      <span class="text-muted-color">Loading bills &amp; transactions...</span>
+    </div>
+
+    <!-- Bills & Payments error -->
+    <div v-else-if="billsError" class="col-span-12">
+      <div class="card bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+        <div class="flex items-center gap-3">
+          <i class="pi pi-exclamation-circle text-orange-600 text-2xl"></i>
+          <p class="text-orange-700 dark:text-orange-300">{{ billsError }}</p>
+        </div>
+      </div>
+    </div>
+
+    <template v-else>
+      <!-- Row 3: Monthly revenue chart (full width) -->
+      <div class="col-span-12">
+        <MonthlyRevenueWidget :payments="allPayments" />
+      </div>
+
+      <!-- Row 4: Bill status donut + overdue bills table -->
+      <div class="col-span-12 xl:col-span-5">
+        <BillStatusWidget :bills="allBills" />
+      </div>
+      <div class="col-span-12 xl:col-span-7">
+        <OverdueBillsWidget :bills="allBills" />
+      </div>
+
+      <!-- Row 5: Top debtors + upcoming dues -->
+      <div class="col-span-12 xl:col-span-6">
+        <TopDebtorsWidget
+          v-if="financialReport"
+          :contracts="financialReport.contracts_summary"
+        />
+      </div>
+      <div class="col-span-12 xl:col-span-6">
+        <UpcomingDuesWidget :bills="allBills" />
+      </div>
+
+      <!-- Row 6: Payment history table (full width) -->
+      <div class="col-span-12">
+        <PaymentHistoryWidget :payments="allPayments" />
       </div>
     </template>
   </div>

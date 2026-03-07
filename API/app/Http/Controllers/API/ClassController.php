@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\StudentHistory;
 use Illuminate\Support\Facades\Validator;
 
 class ClassController extends Controller
@@ -322,9 +323,13 @@ class ClassController extends Controller
      */
 
     public function removeStudentFromClass($studentId){
-        
 
         $student = Student::findOrFail($studentId);
+
+        StudentHistory::where('student_id', $studentId)
+            ->whereNull('left_at')
+            ->update(['left_at' => now()->toDateString()]);
+
         $student->class_id = null;
         $student->save();
 

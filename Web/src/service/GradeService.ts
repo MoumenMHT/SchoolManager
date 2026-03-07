@@ -1,0 +1,57 @@
+import ApiService from './ApiService';
+
+export interface GradeRecord {
+  id: number;
+  student_id: number;
+  subject_id: number;
+  teacher_id: number;
+  exam_type: string;
+  grade: number;
+  max_grade: number;
+  semester: string;
+  academic_year: string;
+  comment: string | null;
+  created_at: string;
+  updated_at: string;
+  student?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    code: string;
+  };
+  subject?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface CreateGradeDTO {
+  student_id: number;
+  subject_id: number;
+  teacher_id: number;
+  exam_type: string;
+  grade: number;
+  max_grade: number;
+  semester: string;
+  academic_year: string;
+  comment?: string | null;
+}
+
+class GradeService {
+  async getClassGrades(classId: number, params?: { subject_id?: number; semester?: string; academic_year?: string }): Promise<GradeRecord[]> {
+    const response = await ApiService.get<GradeRecord[]>(`/classes/${classId}/grades`, params);
+    return (response.data as any) || [];
+  }
+
+  async bulkCreateGrades(grades: CreateGradeDTO[]): Promise<any> {
+    const response = await ApiService.post('/grades/bulk', { grades });
+    return response;
+  }
+
+  async updateGrade(id: number, data: Partial<CreateGradeDTO>): Promise<GradeRecord> {
+    const response = await ApiService.put<GradeRecord>(`/grades/${id}`, data);
+    return (response.data as any);
+  }
+}
+
+export default new GradeService();

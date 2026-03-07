@@ -10,28 +10,36 @@ use Carbon\Carbon;
 class Payment extends Model
 {
     use HasFactory;
+
     protected $fillable = [
-        'student_id',
+        'contract_id',
         'amount',
-        'due_date',
-        'paid_date',
-        'status',
         'payment_type',
-        'academic_year',
-        'month',
-        'notes',
+        'status',
+        'paid_date',
+        'note',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'due_date' => 'date',
-        'paid_date' => 'date',
+        'paid_date' => 'datetime',
     ];
 
     // Relationships
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class);
+    }
+
+    public function allocations()
+    {
+        return $this->hasMany(PaymentAllocation::class);
     }
 
     // Scopes

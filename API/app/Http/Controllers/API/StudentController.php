@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\SchoolClass;
+use App\Models\StudentHistory;
 use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
@@ -87,11 +88,27 @@ class StudentController extends Controller
             'enrollment_date' => $request->enrollment_date,
             'class_id' => $request->class_id,
             'code' => $request->code,
-            'gender' => $request->gender, 
+            'gender' => $request->gender,
             'parent_id' => $request->parent_id,
             'medical_info' => $request->medical_info,
-            'is_active' => true,    
+            'is_active' => true,
         ]);
+
+        if ($student->class_id) {
+            $class = SchoolClass::find($student->class_id);
+            if ($class) {
+                StudentHistory::create([
+                    'student_id' => $student->id,
+                    'class_id'   => $student->class_id,
+                    'academic_year' => $class->academic_year ?? date('Y') . '-' . (date('Y') + 1),
+                    'enrolled_at'   => $student->enrollment_date
+                        ? $student->enrollment_date->toDateString()
+                        : now()->toDateString(),
+                    'left_at' => null,
+                ]);
+            }
+        }
+
         $student->load('class','parent');
 
         return response()->json([
@@ -156,7 +173,33 @@ class StudentController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $oldClassId = $student->class_id;
+
         $student->update($request->all());
+
+        if ($request->has('class_id') && $request->class_id != $oldClassId) {
+            // Close the current open history record
+            if ($oldClassId) {
+                StudentHistory::where('student_id', $student->id)
+                    ->whereNull('left_at')
+                    ->update(['left_at' => now()->toDateString()]);
+            }
+
+            // Open a new history record if the student is assigned to a class
+            if ($request->class_id) {
+                $class = SchoolClass::find($request->class_id);
+                if ($class) {
+                    StudentHistory::create([
+                        'student_id'   => $student->id,
+                        'class_id'     => $request->class_id,
+                        'academic_year' => $class->academic_year ?? date('Y') . '-' . (date('Y') + 1),
+                        'enrolled_at'  => now()->toDateString(),
+                        'left_at'      => null,
+                    ]);
+                }
+            }
+        }
+
         $student->load('class','parent');
 
         return response()->json([
@@ -281,6 +324,28 @@ class StudentController extends Controller
             'success' => true,
             'data' => $students,
             'count' => $students->count()
+        ]);
+    }
+
+    public function getHistory(string $id)
+    {
+        $student = Student::find($id);
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student not found.'
+            ], 404);
+        }
+
+        $history = StudentHistory::with('schoolClass:id,name,level,academic_year')
+            ->where('student_id', $id)
+            ->orderBy('enrolled_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $history
         ]);
     }
 } 

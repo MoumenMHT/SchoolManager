@@ -13,6 +13,7 @@ class Attendance extends Model
         'student_id',
         'subject_id',
         'teacher_id',
+        'schedule_id',
         'date',
         'status',
         'time',
@@ -38,6 +39,11 @@ class Attendance extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(Teacher::class);
+    }
+
+    public function schedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class);
     }
 
     // Scopes

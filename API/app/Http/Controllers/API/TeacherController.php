@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Teacher;
+use App\Models\ClassSubjectTeacher;
+use App\Models\Student;
 use Illuminate\Support\Facades\Validator;
 
 
@@ -175,6 +177,73 @@ class TeacherController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Teacher deleted successfully.'
+        ]);
+    }
+
+    /**
+     * Get the authenticated teacher's classes with their subjects for each class.
+     * GET /teacher/classes
+     */
+    public function myClasses(Request $request)
+    {
+        $user = $request->user();
+        $teacher = $user->teacher;
+
+        if (!$teacher) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Teacher profile not found.'
+            ], 404);
+        }
+
+        $assignments = ClassSubjectTeacher::with(['class.students', 'subject'])
+            ->where('teacher_id', $teacher->id)
+            ->get();
+
+        $classes = $assignments->groupBy('class_id')->map(function ($classAssignments) {
+            $class = $classAssignments->first()->class;
+            if (!$class) return null;
+
+            $classData = $class->toArray();
+            $classData['subjects'] = $classAssignments->map(fn($a) => $a->subject)->filter()->values();
+            $classData['students_count'] = $class->students->count();
+
+            return $classData;
+        })->filter()->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $classes
+        ]);
+    }
+
+    /**
+     * Get all students in the authenticated teacher's classes.
+     * GET /teacher/students
+     */
+    public function myStudents(Request $request)
+    {
+        $user = $request->user();
+        $teacher = $user->teacher;
+
+        if (!$teacher) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Teacher profile not found.'
+            ], 404);
+        }
+
+        $classIds = ClassSubjectTeacher::where('teacher_id', $teacher->id)
+            ->pluck('class_id')
+            ->unique();
+
+        $students = Student::whereIn('class_id', $classIds)
+            ->with('class:id,name,level')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $students
         ]);
     }
 }

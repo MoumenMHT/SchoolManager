@@ -13,15 +13,12 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('student_id')->constrained()->onDelete('cascade');
+            $table->foreignId('contract_id')->constrained()->onDelete('cascade');
             $table->decimal('amount', 10, 2);
-            $table->date('due_date');
             $table->date('paid_date')->nullable();
-            $table->enum('status', ['pending', 'paid', 'late', 'cancelled'])->default('pending');
             $table->string('payment_type');
-            $table->string('academic_year');
-            $table->string('month')->nullable();
-            $table->text('notes')->nullable();
+            $table->enum('status', ['pending', 'paid', 'late', 'cancelled', 'completed'])->default('pending');
+            $table->text('note')->nullable();
             $table->timestamps();
         });
     }

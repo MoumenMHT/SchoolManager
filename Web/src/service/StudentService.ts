@@ -3,6 +3,16 @@ import type { ApiResponse } from '@/types';
 import type { SchoolClass } from './ClassesService';
 import type { Parent } from './ParentService';
 
+export interface StudentHistory {
+  id: number;
+  student_id: number;
+  class_id: number | null;
+  academic_year: string;
+  enrolled_at: string;
+  left_at: string | null;
+  school_class?: Pick<SchoolClass, 'id' | 'name' | 'level' | 'academic_year'>;
+}
+
 export interface Student {
   id: number;
   first_name: string;
@@ -124,6 +134,14 @@ class StudentService {
    */
   async searchStudentsWithoutClass(): Promise<Student[]> {
     const response = await apiService.get<Student[]>('/students/without-class');
+    return response.data || [];
+  }
+
+  /**
+   * Get class history for a student
+   */
+  async getStudentHistory(studentId: number): Promise<StudentHistory[]> {
+    const response = await apiService.get<StudentHistory[]>(`/students/${studentId}/history`);
     return response.data || [];
   }
 }

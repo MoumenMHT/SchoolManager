@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\SchoolClass;
 use App\Models\Payment;
+use App\Models\Contract;
 use App\Models\Attendance;
 use App\Models\Grade;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        $academicYear = $request->get('academic_year', date('Y'));
+        $academicYear = $request->get('academic_year', date('Y') . '-' . (date('Y') + 1));
 
         // Total students
         $totalStudents = Student::where('is_active', true)->count();
@@ -33,20 +34,27 @@ class DashboardController extends Controller
             ->count();
 
         // Revenue statistics
-        $totalRevenue = Payment::where('status', 'paid')
-            ->where('academic_year', $academicYear)
+        $totalRevenue = Payment::whereHas('contract', function ($q) use ($academicYear) {
+                $q->where('academic_year', $academicYear);
+            })
+            ->where('status', 'completed')
             ->sum('amount');
             
-        $pendingPayments = Payment::where('status', 'pending')
-            ->where('academic_year', $academicYear)
+        $pendingPayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
+                $q->where('academic_year', $academicYear);
+            })
+            ->where('status', 'pending')
             ->sum('amount');
             
-        $latePayments = Payment::where('status', 'late')
-            ->where('academic_year', $academicYear)
+        $latePayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
+                $q->where('academic_year', $academicYear);
+            })
+            ->where('status', 'late')
             ->sum('amount');
 
         // Payment rate
-        $totalExpected = Payment::where('academic_year', $academicYear)->sum('amount');
+        $totalExpected = Contract::where('academic_year', $academicYear)
+            ->sum(DB::raw('total_fees - discount_value'));
         $paymentRate = $totalExpected > 0 ? ($totalRevenue / $totalExpected) * 100 : 0;
 
         // Attendance statistics (last 30 days)
@@ -67,8 +75,8 @@ class DashboardController extends Controller
             ->avg('grade');
 
         // Recent payments
-        $recentPayments = Payment::with(['student'])
-            ->where('status', 'paid')
+        $recentPayments = Payment::with(['contract.parent'])
+            ->where('status', 'completed')
             ->latest('paid_date')
             ->limit(10)
             ->get();
@@ -100,7 +108,7 @@ class DashboardController extends Controller
                     'payment_rate' => round($paymentRate, 2),
                 ],
                 'academic' => [
-                    'average_grade' => round($averageGrade, 2),
+                    'average_grade' => round($averageGrade ?? 0, 2),
                     'attendance_rate' => round($attendanceRate, 2),
                 ],
                 'attendance_breakdown' => $attendanceStats,

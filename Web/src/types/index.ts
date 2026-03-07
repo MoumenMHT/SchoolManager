@@ -168,6 +168,72 @@ export interface DashboardStats {
   recent_payments: Payment[];
 }
 
+// Bill record as returned by GET /bills (includes contract.parent)
+export interface BillRecord {
+  id: number;
+  contract_id: number;
+  month_year: string;
+  amount_due: number;
+  amount_paid: number;
+  balance: number;
+  status: 'paid' | 'partial' | 'late' | 'unpaid';
+  due_date: string;
+  note?: string;
+  contract?: {
+    contract_number: string;
+    academic_year: string;
+    parent?: {
+      id: number;
+      first_name: string;
+      last_name: string;
+    };
+  };
+}
+
+// Payment record as returned by GET /payments (includes contract.parent)
+export interface PaymentRecord {
+  id: number;
+  contract_id: number;
+  amount: number;
+  payment_type: string;
+  paid_date: string;
+  status: string;
+  note?: string;
+  contract?: {
+    contract_number: string;
+    academic_year: string;
+    parent?: {
+      id: number;
+      first_name: string;
+      last_name: string;
+    };
+  };
+}
+
+// Payment-related interfaces for financial reports
+export interface PaymentByType {
+  count: number;
+  total: number;
+}
+
+export interface ContractSummary {
+  contract_number: string;
+  parent_name: string;
+  total_fees: number;
+  paid_amount: number;
+  remaining_amount: number;
+  payment_completion: number;
+}
+
+export interface FinancialReport {
+  total_payments: number;
+  total_amount_collected: number;
+  total_refunds: number;
+  net_amount: number;
+  payment_by_type: Record<string, PaymentByType>;
+  contracts_summary: ContractSummary[];
+}
+
 // API Response Interface
 export interface ApiResponse<T> {
   success: boolean;
