@@ -42,12 +42,15 @@ export interface UpdateAttendanceDTO {
 class AttendanceService {
   async getClassAttendances(
     classId: number,
-    params?: { date?: string; subject_id?: number; schedule_id?: number }
+    params?: { date?: string; start_date?: string; end_date?: string; subject_id?: number; schedule_id?: number }
   ): Promise<AttendanceRecord[]> {
     const query: Record<string, any> = {};
     if (params?.date) {
       query.start_date = params.date;
       query.end_date = params.date;
+    } else {
+      if (params?.start_date) query.start_date = params.start_date;
+      if (params?.end_date) query.end_date = params.end_date;
     }
     if (params?.subject_id) query.subject_id = params.subject_id;
     if (params?.schedule_id) query.schedule_id = params.schedule_id;

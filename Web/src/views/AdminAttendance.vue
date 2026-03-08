@@ -13,23 +13,23 @@ const classesLoading = ref(false);
 const selectedClassId = ref<number | null>(null);
 const selectedDate = ref<Date>(new Date());
 
-const selectedDateStr = computed(() => {
-  const d = selectedDate.value;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-});
+// View mode: day or week
+const viewMode = ref<'day' | 'week'>('day');
+const viewModeOptions = [
+  { label: 'Day', value: 'day', icon: 'pi pi-calendar' },
+  { label: 'Week', value: 'week', icon: 'pi pi-calendar-plus' },
+];
 
-const selectedDayName = computed(() => {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[selectedDate.value.getDay()];
-});
+// Period filter (selected schedule slot IDs; empty = show all)
+const selectedPeriodIds = ref<number[]>([]);
 
 const activeTab = ref('0');
 
-// Schedule slots for the selected class+day
-const scheduleSlots = ref<any[]>([]);
+// All schedule slots for the selected class (all days)
+const allClassSlots = ref<any[]>([]);
 const scheduleLoading = ref(false);
 
-// All attendance records for selected class+date
+// All attendance records for selected class+date(s)
 const attendanceRecords = ref<AttendanceRecord[]>([]);
 const attendanceLoading = ref(false);
 
@@ -42,9 +42,82 @@ const selectedStudent = ref<any>(null);
 const studentAttendances = ref<AttendanceRecord[]>([]);
 const studentAttLoading = ref(false);
 
-// ─── Computed ─────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────
+function formatDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
-// Group attendance records by schedule_id
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+// ─── Date computeds ───────────────────────────────────────
+const selectedDateStr = computed(() => formatDateStr(selectedDate.value));
+
+const selectedDayName = computed(() => DAY_NAMES[selectedDate.value.getDay()]);
+
+// Week: Mon–Sun containing selectedDate
+const weekDates = computed(() => {
+  const d = new Date(selectedDate.value);
+  const dayOfWeek = d.getDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    return date;
+  });
+});
+
+const weekStartStr = computed(() => formatDateStr(weekDates.value[0]));
+const weekEndStr = computed(() => formatDateStr(weekDates.value[6]));
+
+const weekLabel = computed(() => `${weekStartStr.value} – ${weekEndStr.value}`);
+
+// ─── Schedule slots computeds ─────────────────────────────
+
+// Slots visible for the current view (all days in week mode, current day in day mode)
+const scheduleSlots = computed(() => {
+  if (viewMode.value === 'week') {
+    return [...allClassSlots.value].sort((a: any, b: any) => {
+      const da = DAY_ORDER.indexOf((a.day ?? a.assignment?.day ?? '').toLowerCase());
+      const db = DAY_ORDER.indexOf((b.day ?? b.assignment?.day ?? '').toLowerCase());
+      if (da !== db) return da - db;
+      return (a.start_time ?? '').localeCompare(b.start_time ?? '');
+    });
+  }
+  const day = selectedDayName.value.toLowerCase();
+  return allClassSlots.value
+    .filter((s: any) => (s.day ?? s.assignment?.day ?? '').toLowerCase() === day)
+    .sort((a: any, b: any) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
+});
+
+// Options for the period MultiSelect – always drawn from all class slots
+const periodOptions = computed(() => {
+  return [...allClassSlots.value].sort((a: any, b: any) => {
+    const da = DAY_ORDER.indexOf((a.day ?? a.assignment?.day ?? '').toLowerCase());
+    const db = DAY_ORDER.indexOf((b.day ?? b.assignment?.day ?? '').toLowerCase());
+    if (da !== db) return da - db;
+    return (a.start_time ?? '').localeCompare(b.start_time ?? '');
+  }).map((slot: any) => {
+    const dayPart = `${(slot.day ?? slot.assignment?.day ?? '').slice(0, 3)} · `;
+    const subject = slot.assignment?.subject?.name ?? slot.subject?.name ?? 'Session';
+    return {
+      id: slot.id,
+      label: `${dayPart}${formatTime(slot.start_time)}–${formatTime(slot.end_time)} · ${subject}`,
+    };
+  });
+});
+
+// Slots after applying the period filter
+const filteredScheduleSlots = computed(() => {
+  if (selectedPeriodIds.value.length === 0) return scheduleSlots.value;
+  return scheduleSlots.value.filter((s: any) => selectedPeriodIds.value.includes(s.id));
+});
+
+// ─── Attendance computeds ─────────────────────────────────
+
+// Group all records by schedule_id
 const attBySchedule = computed(() => {
   const map: Record<number, AttendanceRecord[]> = {};
   for (const rec of attendanceRecords.value) {
@@ -55,9 +128,11 @@ const attBySchedule = computed(() => {
   return map;
 });
 
-// Session summaries: each schedule slot with counts
+// ── Day mode computeds ────────────────────────────────────
+
+// Session summaries for day mode only
 const sessionSummaries = computed(() => {
-  return scheduleSlots.value.map((slot: any) => {
+  return filteredScheduleSlots.value.map((slot: any) => {
     const records = attBySchedule.value[slot.id] ?? [];
     const present = records.filter(r => r.status === 'present').length;
     const absent = records.filter(r => r.status === 'absent').length;
@@ -69,15 +144,87 @@ const sessionSummaries = computed(() => {
   });
 });
 
-// Grid: students × sessions (for grid view)
+// Grid: students × sessions (day mode)
 const attendanceGrid = computed(() => {
   return classStudents.value.map((student: any) => {
-    const sessions = scheduleSlots.value.map((slot: any) => {
+    const sessions = filteredScheduleSlots.value.map((slot: any) => {
       const records = attBySchedule.value[slot.id] ?? [];
       const rec = records.find(r => r.student_id === student.id);
       return { slot, status: rec?.status ?? null };
     });
     return { student, sessions };
+  });
+});
+
+// ── Week mode computeds ───────────────────────────────────
+
+// Per-day session summaries for week mode
+const weekDaySummaries = computed(() => {
+  return weekDates.value.map(date => {
+    const dayName = DAY_NAMES[date.getDay()].toLowerCase();
+    const dateStr = formatDateStr(date);
+    const daySlots = filteredScheduleSlots.value.filter((s: any) =>
+      (s.day ?? s.assignment?.day ?? '').toLowerCase() === dayName
+    );
+    const summaries = daySlots.map((slot: any) => {
+      const records = (attBySchedule.value[slot.id] ?? []).filter(r => r.date === dateStr);
+      const present = records.filter(r => r.status === 'present').length;
+      const absent = records.filter(r => r.status === 'absent').length;
+      const late = records.filter(r => r.status === 'late').length;
+      const excused = records.filter(r => r.status === 'excused').length;
+      const total = classStudents.value.length;
+      const marked = records.length;
+      return { slot, present, absent, late, excused, total, marked };
+    });
+    return {
+      date,
+      dateStr,
+      dayName: DAY_NAMES[date.getDay()],
+      summaries,
+      hasSchedule: daySlots.length > 0,
+    };
+  }).filter(day => day.hasSchedule);
+});
+
+// Per-student weekly summary
+const weekStudentSummaries = computed(() => {
+  return classStudents.value.map((student: any) => {
+    const recs = attendanceRecords.value.filter(r => r.student_id === student.id);
+    const present = recs.filter(r => r.status === 'present').length;
+    const absent = recs.filter(r => r.status === 'absent').length;
+    const late = recs.filter(r => r.status === 'late').length;
+    const excused = recs.filter(r => r.status === 'excused').length;
+    const total = recs.length;
+    const rate = total > 0 ? Math.round((present / total) * 100) : null;
+    return { student, present, absent, late, excused, total, rate };
+  });
+});
+
+// Columns for week grid view: (slot, date) pairs ordered by day then time
+const weekGridColumns = computed(() => {
+  return weekDates.value.flatMap(date => {
+    const dayName = DAY_NAMES[date.getDay()].toLowerCase();
+    const dateStr = formatDateStr(date);
+    return filteredScheduleSlots.value
+      .filter((s: any) => (s.day ?? s.assignment?.day ?? '').toLowerCase() === dayName)
+      .map((slot: any) => ({
+        slot,
+        date,
+        dateStr,
+        dayLabel: DAY_NAMES[date.getDay()].slice(0, 3),
+      }));
+  });
+});
+
+// Grid rows for week mode
+const weekAttendanceGrid = computed(() => {
+  return classStudents.value.map((student: any) => {
+    const cells = weekGridColumns.value.map(col => {
+      const rec = (attBySchedule.value[col.slot.id] ?? [])
+        .find(r => r.student_id === student.id && r.date === col.dateStr);
+      return { ...col, status: rec?.status ?? null };
+    });
+    return { student, cells };
   });
 });
 
@@ -105,15 +252,9 @@ async function loadSchedule() {
       with_relations: 'class,subject,teacher',
     });
     const raw: any[] = (response.data as any)?.data ?? response.data ?? [];
-    const day = selectedDayName.value.toLowerCase();
-    const daySlots = raw.filter((s: any) => {
-      const slotDay = s.day ?? s.assignment?.day ?? '';
-      return slotDay.toLowerCase() === day;
-    });
-    daySlots.sort((a: any, b: any) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
-    scheduleSlots.value = daySlots;
+    allClassSlots.value = raw;
   } catch {
-    scheduleSlots.value = [];
+    allClassSlots.value = [];
   } finally {
     scheduleLoading.value = false;
   }
@@ -123,12 +264,13 @@ async function loadAttendance() {
   if (!selectedClassId.value) return;
   attendanceLoading.value = true;
   try {
-    const records = await AttendanceService.getClassAttendances(selectedClassId.value, {
-      date: selectedDateStr.value,
-    });
+    const params = viewMode.value === 'week'
+      ? { start_date: weekStartStr.value, end_date: weekEndStr.value }
+      : { date: selectedDateStr.value };
+
+    const records = await AttendanceService.getClassAttendances(selectedClassId.value, params);
     attendanceRecords.value = records;
 
-    // Also extract students list from the selected class
     const cls = classes.value.find((c: any) => c.id === selectedClassId.value);
     classStudents.value = cls?.students ?? [];
   } catch {
@@ -147,10 +289,11 @@ async function openStudentTimeline(student: any) {
   studentDialog.value = true;
   studentAttLoading.value = true;
   try {
-    const response = await ApiService.get<any>(`/students/${student.id}/attendances`, {
-      start_date: selectedDateStr.value,
-      end_date: selectedDateStr.value,
-    });
+    const params = viewMode.value === 'week'
+      ? { start_date: weekStartStr.value, end_date: weekEndStr.value }
+      : { start_date: selectedDateStr.value, end_date: selectedDateStr.value };
+
+    const response = await ApiService.get<any>(`/students/${student.id}/attendances`, params);
     const raw = (response.data as any)?.data ?? response.data ?? [];
     studentAttendances.value = Array.isArray(raw) ? raw : Object.values(raw);
   } catch {
@@ -160,9 +303,16 @@ async function openStudentTimeline(student: any) {
   }
 }
 
+const studentDialogHeader = computed(() => {
+  const name = `${selectedStudent.value?.first_name ?? ''} ${selectedStudent.value?.last_name ?? ''}`.trim();
+  return viewMode.value === 'week'
+    ? `${name} – ${weekLabel.value}`
+    : `${name} – ${selectedDateStr.value}`;
+});
+
 function getScheduleSlot(scheduleId: number | null): any | null {
   if (!scheduleId) return null;
-  return scheduleSlots.value.find((s: any) => s.id === scheduleId) ?? null;
+  return allClassSlots.value.find((s: any) => s.id === scheduleId) ?? null;
 }
 
 function formatTime(t: string) {
@@ -194,8 +344,24 @@ function statusIcon(status: string | null) {
   }
 }
 
+function rateColor(rate: number | null) {
+  if (rate === null) return 'text-surface-400 dark:text-surface-500';
+  if (rate >= 90) return 'text-green-600 dark:text-green-400';
+  if (rate >= 75) return 'text-amber-600 dark:text-amber-400';
+  return 'text-red-600 dark:text-red-400';
+}
+
 // ─── Watchers ─────────────────────────────────────────────
-watch(selectedClassId, () => { if (selectedClassId.value) loadClassData(); });
+watch(viewMode, () => {
+  selectedPeriodIds.value = [];
+  if (selectedClassId.value) loadClassData();
+});
+
+watch(selectedClassId, () => {
+  selectedPeriodIds.value = [];
+  if (selectedClassId.value) loadClassData();
+});
+
 watch(selectedDate, () => { if (selectedClassId.value) loadClassData(); });
 
 onMounted(loadClasses);
@@ -211,6 +377,7 @@ onMounted(loadClasses);
 
     <!-- Controls -->
     <div class="flex flex-wrap gap-4 mb-6 p-4 bg-white dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700">
+      <!-- Class selector -->
       <div class="flex flex-col gap-1">
         <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Class</label>
         <Select
@@ -223,19 +390,70 @@ onMounted(loadClasses);
           class="w-full sm:w-64"
         />
       </div>
+
+      <!-- View mode toggle -->
       <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">View</label>
+        <SelectButton
+          v-model="viewMode"
+          :options="viewModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+        />
+      </div>
+
+      <!-- Date picker (day mode) -->
+      <div v-if="viewMode === 'day'" class="flex flex-col gap-1">
         <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
         <DatePicker
           v-model="selectedDate"
           show-icon
+          dateFormat="yy-mm-dd"
           :manual-input="false"
           class="w-full sm:w-48"
         />
       </div>
-      <div v-if="selectedClassId" class="flex items-end">
+
+      <!-- Week picker (week mode) -->
+      <div v-else class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Week</label>
+        <div class="flex items-center gap-2">
+          <DatePicker
+            v-model="selectedDate"
+            show-icon
+            dateFormat="yy-mm-dd"
+            :manual-input="false"
+            class="w-full sm:w-48"
+          />
+          <span v-if="selectedClassId" class="text-sm text-surface-500 dark:text-surface-400 bg-surface-50 dark:bg-surface-700 px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-600 whitespace-nowrap">
+            {{ weekLabel }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Day label (day mode) -->
+      <div v-if="viewMode === 'day' && selectedClassId" class="flex items-end">
         <span class="text-sm text-surface-500 dark:text-surface-400 bg-surface-50 dark:bg-surface-700 px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-600">
           <i class="pi pi-calendar mr-1.5"></i>{{ selectedDayName }}
         </span>
+      </div>
+
+      <!-- Period filter -->
+      <div v-if="selectedClassId && allClassSlots.length > 0" class="flex flex-col gap-1">
+        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">
+          Periods
+          <span v-if="selectedPeriodIds.length > 0" class="ml-1 text-xs text-primary-600 dark:text-primary-400">({{ selectedPeriodIds.length }} selected)</span>
+        </label>
+        <MultiSelect
+          v-model="selectedPeriodIds"
+          :options="periodOptions"
+          option-label="label"
+          option-value="id"
+          placeholder="All periods"
+          :max-selected-labels="2"
+          class="w-full sm:w-72"
+        />
       </div>
     </div>
 
@@ -278,76 +496,135 @@ onMounted(loadClasses);
                 <ProgressSpinner style="width: 40px; height: 40px" />
               </div>
 
-              <div v-else-if="scheduleSlots.length === 0" class="flex flex-col items-center py-12 text-surface-400">
-                <i class="pi pi-calendar-times text-4xl mb-3"></i>
-                <p>No sessions scheduled for {{ selectedDayName }}.</p>
-              </div>
+              <!-- ── DAY MODE ── -->
+              <template v-else-if="viewMode === 'day'">
+                <div v-if="filteredScheduleSlots.length === 0" class="flex flex-col items-center py-12 text-surface-400">
+                  <i class="pi pi-calendar-times text-4xl mb-3"></i>
+                  <p>No sessions scheduled for {{ selectedDayName }}.</p>
+                </div>
 
-              <div v-else class="space-y-3">
-                <div
-                  v-for="summary in sessionSummaries"
-                  :key="summary.slot.id"
-                  class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden"
-                >
-                  <!-- Session header -->
-                  <div class="flex flex-wrap items-center gap-4 p-4">
-                    <div class="flex items-center gap-3 flex-1 min-w-0">
-                      <div class="bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded-lg p-2 shrink-0">
-                        <i class="pi pi-clock text-sm"></i>
-                      </div>
-                      <div class="min-w-0">
-                        <div class="font-semibold text-surface-900 dark:text-surface-0 truncate">
-                          {{ summary.slot.assignment?.subject?.name ?? summary.slot.subject?.name ?? 'Session' }}
+                <div v-else class="space-y-3">
+                  <div
+                    v-for="summary in sessionSummaries"
+                    :key="summary.slot.id"
+                    class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden"
+                  >
+                    <div class="flex flex-wrap items-center gap-4 p-4">
+                      <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <div class="bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded-lg p-2 shrink-0">
+                          <i class="pi pi-clock text-sm"></i>
                         </div>
-                        <div class="text-xs text-surface-500 dark:text-surface-400">
-                          {{ formatTime(summary.slot.start_time) }} – {{ formatTime(summary.slot.end_time) }}
-                          <span v-if="summary.slot.room" class="ml-2">
-                            <i class="pi pi-map-marker text-[10px]"></i> {{ summary.slot.room }}
+                        <div class="min-w-0">
+                          <div class="font-semibold text-surface-900 dark:text-surface-0 truncate">
+                            {{ summary.slot.assignment?.subject?.name ?? summary.slot.subject?.name ?? 'Session' }}
+                          </div>
+                          <div class="text-xs text-surface-500 dark:text-surface-400">
+                            {{ formatTime(summary.slot.start_time) }} – {{ formatTime(summary.slot.end_time) }}
+                            <span v-if="summary.slot.room" class="ml-2">
+                              <i class="pi pi-map-marker text-[10px]"></i> {{ summary.slot.room }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3 shrink-0">
+                        <div v-if="summary.marked === 0" class="text-xs text-surface-400 dark:text-surface-500 italic">Not marked yet</div>
+                        <template v-else>
+                          <span class="flex items-center gap-1.5 text-sm">
+                            <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                            <span class="font-semibold text-green-700 dark:text-green-300">{{ summary.present }}</span>
                           </span>
-                        </div>
+                          <span class="flex items-center gap-1.5 text-sm">
+                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                            <span class="font-semibold text-red-700 dark:text-red-300">{{ summary.absent }}</span>
+                          </span>
+                          <span v-if="summary.late > 0" class="flex items-center gap-1.5 text-sm">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                            <span class="font-semibold text-amber-700 dark:text-amber-300">{{ summary.late }}</span>
+                          </span>
+                          <span class="text-xs text-surface-400 dark:text-surface-500">/ {{ summary.total }}</span>
+                        </template>
                       </div>
                     </div>
-
-                    <!-- Counts -->
-                    <div class="flex items-center gap-3 shrink-0">
-                      <div v-if="summary.marked === 0" class="text-xs text-surface-400 dark:text-surface-500 italic">
-                        Not marked yet
-                      </div>
-                      <template v-else>
-                        <span class="flex items-center gap-1.5 text-sm">
-                          <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
-                          <span class="font-semibold text-green-700 dark:text-green-300">{{ summary.present }}</span>
-                        </span>
-                        <span class="flex items-center gap-1.5 text-sm">
-                          <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
-                          <span class="font-semibold text-red-700 dark:text-red-300">{{ summary.absent }}</span>
-                        </span>
-                        <span v-if="summary.late > 0" class="flex items-center gap-1.5 text-sm">
-                          <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
-                          <span class="font-semibold text-amber-700 dark:text-amber-300">{{ summary.late }}</span>
-                        </span>
-                        <span class="text-xs text-surface-400 dark:text-surface-500">/ {{ summary.total }}</span>
-                      </template>
+                    <div v-if="summary.marked > 0 && summary.total > 0" class="h-1.5 bg-surface-100 dark:bg-surface-700 flex">
+                      <div class="bg-green-500 h-full transition-all" :style="{ width: `${(summary.present / summary.total) * 100}%` }"></div>
+                      <div class="bg-amber-500 h-full transition-all" :style="{ width: `${(summary.late / summary.total) * 100}%` }"></div>
+                      <div class="bg-red-500 h-full transition-all" :style="{ width: `${(summary.absent / summary.total) * 100}%` }"></div>
                     </div>
-                  </div>
-
-                  <!-- Progress bar -->
-                  <div v-if="summary.marked > 0 && summary.total > 0" class="h-1.5 bg-surface-100 dark:bg-surface-700 flex">
-                    <div
-                      class="bg-green-500 h-full transition-all"
-                      :style="{ width: `${(summary.present / summary.total) * 100}%` }"
-                    ></div>
-                    <div
-                      class="bg-amber-500 h-full transition-all"
-                      :style="{ width: `${(summary.late / summary.total) * 100}%` }"
-                    ></div>
-                    <div
-                      class="bg-red-500 h-full transition-all"
-                      :style="{ width: `${(summary.absent / summary.total) * 100}%` }"
-                    ></div>
                   </div>
                 </div>
-              </div>
+              </template>
+
+              <!-- ── WEEK MODE ── -->
+              <template v-else>
+                <div v-if="weekDaySummaries.length === 0" class="flex flex-col items-center py-12 text-surface-400">
+                  <i class="pi pi-calendar-times text-4xl mb-3"></i>
+                  <p>No sessions scheduled this week.</p>
+                </div>
+
+                <div v-else class="space-y-6">
+                  <div v-for="day in weekDaySummaries" :key="day.dateStr">
+                    <!-- Day header -->
+                    <div class="flex items-center gap-3 mb-3">
+                      <div class="bg-surface-100 dark:bg-surface-700 rounded-lg px-3 py-1.5 text-sm font-semibold text-surface-700 dark:text-surface-200">
+                        {{ day.dayName }}
+                      </div>
+                      <span class="text-xs text-surface-400 dark:text-surface-500">{{ day.dateStr }}</span>
+                      <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
+                    </div>
+
+                    <!-- Sessions for that day -->
+                    <div class="space-y-2 pl-2">
+                      <div
+                        v-for="summary in day.summaries"
+                        :key="summary.slot.id"
+                        class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl overflow-hidden"
+                      >
+                        <div class="flex flex-wrap items-center gap-4 p-4">
+                          <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 rounded-lg p-2 shrink-0">
+                              <i class="pi pi-clock text-sm"></i>
+                            </div>
+                            <div class="min-w-0">
+                              <div class="font-semibold text-surface-900 dark:text-surface-0 truncate">
+                                {{ summary.slot.assignment?.subject?.name ?? summary.slot.subject?.name ?? 'Session' }}
+                              </div>
+                              <div class="text-xs text-surface-500 dark:text-surface-400">
+                                {{ formatTime(summary.slot.start_time) }} – {{ formatTime(summary.slot.end_time) }}
+                                <span v-if="summary.slot.room" class="ml-2">
+                                  <i class="pi pi-map-marker text-[10px]"></i> {{ summary.slot.room }}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="flex items-center gap-3 shrink-0">
+                            <div v-if="summary.marked === 0" class="text-xs text-surface-400 dark:text-surface-500 italic">Not marked yet</div>
+                            <template v-else>
+                              <span class="flex items-center gap-1.5 text-sm">
+                                <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                                <span class="font-semibold text-green-700 dark:text-green-300">{{ summary.present }}</span>
+                              </span>
+                              <span class="flex items-center gap-1.5 text-sm">
+                                <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                                <span class="font-semibold text-red-700 dark:text-red-300">{{ summary.absent }}</span>
+                              </span>
+                              <span v-if="summary.late > 0" class="flex items-center gap-1.5 text-sm">
+                                <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                                <span class="font-semibold text-amber-700 dark:text-amber-300">{{ summary.late }}</span>
+                              </span>
+                              <span class="text-xs text-surface-400 dark:text-surface-500">/ {{ summary.total }}</span>
+                            </template>
+                          </div>
+                        </div>
+                        <div v-if="summary.marked > 0 && summary.total > 0" class="h-1.5 bg-surface-100 dark:bg-surface-700 flex">
+                          <div class="bg-green-500 h-full transition-all" :style="{ width: `${(summary.present / summary.total) * 100}%` }"></div>
+                          <div class="bg-amber-500 h-full transition-all" :style="{ width: `${(summary.late / summary.total) * 100}%` }"></div>
+                          <div class="bg-red-500 h-full transition-all" :style="{ width: `${(summary.absent / summary.total) * 100}%` }"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
           </TabPanel>
 
@@ -363,55 +640,128 @@ onMounted(loadClasses);
                 <p>No students in this class.</p>
               </div>
 
-              <div v-else class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="bg-surface-50 dark:bg-surface-800/80">
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                      <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Sessions Today</th>
-                      <th class="text-right p-3 font-semibold text-surface-500 dark:text-surface-400"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(student, idx) in classStudents"
-                      :key="student.id"
-                      class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
-                    >
-                      <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
-                      <td class="p-3 font-medium text-surface-900 dark:text-surface-100">
-                        {{ student.first_name }} {{ student.last_name }}
-                      </td>
-                      <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
-                      <td class="p-3">
-                        <div class="flex justify-center gap-1 flex-wrap">
-                          <template v-for="slot in scheduleSlots" :key="slot.id">
-                            <div
-                              class="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                              :class="statusColor((attBySchedule[slot.id] ?? []).find(r => r.student_id === student.id)?.status ?? null)"
-                            >
-                              {{ formatTime(slot.start_time) }}
-                            </div>
-                          </template>
-                          <span v-if="scheduleSlots.length === 0" class="text-surface-300 dark:text-surface-600 text-xs">—</span>
-                        </div>
-                      </td>
-                      <td class="p-3 text-right">
-                        <Button
-                          label="View"
-                          icon="pi pi-eye"
-                          size="small"
-                          text
-                          severity="secondary"
-                          @click="openStudentTimeline(student)"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <!-- ── DAY MODE ── -->
+              <template v-else-if="viewMode === 'day'">
+                <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="bg-surface-50 dark:bg-surface-800/80">
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Sessions Today</th>
+                        <th class="text-right p-3 font-semibold text-surface-500 dark:text-surface-400"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="(student, idx) in classStudents"
+                        :key="student.id"
+                        class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
+                      >
+                        <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
+                        <td class="p-3 font-medium text-surface-900 dark:text-surface-100">
+                          {{ student.first_name }} {{ student.last_name }}
+                        </td>
+                        <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
+                        <td class="p-3">
+                          <div class="flex justify-center gap-1 flex-wrap">
+                            <template v-for="slot in filteredScheduleSlots" :key="slot.id">
+                              <div
+                                class="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                                :class="statusColor((attBySchedule[slot.id] ?? []).find(r => r.student_id === student.id)?.status ?? null)"
+                              >
+                                {{ formatTime(slot.start_time) }}
+                              </div>
+                            </template>
+                            <span v-if="filteredScheduleSlots.length === 0" class="text-surface-300 dark:text-surface-600 text-xs">—</span>
+                          </div>
+                        </td>
+                        <td class="p-3 text-right">
+                          <Button
+                            label="View"
+                            icon="pi pi-eye"
+                            size="small"
+                            text
+                            severity="secondary"
+                            @click="openStudentTimeline(student)"
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+
+              <!-- ── WEEK MODE ── -->
+              <template v-else>
+                <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="bg-surface-50 dark:bg-surface-800/80">
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
+                          <span class="flex items-center justify-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Present
+                          </span>
+                        </th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
+                          <span class="flex items-center justify-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Absent
+                          </span>
+                        </th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">
+                          <span class="flex items-center justify-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Late
+                          </span>
+                        </th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">
+                          <span class="flex items-center justify-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>Excused
+                          </span>
+                        </th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Rate</th>
+                        <th class="text-right p-3 font-semibold text-surface-500 dark:text-surface-400"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="(row, idx) in weekStudentSummaries"
+                        :key="row.student.id"
+                        class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
+                      >
+                        <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
+                        <td class="p-3 font-medium text-surface-900 dark:text-surface-100">
+                          {{ row.student.first_name }} {{ row.student.last_name }}
+                        </td>
+                        <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ row.student.code }}</td>
+                        <td class="p-3 text-center font-semibold text-green-700 dark:text-green-300">{{ row.present }}</td>
+                        <td class="p-3 text-center font-semibold text-red-700 dark:text-red-300">{{ row.absent }}</td>
+                        <td class="p-3 text-center font-semibold text-amber-700 dark:text-amber-300 hidden md:table-cell">{{ row.late }}</td>
+                        <td class="p-3 text-center font-semibold text-blue-700 dark:text-blue-300 hidden md:table-cell">{{ row.excused }}</td>
+                        <td class="p-3 text-center">
+                          <span v-if="row.rate !== null" class="font-semibold text-sm" :class="rateColor(row.rate)">
+                            {{ row.rate }}%
+                          </span>
+                          <span v-else class="text-surface-400 dark:text-surface-500 text-xs">—</span>
+                        </td>
+                        <td class="p-3 text-right">
+                          <Button
+                            label="View"
+                            icon="pi pi-eye"
+                            size="small"
+                            text
+                            severity="secondary"
+                            @click="openStudentTimeline(row.student)"
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
             </div>
           </TabPanel>
 
@@ -422,9 +772,9 @@ onMounted(loadClasses);
                 <ProgressSpinner style="width: 40px; height: 40px" />
               </div>
 
-              <div v-else-if="scheduleSlots.length === 0" class="flex flex-col items-center py-12 text-surface-400">
+              <div v-else-if="filteredScheduleSlots.length === 0" class="flex flex-col items-center py-12 text-surface-400">
                 <i class="pi pi-calendar-times text-4xl mb-3"></i>
-                <p>No sessions scheduled for {{ selectedDayName }}.</p>
+                <p>No sessions scheduled for this {{ viewMode === 'week' ? 'week' : selectedDayName }}.</p>
               </div>
 
               <div v-else-if="classStudents.length === 0" class="flex flex-col items-center py-12 text-surface-400">
@@ -432,54 +782,110 @@ onMounted(loadClasses);
                 <p>No students in this class.</p>
               </div>
 
-              <div v-else class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-                <table class="text-sm border-collapse w-full">
-                  <thead>
-                    <tr class="bg-surface-50 dark:bg-surface-800/80">
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-36">
-                        Student
-                      </th>
-                      <th
-                        v-for="slot in scheduleSlots"
-                        :key="slot.id"
-                        class="text-center p-2 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-24"
-                      >
-                        <div class="text-xs font-semibold">{{ slot.assignment?.subject?.name ?? 'Session' }}</div>
-                        <div class="text-[10px] text-surface-400 font-normal mt-0.5">
-                          {{ formatTime(slot.start_time) }}–{{ formatTime(slot.end_time) }}
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="row in attendanceGrid"
-                      :key="row.student.id"
-                      class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/30 dark:hover:bg-surface-800/30 transition-colors"
-                    >
-                      <td class="p-3 font-medium text-surface-900 dark:text-surface-100 border-r border-surface-100 dark:border-surface-700">
-                        {{ row.student.first_name }} {{ row.student.last_name }}
-                      </td>
-                      <td
-                        v-for="cell in row.sessions"
-                        :key="cell.slot.id"
-                        class="p-2 text-center"
-                      >
-                        <span
-                          class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold"
-                          :class="statusColor(cell.status)"
-                          :title="statusLabel(cell.status)"
+              <!-- ── DAY MODE ── -->
+              <template v-else-if="viewMode === 'day'">
+                <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
+                  <table class="text-sm border-collapse w-full">
+                    <thead>
+                      <tr class="bg-surface-50 dark:bg-surface-800/80">
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-36">
+                          Student
+                        </th>
+                        <th
+                          v-for="slot in filteredScheduleSlots"
+                          :key="slot.id"
+                          class="text-center p-2 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-24"
                         >
-                          <i :class="statusIcon(cell.status)" class="text-[11px]"></i>
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                          <div class="text-xs font-semibold">{{ slot.assignment?.subject?.name ?? 'Session' }}</div>
+                          <div class="text-[10px] text-surface-400 font-normal mt-0.5">
+                            {{ formatTime(slot.start_time) }}–{{ formatTime(slot.end_time) }}
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="row in attendanceGrid"
+                        :key="row.student.id"
+                        class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/30 dark:hover:bg-surface-800/30 transition-colors"
+                      >
+                        <td class="p-3 font-medium text-surface-900 dark:text-surface-100 border-r border-surface-100 dark:border-surface-700">
+                          {{ row.student.first_name }} {{ row.student.last_name }}
+                        </td>
+                        <td
+                          v-for="cell in row.sessions"
+                          :key="cell.slot.id"
+                          class="p-2 text-center"
+                        >
+                          <span
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold"
+                            :class="statusColor(cell.status)"
+                            :title="statusLabel(cell.status)"
+                          >
+                            <i :class="statusIcon(cell.status)" class="text-[11px]"></i>
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+
+              <!-- ── WEEK MODE ── -->
+              <template v-else>
+                <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
+                  <table class="text-sm border-collapse">
+                    <thead>
+                      <!-- Day header row -->
+                      <tr class="bg-surface-50 dark:bg-surface-800/80">
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-36 sticky left-0 bg-surface-50 dark:bg-surface-800/80 z-10">
+                          Student
+                        </th>
+                        <th
+                          v-for="col in weekGridColumns"
+                          :key="`${col.dateStr}-${col.slot.id}`"
+                          class="text-center p-2 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-20"
+                        >
+                          <div class="text-xs font-semibold text-surface-700 dark:text-surface-200">{{ col.dayLabel }}</div>
+                          <div class="text-[10px] text-surface-500 dark:text-surface-400 font-normal mt-0.5">
+                            {{ col.slot.assignment?.subject?.name ?? 'Session' }}
+                          </div>
+                          <div class="text-[10px] text-surface-400 font-normal">
+                            {{ formatTime(col.slot.start_time) }}
+                          </div>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="row in weekAttendanceGrid"
+                        :key="row.student.id"
+                        class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/30 dark:hover:bg-surface-800/30 transition-colors"
+                      >
+                        <td class="p-3 font-medium text-surface-900 dark:text-surface-100 border-r border-surface-100 dark:border-surface-700 sticky left-0 bg-white dark:bg-surface-800 z-10 whitespace-nowrap">
+                          {{ row.student.first_name }} {{ row.student.last_name }}
+                        </td>
+                        <td
+                          v-for="cell in row.cells"
+                          :key="`${cell.dateStr}-${cell.slot.id}`"
+                          class="p-2 text-center"
+                        >
+                          <span
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold"
+                            :class="statusColor(cell.status)"
+                            :title="statusLabel(cell.status)"
+                          >
+                            <i :class="statusIcon(cell.status)" class="text-[11px]"></i>
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
 
               <!-- Legend -->
-              <div v-if="scheduleSlots.length > 0" class="flex flex-wrap gap-4 mt-3 text-xs text-surface-500 dark:text-surface-400">
+              <div v-if="filteredScheduleSlots.length > 0" class="flex flex-wrap gap-4 mt-3 text-xs text-surface-500 dark:text-surface-400">
                 <span class="flex items-center gap-1.5">
                   <span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span> Present
                 </span>
@@ -506,8 +912,8 @@ onMounted(loadClasses);
     <!-- Student Timeline Dialog -->
     <Dialog
       v-model:visible="studentDialog"
-      :header="`${selectedStudent?.first_name ?? ''} ${selectedStudent?.last_name ?? ''} – ${selectedDateStr}`"
-      :style="{ width: '500px', maxWidth: '95vw' }"
+      :header="studentDialogHeader"
+      :style="{ width: '520px', maxWidth: '95vw' }"
       :modal="true"
       :closable="true"
     >
@@ -517,7 +923,7 @@ onMounted(loadClasses);
 
       <div v-else-if="studentAttendances.length === 0" class="flex flex-col items-center py-8 text-surface-400">
         <i class="pi pi-calendar-times text-3xl mb-2"></i>
-        <p class="text-sm">No attendance records for this day.</p>
+        <p class="text-sm">No attendance records for this {{ viewMode === 'week' ? 'week' : 'day' }}.</p>
       </div>
 
       <div v-else class="space-y-2 py-2">
@@ -532,6 +938,11 @@ onMounted(loadClasses);
             'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20': rec.status === 'excused',
           }"
         >
+          <!-- Date (shown in week mode) -->
+          <div v-if="viewMode === 'week'" class="shrink-0 text-xs font-mono text-surface-500 dark:text-surface-400 w-24">
+            {{ rec.date?.slice(0, 10) ?? '—' }}
+          </div>
+
           <!-- Time slot -->
           <div class="shrink-0 text-xs font-mono text-surface-500 dark:text-surface-400 w-24">
             <template v-if="getScheduleSlot(rec.schedule_id)">
