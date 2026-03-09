@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import TeacherService, { type Teacher, type CreateTeacherDTO, type UpdateTeacherDTO } from '@/service/TeacherService';
@@ -7,6 +8,7 @@ import SubjectService, { type Subject } from '@/service/SubjectService';
 import ScheduleService, { type Schedule } from '@/service/ScheduleService';
 import { Column } from 'primevue';
 
+const { t } = useI18n();
 const toast = useToast();
 const dt = ref();
 const teachers = ref<Teacher[]>([]);
@@ -56,7 +58,23 @@ const selectedAcademicYear = ref<string>('');
 const availableAcademicYears = ref<string[]>([]);
 
 // Days and hours for schedule grid
-const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// English keys used internally for schedule data lookup (API returns English day names)
+const weekDayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+const weekDays = computed(() => [
+  t('common.monday'),
+  t('common.tuesday'),
+  t('common.wednesday'),
+  t('common.thursday'),
+  t('common.friday'),
+  t('common.saturday')
+]);
+
+const genderOptions = computed(() => [
+  { label: t('common.male'), value: 'male' },
+  { label: t('common.female'), value: 'female' }
+]);
+
 const schoolHours = [
   { hour: 8, label: '08:00 - 09:00' },
   { hour: 9, label: '09:00 - 10:00' },
@@ -79,24 +97,24 @@ const loadTeachers = async () => {
   try {
     loading.value = true;
     teachers.value = await TeacherService.getTeachers();
-    
+
     // Add computed properties for each teacher
     teachers.value = teachers.value.map(t => ({
       ...t,
       full_name: `${t.first_name} ${t.last_name}`,
       has_account: !!t.user_id,
-      subjects_text: t.subjects && Array.isArray(t.subjects) 
-        ? t.subjects.map(s => s.name).join(', ') 
+      subjects_text: t.subjects && Array.isArray(t.subjects)
+        ? t.subjects.map(s => s.name).join(', ')
         : '',
-      classes_text: t.classes && Array.isArray(t.classes) 
-        ? t.classes.map(c => c.name).join(', ') 
+      classes_text: t.classes && Array.isArray(t.classes)
+        ? t.classes.map(c => c.name).join(', ')
         : '',
     }));
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load teachers',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('teachers.load_error'),
       life: 3000
     });
     console.log('Error fetching teachers:', error.response.data.message);
@@ -122,8 +140,8 @@ const loadAvailableSubjects = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load subjects',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('subjects.load_error'),
       life: 3000
     });
   }
@@ -140,17 +158,17 @@ const saveTeacher = async () => {
   submitted.value = true;
 
   // Validate required fields
-  if (!teacher.value.first_name?.trim() || 
-      !teacher.value.last_name?.trim() || 
-      !teacher.value.birth_date || 
-      !teacher.value.hire_date || 
-      !teacher.value.specialization?.trim() || 
-      teacher.value.salary === undefined || 
+  if (!teacher.value.first_name?.trim() ||
+      !teacher.value.last_name?.trim() ||
+      !teacher.value.birth_date ||
+      !teacher.value.hire_date ||
+      !teacher.value.specialization?.trim() ||
+      teacher.value.salary === undefined ||
       teacher.value.salary === null) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please fill in all required fields',
+      summary: t('common.validation_error'),
+      detail: t('validation.fill_required_fields'),
       life: 3000
     });
     return;
@@ -170,14 +188,14 @@ const saveTeacher = async () => {
       }
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Teacher updated successfully',
+        summary: t('common.success'),
+        detail: t('teachers.update_success'),
         life: 3000
       });
     } else {
       // Create new teacher
       const created = await TeacherService.createTeacher(teacher.value as CreateTeacherDTO);
-      
+
       // Assign selected subjects if any
       if (newTeacherSubjects.value.length > 0) {
         const subjectIds = newTeacherSubjects.value.map(s => s.id);
@@ -187,21 +205,21 @@ const saveTeacher = async () => {
           console.log('Error assigning subjects:', error);
           toast.add({
             severity: 'warn',
-            summary: 'Warning',
-            detail: 'Teacher created but failed to assign some subjects',
+            summary: t('common.warning'),
+            detail: t('teachers.create_partial'),
             life: 3000
           });
-          
+
         }
       }
-      
+
       // Reload teachers to get updated data with subjects
       await loadTeachers();
-      
+
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Teacher created successfully',
+        summary: t('common.success'),
+        detail: t('teachers.create_success'),
         life: 3000
       });
     }
@@ -211,8 +229,8 @@ const saveTeacher = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to save teacher',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('teachers.save_error'),
       life: 3000
     });
   }
@@ -220,7 +238,7 @@ const saveTeacher = async () => {
 
 // Edit teacher
 const editTeacher = async (teacherToEdit: Teacher) => {
-  teacher.value = { 
+  teacher.value = {
     ...teacherToEdit,
     // Convert date strings to Date objects for DatePicker
     birth_date: teacherToEdit.birth_date ? new Date(teacherToEdit.birth_date) : null,
@@ -241,23 +259,23 @@ const showTeacherDetails = async(teacherData: Teacher) =>{
     const response = await TeacherService.getTeacher(teacherData.id);
     console.log('Raw API response:', response);
 
-    
-    
-    selectedTeacherData.value = response; 
-    
+
+
+    selectedTeacherData.value = response;
+
     // Open dialog AFTER data is loaded
     parentDetailsDialog.value = true;
   }catch (error: any){
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load teacher data',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('teachers.load_detail_error'),
       life: 3000
     })
   }finally{
     teacherLoading.value = false
   }
-  
+
 }
 
 // Confirm delete teacher
@@ -275,15 +293,15 @@ const deleteTeacher = async () => {
     teacher.value = {};
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Teacher deleted successfully',
+      summary: t('common.success'),
+      detail: t('teachers.delete_success'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete teacher',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('teachers.delete_error'),
       life: 3000
     });
   }
@@ -309,15 +327,15 @@ const deleteSelectedTeachers = async () => {
     selectedTeachers.value = [];
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Teachers deleted successfully',
+      summary: t('common.success'),
+      detail: t('teachers.delete_multiple_success'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete teachers',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('teachers.delete_multiple_error'),
       life: 3000
     });
   }
@@ -329,7 +347,7 @@ const getAccountStatusSeverity = (hasAccount: boolean) => {
 };
 
 const getAccountStatusLabel = (hasAccount: boolean) => {
-  return hasAccount ? 'Active Account' : 'No Account';
+  return hasAccount ? t('common.active_account') : t('common.no_account');
 };
 
 // Open create account dialog
@@ -376,11 +394,11 @@ const hideCreateAccountDialog = () => {
 // Validate email
 const validateEmail = (email: string): string => {
   if (!email || !email.trim()) {
-    return 'Email is required';
+    return t('validation.email_required');
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return 'Please enter a valid email address';
+    return t('validation.email_invalid');
   }
   return '';
 };
@@ -388,10 +406,10 @@ const validateEmail = (email: string): string => {
 // Validate password
 const validatePassword = (password: string): string => {
   if (!password || !password.trim()) {
-    return 'Password is required';
+    return t('validation.password_required');
   }
   if (password.length < 8) {
-    return 'Password must be at least 8 characters long';
+    return t('validation.password_min_length');
   }
   return '';
 };
@@ -399,10 +417,10 @@ const validatePassword = (password: string): string => {
 // Validate confirm password
 const validateConfirmPassword = (password: string, confirmPassword: string): string => {
   if (!confirmPassword || !confirmPassword.trim()) {
-    return 'Please confirm your password';
+    return t('validation.confirm_password_required');
   }
   if (password !== confirmPassword) {
-    return 'Passwords do not match';
+    return t('validation.passwords_no_match');
   }
   return '';
 };
@@ -415,9 +433,9 @@ const createUserAccount = async () => {
   validationErrors.value.email = validateEmail(accountData.value.email);
   validationErrors.value.password = validatePassword(accountData.value.password);
   validationErrors.value.confirmPassword = validateConfirmPassword(
-    accountData.value.password, 
+    accountData.value.password,
     accountData.value.confirmPassword,
-    
+
   );
 
   // Check if there are any validation errors
@@ -433,7 +451,7 @@ const createUserAccount = async () => {
       accountData.value.username,
       accountData.value.role
     );
-    
+
     // Update the teacher in the list
     const index = teachers.value.findIndex(t => t.id === teacher.value.id);
     if (index !== -1) {
@@ -443,14 +461,14 @@ const createUserAccount = async () => {
         has_account: !!updated.user_id
       };
     }
-    
+
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'User account created successfully',
+      summary: t('common.success'),
+      detail: t('teachers.account_created'),
       life: 3000
     });
-    
+
     createAccountDialog.value = false;
     accountData.value = {
       email: '',
@@ -477,8 +495,8 @@ const createUserAccount = async () => {
     } else {
       toast.add({
         severity: 'error',
-        summary: 'Error',
-        detail: error.response?.data?.message || 'Failed to create user account',
+        summary: t('common.error'),
+        detail: error.response?.data?.message || t('teachers.account_create_error'),
         life: 3000
       });
     }
@@ -490,9 +508,9 @@ const createUserAccount = async () => {
 
 // Get subjects of teachers
 const getTeacherSubjects = (teacher: Teacher) => {
-  return teacher.subjects && Array.isArray(teacher.subjects) 
-    ? teacher.subjects.map(s => s.name).join(', ') 
-    : 'N/A';
+  return teacher.subjects && Array.isArray(teacher.subjects)
+    ? teacher.subjects.map(s => s.name).join(', ')
+    : t('common.na');
 };
 
 
@@ -517,8 +535,8 @@ const loadSubjectsForDialog = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load subjects',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('subjects.load_error'),
       life: 3000
     });
   } finally {
@@ -537,41 +555,41 @@ const hideManageSubjectsDialog = () => {
 const saveSubjectAssignments = async () => {
   try {
     subjectsLoading.value = true;
-    
+
     // Get subject IDs
     const selectedIds = selectedSubjects.value.map(s => s.id);
     const currentIds = teacherSubjects.value.map(s => s.id);
-    
+
     // Find subjects to add and remove
     const toAdd = selectedIds.filter(id => !currentIds.includes(id));
     const toRemove = currentIds.filter(id => !selectedIds.includes(id));
-    
+
     // Add new subjects
     if (toAdd.length > 0) {
       await TeacherService.assignMultipleSubjects(teacher.value.id!, toAdd);
     }
-    
+
     // Remove unselected subjects
     for (const subjectId of toRemove) {
       await TeacherService.removeSubject(teacher.value.id!, subjectId);
     }
-    
+
     // Reload teachers to update the list
     await loadTeachers();
-    
+
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Subject assignments updated successfully',
+      summary: t('common.success'),
+      detail: t('teachers.subjects_updated'),
       life: 3000
     });
-    
+
     hideManageSubjectsDialog();
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to update subject assignments',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('teachers.subjects_update_error'),
       life: 3000
     });
   } finally {
@@ -586,7 +604,7 @@ const getCurrentAcademicYear = (): string => {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-11
-  
+
   // If we're past September (month 8), academic year is current-next
   // Otherwise it's previous-current
   if (currentMonth >= 8) {
@@ -599,7 +617,7 @@ const getCurrentAcademicYear = (): string => {
 // Open schedule dialog for a teacher
 const viewSchedule = async (teacherToView: Teacher) => {
   selectedTeacherForSchedule.value = teacherToView;
-  
+
   // Get unique academic years from teacher's classes
   const uniqueYears = new Set<string>();
   if (teacherToView.classes && Array.isArray(teacherToView.classes)) {
@@ -609,10 +627,10 @@ const viewSchedule = async (teacherToView: Teacher) => {
       }
     });
   }
-  
+
   // Convert to array and sort (most recent first)
   availableAcademicYears.value = Array.from(uniqueYears).sort().reverse();
-  
+
   // Set default academic year to current year or first available
   const currentYear = getCurrentAcademicYear();
   if (availableAcademicYears.value.includes(currentYear)) {
@@ -623,30 +641,30 @@ const viewSchedule = async (teacherToView: Teacher) => {
     selectedAcademicYear.value = currentYear;
     availableAcademicYears.value = [currentYear];
   }
-  
+
   // Load schedule for selected year
   await loadTeacherSchedule();
-  
+
   scheduleDialog.value = true;
 };
 
 // Load teacher schedule for selected academic year
 const loadTeacherSchedule = async () => {
   if (!selectedTeacherForSchedule.value) return;
-  
+
   try {
     scheduleLoading.value = true;
-    
+
     const response = await ScheduleService.getTeacherSchedule(
       selectedTeacherForSchedule.value.id,
-      selectedAcademicYear.value 
+      selectedAcademicYear.value
     );
-    
-    
+
+
     // Extract the data from response
     const scheduleData = (response as any).data || response;
-    
-    
+
+
     // The API returns data grouped by day with capitalized day names
     // We need to normalize to lowercase for consistent access
     if (scheduleData && typeof scheduleData === 'object' && !Array.isArray(scheduleData)) {
@@ -671,12 +689,12 @@ const loadTeacherSchedule = async () => {
     } else {
       teacherSchedules.value = {};
     }
-    
+
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load teacher schedule',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('teachers.schedule_error'),
       life: 3000
     });
   } finally {
@@ -689,19 +707,17 @@ const onAcademicYearChange = async () => {
   await loadTeacherSchedule();
 };
 
-// Get schedule for a specific day and hour
-const getScheduleForSlot = (day: string, hour: number): Schedule | null => {
-  const dayKey = day.toLowerCase();
+// Get schedule for a specific day key (English lowercase) and hour
+const getScheduleForSlot = (dayKey: string, hour: number): Schedule | null => {
   const daySchedules = teacherSchedules.value[dayKey] || [];
   const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
-  const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
-  
+
   const found = daySchedules.find(schedule => {
     const scheduleStart = schedule.start_time;
     const scheduleEnd = schedule.end_time;
     return scheduleStart <= startTime && scheduleEnd > startTime;
   }) || null;
-  
+
   return found;
 };
 
@@ -718,32 +734,32 @@ const hideScheduleDialog = () => {
 <template>
   <div class="card">
     <Toast />
-    
+
     <!-- Toolbar -->
     <Toolbar class="mb-6">
       <template #start>
-        <Button 
-          label="New Teacher" 
-          icon="pi pi-plus" 
-          severity="secondary" 
-          class="mr-2" 
-          @click="openNew" 
+        <Button
+          :label="t('teachers.new_teacher')"
+          icon="pi pi-plus"
+          severity="secondary"
+          class="mr-2"
+          @click="openNew"
         />
-        <Button 
-          label="Delete" 
-          icon="pi pi-trash" 
-          severity="secondary" 
-          :disabled="!selectedTeachers || !selectedTeachers.length" 
-          @click="confirmDeleteSelected" 
+        <Button
+          :label="t('common.delete')"
+          icon="pi pi-trash"
+          severity="secondary"
+          :disabled="!selectedTeachers || !selectedTeachers.length"
+          @click="confirmDeleteSelected"
         />
       </template>
 
       <template #end>
-        <Button 
-          label="Export" 
-          icon="pi pi-upload" 
-          severity="secondary" 
-          @click="exportCSV" 
+        <Button
+          :label="t('common.export')"
+          icon="pi pi-upload"
+          severity="secondary"
+          @click="exportCSV"
         />
       </template>
     </Toolbar>
@@ -761,21 +777,21 @@ const hideScheduleDialog = () => {
       exportFilename="teachers"
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       :rowsPerPageOptions="[5, 10, 25, 50]"
-      
+
       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} teachers"
       class="p-datatable-sm"
       @row-click="showTeacherDetails($event.data)"
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
-          <h4 class="m-0 text-xl font-semibold">Manage Teachers</h4>
+          <h4 class="m-0 text-xl font-semibold">{{ t('teachers.title') }}</h4>
           <IconField>
             <InputIcon>
               <i class="pi pi-search" />
             </InputIcon>
-            <InputText 
-              v-model="filters['global'].value" 
-              placeholder="Search teachers..." 
+            <InputText
+              v-model="filters['global'].value"
+              :placeholder="t('teachers.search_placeholder')"
             />
           </IconField>
         </div>
@@ -784,13 +800,13 @@ const hideScheduleDialog = () => {
       <template #empty>
         <div class="text-center py-8">
           <i class="pi pi-users text-4xl text-muted-color mb-3 block"></i>
-          <p class="text-muted-color">No teachers found.</p>
+          <p class="text-muted-color">{{ t('teachers.no_teachers') }}</p>
         </div>
       </template>
 
       <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-      
-      <Column field="full_name" header="Full Name" sortable style="min-width: 14rem">
+
+      <Column field="full_name" :header="t('common.full_name')" sortable style="min-width: 14rem">
         <template #body="{ data }">
           <div class="flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
@@ -799,98 +815,98 @@ const hideScheduleDialog = () => {
         </template>
       </Column>
 
-    
 
-      <Column field="phone" header="Phone" sortable style="min-width: 12rem">
+
+      <Column field="phone" :header="t('common.phone')" sortable style="min-width: 12rem">
         <template #body="{ data }">
           <div v-if="data.phone" class="flex items-center gap-2">
             <i class="pi pi-phone text-sm text-muted-color"></i>
             <span>{{ data.phone }}</span>
           </div>
-          <span v-else class="text-muted-color">N/A</span>
+          <span v-else class="text-muted-color">{{ t('common.na') }}</span>
         </template>
       </Column>
 
-      <Column field="email" header="Email" sortable style="min-width: 14rem">
+      <Column field="email" :header="t('common.email')" sortable style="min-width: 14rem">
         <template #body="{ data }">
           <div v-if="data.email" class="flex items-center gap-2">
             <i class="pi pi-envelope text-sm text-muted-color"></i>
             <span>{{ data.email }}</span>
           </div>
-          <span v-else class="text-muted-color">N/A</span>
+          <span v-else class="text-muted-color">{{ t('common.na') }}</span>
         </template>
       </Column>
 
-      
 
-      <Column field="classes_text" header="Classes" style="min-width: 15rem">
+
+      <Column field="classes_text" :header="t('teachers.classes')" style="min-width: 15rem">
         <template #body="{ data }">
-          <span>{{ data.classes_text || 'N/A' }}</span>
+          <span>{{ data.classes_text || t('common.na') }}</span>
         </template>
       </Column>
 
-      <Column field="subjects_text" header="Subjects" style="min-width: 15rem">
+      <Column field="subjects_text" :header="t('teachers.subjects')" style="min-width: 15rem">
         <template #body="{ data }">
-          <span>{{ data.subjects_text || 'N/A' }}</span>
+          <span>{{ data.subjects_text || t('common.na') }}</span>
         </template>
       </Column>
 
-      <Column header="Actions" :exportable="false" style="min-width: 16rem">
+      <Column :header="t('common.actions')" :exportable="false" style="min-width: 16rem">
         <template #body="{ data }">
-         
-          <Button 
+
+          <Button
             v-if="!data.has_account"
-            icon="pi pi-user-plus" 
-            outlined 
-            rounded 
+            icon="pi pi-user-plus"
+            outlined
+            rounded
             severity="success"
-            class="mr-2" 
-            @click="openCreateAccount(data)" 
-            v-tooltip.top="'Create Account'"
+            class="mr-2"
+            @click="openCreateAccount(data)"
+            :v-tooltip.top="t('common.create_account')"
           />
-          <Button 
-            icon="pi pi-calendar" 
-            outlined 
-            rounded 
+          <Button
+            icon="pi pi-calendar"
+            outlined
+            rounded
             severity="info"
-            class="mr-2" 
-            @click="viewSchedule(data)" 
-            v-tooltip.top="'View Schedule'"
+            class="mr-2"
+            @click="viewSchedule(data)"
+            :v-tooltip.top="t('teachers.view_schedule')"
           />
-          <Button 
-            icon="pi pi-book" 
-            outlined 
-            rounded 
+          <Button
+            icon="pi pi-book"
+            outlined
+            rounded
             severity="info"
-            class="mr-2" 
-            @click="openManageSubjects(data)" 
-            v-tooltip.top="'Manage Subjects'"
+            class="mr-2"
+            @click="openManageSubjects(data)"
+            :v-tooltip.top="t('teachers.manage_subjects')"
           />
-          <Button 
-            icon="pi pi-pencil" 
-            outlined 
-            rounded 
-            class="mr-2" 
-            @click="editTeacher(data)" 
-            v-tooltip.top="'Edit'"
+          <Button
+            icon="pi pi-pencil"
+            outlined
+            rounded
+            class="mr-2"
+            @click="editTeacher(data)"
+            :v-tooltip.top="t('common.edit')"
           />
-          <Button 
-            icon="pi pi-trash" 
-            outlined 
-            rounded 
-            severity="danger" 
-            @click="confirmDeleteTeacher(data)" 
-            v-tooltip.top="'Delete'"
+          <Button
+            icon="pi pi-trash"
+            outlined
+            rounded
+            severity="danger"
+            @click="confirmDeleteTeacher(data)"
+            :v-tooltip.top="t('common.delete')"
           />
         </template>
       </Column>
     </DataTable>
 
     <!-- Add/Edit Teacher Dialog -->
-    <Dialog 
-      v-model:visible="teacherDialog" 
-      :style="{ width: '550px' }" 
-      header="Teacher Details" 
+    <Dialog
+      v-model:visible="teacherDialog"
+      :style="{ width: '550px' }"
+      :header="t('teachers.teacher_details')"
       :modal="true"
       class="p-fluid"
     >
@@ -899,45 +915,45 @@ const hideScheduleDialog = () => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="first_name" class="block font-semibold mb-2">
-              First Name <span class="text-red-500">*</span>
+              {{ t('common.first_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="first_name" 
-              v-model="teacher.first_name" 
-              required 
-              autofocus 
-              :invalid="submitted && !teacher.first_name" 
-              placeholder="Enter first name"
+            <InputText
+              id="first_name"
+              v-model="teacher.first_name"
+              required
+              autofocus
+              :invalid="submitted && !teacher.first_name"
+              :placeholder="t('teachers.enter_first_name')"
             />
             <small v-if="submitted && !teacher.first_name" class="text-red-500">
-              First name is required.
+              {{ t('validation.first_name_required') }}
             </small>
           </div>
-          
+
           <div>
             <label for="last_name" class="block font-semibold mb-2">
-              Last Name <span class="text-red-500">*</span>
+              {{ t('common.last_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="last_name" 
-              v-model="teacher.last_name" 
-              required 
-              :invalid="submitted && !teacher.last_name" 
-              placeholder="Enter last name"
+            <InputText
+              id="last_name"
+              v-model="teacher.last_name"
+              required
+              :invalid="submitted && !teacher.last_name"
+              :placeholder="t('teachers.enter_last_name')"
             />
             <small v-if="submitted && !teacher.last_name" class="text-red-500">
-              Last name is required.
+              {{ t('validation.last_name_required') }}
             </small>
           </div>
         </div>
 
         <!-- CIN -->
         <div>
-          <label for="cin" class="block font-semibold mb-2">CIN (National ID)</label>
-          <InputText 
-            id="cin" 
-            v-model="teacher.cin" 
-            placeholder="Enter national ID number"
+          <label for="cin" class="block font-semibold mb-2">{{ t('common.cin') }}</label>
+          <InputText
+            id="cin"
+            v-model="teacher.cin"
+            :placeholder="t('teachers.enter_cin')"
           />
         </div>
 
@@ -945,35 +961,35 @@ const hideScheduleDialog = () => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="birth_date" class="block font-semibold mb-2">
-              Birth Date <span class="text-red-500">*</span>
+              {{ t('teachers.birth_date') }} <span class="text-red-500">*</span>
             </label>
-            <DatePicker 
-              id="birth_date" 
-              v-model="teacher.birth_date" 
+            <DatePicker
+              id="birth_date"
+              v-model="teacher.birth_date"
               dateFormat="yy-mm-dd"
               showIcon
               :invalid="submitted && !teacher.birth_date"
-              placeholder="Select birth date"
+              :placeholder="t('teachers.select_birth_date')"
             />
             <small v-if="submitted && !teacher.birth_date" class="text-red-500">
-              Birth date is required.
+              {{ t('validation.birth_date_required') }}
             </small>
           </div>
-          
+
           <div>
             <label for="hire_date" class="block font-semibold mb-2">
-              Hire Date <span class="text-red-500">*</span>
+              {{ t('teachers.hire_date') }} <span class="text-red-500">*</span>
             </label>
-            <DatePicker 
-              id="hire_date" 
-              v-model="teacher.hire_date" 
+            <DatePicker
+              id="hire_date"
+              v-model="teacher.hire_date"
               dateFormat="yy-mm-dd"
               showIcon
               :invalid="submitted && !teacher.hire_date"
-              placeholder="Select hire date"
+              :placeholder="t('teachers.select_hire_date')"
             />
             <small v-if="submitted && !teacher.hire_date" class="text-red-500">
-              Hire date is required.
+              {{ t('validation.hire_date_required') }}
             </small>
           </div>
         </div>
@@ -981,50 +997,50 @@ const hideScheduleDialog = () => {
         <!-- Specialization -->
         <div>
           <label for="specialization" class="block font-semibold mb-2">
-            Specialization <span class="text-red-500">*</span>
+            {{ t('teachers.specialization') }} <span class="text-red-500">*</span>
           </label>
-          <InputText 
-            id="specialization" 
-            v-model="teacher.specialization" 
+          <InputText
+            id="specialization"
+            v-model="teacher.specialization"
             :invalid="submitted && !teacher.specialization"
-            placeholder="Enter specialization"
+            :placeholder="t('teachers.enter_specialization')"
           />
           <small v-if="submitted && !teacher.specialization" class="text-red-500">
-            Specialization is required.
+            {{ t('validation.specialization_required') }}
           </small>
         </div>
 
         <!-- Salary -->
         <div>
           <label for="salary" class="block font-semibold mb-2">
-            Salary <span class="text-red-500">*</span>
+            {{ t('teachers.salary') }} <span class="text-red-500">*</span>
           </label>
-          <InputNumber 
-            id="salary" 
-            v-model="teacher.salary" 
-            mode="currency" 
-            currency="DZD" 
+          <InputNumber
+            id="salary"
+            v-model="teacher.salary"
+            mode="currency"
+            currency="DZD"
             locale="fr-DZ"
             :invalid="submitted && (teacher.salary === undefined || teacher.salary === null)"
-            placeholder="Enter salary"
+            :placeholder="t('teachers.enter_salary')"
           />
           <small v-if="submitted && (teacher.salary === undefined || teacher.salary === null)" class="text-red-500">
-            Salary is required.
+            {{ t('validation.salary_required') }}
           </small>
         </div>
 
         <!-- Subjects (only for new teachers) -->
         <div v-if="!teacher.id">
           <label for="subjects" class="block font-semibold mb-2">
-            Subjects
+            {{ t('teachers.subjects') }}
           </label>
-          <MultiSelect 
+          <MultiSelect
             id="subjects"
             v-model="newTeacherSubjects"
             :options="availableSubjects"
             dataKey="id"
             optionLabel="name"
-            placeholder="Select subjects to assign"
+            :placeholder="t('teachers.select_subjects_placeholder')"
             :maxSelectedLabels="3"
             class="w-full"
             display="chip"
@@ -1037,88 +1053,88 @@ const hideScheduleDialog = () => {
             </template>
           </MultiSelect>
           <small class="text-muted-color mt-2 block">
-            You can assign subjects now or later using "Manage Subjects" button
+            {{ t('teachers.subjects_assign_hint') }}
           </small>
         </div>
       </div>
 
       <template #footer>
-        
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideDialog" 
+
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideDialog"
         />
-        <Button 
-          label="Save" 
-          icon="pi pi-check" 
-          @click="saveTeacher" 
+        <Button
+          :label="t('common.save')"
+          icon="pi pi-check"
+          @click="saveTeacher"
         />
       </template>
     </Dialog>
 
     <!-- Delete Teacher Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="deleteTeacherDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Deletion" 
+    <Dialog
+      v-model:visible="deleteTeacherDialog"
+      :style="{ width: '450px' }"
+      :header="t('common.confirm_deletion')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-3xl text-red-500"></i>
         <span v-if="teacher">
-          Are you sure you want to delete <b>{{ teacher.full_name }}</b>?
+          {{ t('common.are_you_sure_delete') }} <b>{{ teacher.full_name }}</b>?
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteTeacherDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteTeacherDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteTeacher" 
+          @click="deleteTeacher"
         />
       </template>
     </Dialog>
 
     <!-- Delete Multiple Teachers Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="deleteTeachersDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Deletion" 
+    <Dialog
+      v-model:visible="deleteTeachersDialog"
+      :style="{ width: '450px' }"
+      :header="t('common.confirm_deletion')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-3xl text-red-500"></i>
-        <span>Are you sure you want to delete the selected teachers?</span>
+        <span>{{ t('common.are_you_sure_delete') }}</span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteTeachersDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteTeachersDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteSelectedTeachers" 
+          @click="deleteSelectedTeachers"
         />
       </template>
     </Dialog>
 
     <!-- Create User Account Dialog -->
-    <Dialog 
-      v-model:visible="createAccountDialog" 
-      :style="{ width: '500px' }" 
-      header="Create User Account" 
+    <Dialog
+      v-model:visible="createAccountDialog"
+      :style="{ width: '500px' }"
+      :header="t('common.create_user_account')"
       :modal="true"
       class="p-fluid"
     >
@@ -1127,7 +1143,7 @@ const hideScheduleDialog = () => {
           <div class="flex items-start gap-3">
             <i class="pi pi-info-circle text-blue-600 text-xl mt-1"></i>
             <div>
-              <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">Creating account for:</p>
+              <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">{{ t('common.creating_account_for') }}</p>
               <p class="text-blue-700 dark:text-blue-300">{{ teacher.full_name }}</p>
             </div>
           </div>
@@ -1136,16 +1152,16 @@ const hideScheduleDialog = () => {
         <!-- Email -->
         <div>
           <label for="account_email" class="block font-semibold mb-2">
-            Email <span class="text-red-500">*</span>
+            {{ t('common.email') }} <span class="text-red-500">*</span>
           </label>
-          <InputText 
-            id="account_email" 
-            v-model="accountData.email" 
+          <InputText
+            id="account_email"
+            v-model="accountData.email"
             type="email"
-            required 
+            required
             autofocus
-            :invalid="submitted && !!validationErrors.email" 
-            placeholder="Enter email address"
+            :invalid="submitted && !!validationErrors.email"
+            :placeholder="t('teachers.enter_email_address')"
             @blur="validationErrors.email = validateEmail(accountData.email)"
           />
           <small v-if="submitted && validationErrors.email" class="text-red-500">
@@ -1156,14 +1172,14 @@ const hideScheduleDialog = () => {
         <!-- Username -->
         <div>
           <label for="account_username" class="block font-semibold mb-2">
-            Username <span class="text-red-500">*</span>
+            {{ t('common.username') }} <span class="text-red-500">*</span>
           </label>
-          <InputText 
-            id="account_username" 
-            v-model="accountData.username" 
+          <InputText
+            id="account_username"
+            v-model="accountData.username"
             required
-            :invalid="submitted && !!validationErrors.username" 
-            placeholder="Enter username"
+            :invalid="submitted && !!validationErrors.username"
+            :placeholder="t('teachers.enter_username')"
           />
           <small v-if="submitted && validationErrors.username" class="text-red-500">
             {{ validationErrors.username }}
@@ -1172,20 +1188,20 @@ const hideScheduleDialog = () => {
 
 
         <!-- Role -->
-        
+
 
         <!-- Password -->
         <div>
           <label for="account_password" class="block font-semibold mb-2">
-            Password <span class="text-red-500">*</span>
+            {{ t('common.password') }} <span class="text-red-500">*</span>
           </label>
-          <Password 
-            id="account_password" 
-            v-model="accountData.password" 
+          <Password
+            id="account_password"
+            v-model="accountData.password"
             required
             toggleMask
-            :invalid="submitted && !!validationErrors.password" 
-            placeholder="Enter password (min. 8 characters)"
+            :invalid="submitted && !!validationErrors.password"
+            :placeholder="t('teachers.enter_password_hint')"
             :feedback="true"
             @blur="validationErrors.password = validatePassword(accountData.password)"
           />
@@ -1197,15 +1213,15 @@ const hideScheduleDialog = () => {
         <!-- Confirm Password -->
         <div>
           <label for="account_confirm_password" class="block font-semibold mb-2">
-            Confirm Password <span class="text-red-500">*</span>
+            {{ t('common.confirm_password') }} <span class="text-red-500">*</span>
           </label>
-          <Password 
-            id="account_confirm_password" 
-            v-model="accountData.confirmPassword" 
+          <Password
+            id="account_confirm_password"
+            v-model="accountData.confirmPassword"
             required
             toggleMask
-            :invalid="submitted && !!validationErrors.confirmPassword" 
-            placeholder="Confirm password"
+            :invalid="submitted && !!validationErrors.confirmPassword"
+            :placeholder="t('teachers.confirm_password_placeholder')"
             :feedback="false"
             @blur="validationErrors.confirmPassword = validateConfirmPassword(accountData.password, accountData.confirmPassword)"
           />
@@ -1216,26 +1232,26 @@ const hideScheduleDialog = () => {
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideCreateAccountDialog" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideCreateAccountDialog"
         />
-        <Button 
-          label="Create Account" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.create_account')"
+          icon="pi pi-check"
           severity="success"
-          @click="createUserAccount" 
+          @click="createUserAccount"
         />
       </template>
     </Dialog>
 
     <!-- Manage Subjects Dialog -->
-    <Dialog 
-      v-model:visible="manageSubjectsDialog" 
-      :style="{ width: '600px' }" 
-      header="Manage Teacher Subjects" 
+    <Dialog
+      v-model:visible="manageSubjectsDialog"
+      :style="{ width: '600px' }"
+      :header="t('teachers.manage_teacher_subjects')"
       :modal="true"
       class="p-fluid"
     >
@@ -1244,7 +1260,7 @@ const hideScheduleDialog = () => {
           <div class="flex items-start gap-3">
             <i class="pi pi-info-circle text-blue-600 text-xl mt-1"></i>
             <div>
-              <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">Managing subjects for:</p>
+              <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">{{ t('teachers.managing_subjects_for') }}</p>
               <p class="text-blue-700 dark:text-blue-300">{{ teacher.full_name }}</p>
             </div>
           </div>
@@ -1253,15 +1269,15 @@ const hideScheduleDialog = () => {
         <!-- Subjects MultiSelect -->
         <div>
           <label for="subjects" class="block font-semibold mb-2">
-            Select Subjects
+            {{ t('teachers.select_subjects') }}
           </label>
-          <MultiSelect 
+          <MultiSelect
             id="subjects"
             v-model="selectedSubjects"
             :options="availableSubjects"
             dataKey="id"
             optionLabel="name"
-            placeholder="Select subjects to assign"
+            :placeholder="t('teachers.select_subjects_placeholder')"
             :loading="subjectsLoading"
             :maxSelectedLabels="10"
             class="w-full"
@@ -1275,17 +1291,17 @@ const hideScheduleDialog = () => {
             </template>
           </MultiSelect>
           <small class="text-muted-color mt-2 block">
-            Select all subjects this teacher can teach
+            {{ t('teachers.subjects_hint') }}
           </small>
         </div>
 
         <!-- Currently Assigned Subjects Preview -->
         <div v-if="selectedSubjects.length > 0" class="border rounded p-4">
-          <p class="font-semibold mb-2">Selected Subjects ({{ selectedSubjects.length }}):</p>
+          <p class="font-semibold mb-2">{{ t('teachers.selected_subjects', { count: selectedSubjects.length }) }}:</p>
           <div class="flex flex-wrap gap-2">
-            <Tag 
-              v-for="subject in selectedSubjects" 
-              :key="subject.id" 
+            <Tag
+              v-for="subject in selectedSubjects"
+              :key="subject.id"
               :value="subject.name"
               severity="info"
             />
@@ -1294,34 +1310,34 @@ const hideScheduleDialog = () => {
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideManageSubjectsDialog" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideManageSubjectsDialog"
           :disabled="subjectsLoading"
         />
-        <Button 
-          label="Save Subjects" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('teachers.save_subjects')"
+          icon="pi pi-check"
           severity="success"
-          @click="saveSubjectAssignments" 
+          @click="saveSubjectAssignments"
           :loading="subjectsLoading"
         />
       </template>
     </Dialog>
 
     <!-- View Teacher Schedule Dialog (Read-Only) -->
-    <Dialog 
-      v-model:visible="scheduleDialog" 
-      :style="{ width: '95vw', maxWidth: '1200px' }" 
-      :header="selectedTeacherForSchedule ? `Schedule - ${selectedTeacherForSchedule.first_name} ${selectedTeacherForSchedule.last_name}` : 'Schedule'" 
+    <Dialog
+      v-model:visible="scheduleDialog"
+      :style="{ width: '95vw', maxWidth: '1200px' }"
+      :header="selectedTeacherForSchedule ? `Schedule - ${selectedTeacherForSchedule.first_name} ${selectedTeacherForSchedule.last_name}` : 'Schedule'"
       :modal="true"
       maximizable
     >
       <div v-if="scheduleLoading" class="text-center py-8">
         <i class="pi pi-spin pi-spinner text-4xl text-primary mb-3"></i>
-        <p class="text-muted-color">Loading schedule...</p>
+        <p class="text-muted-color">{{ t('teachers.loading_schedule') }}</p>
       </div>
 
       <div v-else>
@@ -1329,19 +1345,19 @@ const hideScheduleDialog = () => {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-if="selectedTeacherForSchedule?.specialization" class="flex items-center gap-2">
               <i class="pi pi-briefcase text-primary"></i>
-              <span class="font-semibold">Specialization:</span>
+              <span class="font-semibold">{{ t('teachers.specialization_label') }}</span>
               <span>{{ selectedTeacherForSchedule.specialization }}</span>
             </div>
             <div class="flex items-center gap-2">
               <label for="academicYear" class="font-semibold whitespace-nowrap">
                 <i class="pi pi-calendar text-primary mr-1"></i>
-                Academic Year:
+                {{ t('teachers.academic_year_label') }}
               </label>
-              <Select 
+              <Select
                 id="academicYear"
-                v-model="selectedAcademicYear" 
-                :options="availableAcademicYears" 
-                placeholder="Select year"
+                v-model="selectedAcademicYear"
+                :options="availableAcademicYears"
+                :placeholder="t('teachers.select_year_placeholder')"
                 @change="onAcademicYearChange"
                 class="w-full"
               />
@@ -1353,10 +1369,10 @@ const hideScheduleDialog = () => {
           <table class="schedule-table">
             <thead>
               <tr>
-                <th class="schedule-header time-column">Time</th>
-                <th 
-                  v-for="day in weekDays" 
-                  :key="day" 
+                <th class="schedule-header time-column">{{ t('common.time') }}</th>
+                <th
+                  v-for="(day, idx) in weekDays"
+                  :key="weekDayKeys[idx]"
                   class="schedule-header"
                 >
                   {{ day }}
@@ -1368,21 +1384,21 @@ const hideScheduleDialog = () => {
                 <td class="time-column font-semibold text-sm">
                   {{ timeSlot.label }}
                 </td>
-                <td 
-                  v-for="day in weekDays" 
-                  :key="day"
+                <td
+                  v-for="(day, idx) in weekDays"
+                  :key="weekDayKeys[idx]"
                   class="schedule-cell"
                 >
-                  <template v-if="getScheduleForSlot(day, timeSlot.hour)">
+                  <template v-if="getScheduleForSlot(weekDayKeys[idx], timeSlot.hour)">
                     <div class="schedule-content has-schedule">
                       <div class="font-semibold text-sm">
-                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name }}
+                        {{ getScheduleForSlot(weekDayKeys[idx], timeSlot.hour)?.assignment?.subject?.name }}
                       </div>
                       <div class="text-xs mt-1">
-                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.class?.name }}
+                        {{ getScheduleForSlot(weekDayKeys[idx], timeSlot.hour)?.assignment?.class?.name }}
                       </div>
-                      <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
-                        <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day, timeSlot.hour)?.room }}
+                      <div v-if="getScheduleForSlot(weekDayKeys[idx], timeSlot.hour)?.room" class="text-xs mt-1">
+                        <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(weekDayKeys[idx], timeSlot.hour)?.room }}
                       </div>
                     </div>
                   </template>
@@ -1397,101 +1413,100 @@ const hideScheduleDialog = () => {
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="hideScheduleDialog" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="hideScheduleDialog"
         />
       </template>
     </Dialog>
 
     <!-- Teacher Details Dialog -->
-    <Dialog 
-      v-model:visible="parentDetailsDialog" 
-      :style="{ width: '700px' }" 
-      header="Teacher Details" 
+    <Dialog
+      v-model:visible="parentDetailsDialog"
+      :style="{ width: '700px' }"
+      :header="t('teachers.teacher_details')"
       :modal="true"
     >
       <div v-if="teacherLoading" class="flex justify-center items-center py-8">
         <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
       </div>
-      
+
       <div v-else-if="selectedTeacherData" class="flex flex-col gap-6">
-        <!-- Parent Information Section -->
+        <!-- Teacher Information Section -->
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
-            Personal Information
+            {{ t('common.personal_information') }}
           </h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="text-sm text-muted-color">Full Name</label>
+              <label class="text-sm text-muted-color">{{ t('common.full_name') }}</label>
               <p class="font-semibold">{{ selectedTeacherData.first_name }} {{ selectedTeacherData.last_name }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">CIN</label>
-              <p class="font-semibold">{{ selectedTeacherData.cin || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.cin') }}</label>
+              <p class="font-semibold">{{ selectedTeacherData.cin || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Phone</label>
+              <label class="text-sm text-muted-color">{{ t('common.phone') }}</label>
               <p class="font-semibold">
                 <i class="pi pi-phone text-sm mr-2"></i>
-                {{ selectedTeacherData.user?.phone || 'N/A' }}
+                {{ selectedTeacherData.user?.phone || t('common.na') }}
               </p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Email</label>
+              <label class="text-sm text-muted-color">{{ t('common.email') }}</label>
               <p class="font-semibold">
                 <i class="pi pi-envelope text-sm mr-2"></i>
-                {{ selectedTeacherData.user?.email || 'N/A' }}
+                {{ selectedTeacherData.user?.email || t('common.na') }}
               </p>
             </div>
-            
+
             <div>
-              <label class="text-sm text-muted-color">Account Status</label>
+              <label class="text-sm text-muted-color">{{ t('common.account_status') }}</label>
               <p>
-                <Tag 
-                  :value="getAccountStatusLabel(!!selectedTeacherData.user_id)" 
-                  :severity="getAccountStatusSeverity(!!selectedTeacherData.user_id)" 
+                <Tag
+                  :value="getAccountStatusLabel(!!selectedTeacherData.user_id)"
+                  :severity="getAccountStatusSeverity(!!selectedTeacherData.user_id)"
                 />
               </p>
             </div>
 
-            
+
           </div>
           <Divider />
           <!-- Subjects Section -->
           <div class="mt-6">
             <h6 class="text-sm font-semibold text-muted-color mb-3 ">
-              <i class="pi pi-book mr-2"></i>Subjects
+              <i class="pi pi-book mr-2"></i>{{ t('teachers.subjects') }}
             </h6>
             <div v-if="Array.isArray(selectedTeacherData.teachable_subjects) && selectedTeacherData.teachable_subjects.length > 0">
               <div class="grid grid-cols-2 gap-2">
-                <Tag 
-                  v-for="(subject, index) in selectedTeacherData.teachable_subjects" 
+                <Tag
+                  v-for="(subject, index) in selectedTeacherData.teachable_subjects"
                   :key="subject.id || index"
                   :value="subject.name"
                   severity="info"
                 />
               </div>
             </div>
-            <p v-else class="text-muted-color">No subjects assigned</p>
+            <p v-else class="text-muted-color">{{ t('teachers.no_subjects') }}</p>
           </div>
           <Divider />
 
 
         </div>
-        
 
 
-       
+
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="parentDetailsDialog = false" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="parentDetailsDialog = false"
         />
       </template>
     </Dialog>

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 Chart.register(...registerables);
 
@@ -19,7 +22,7 @@ const chartData = computed(() => ({
   labels: props.data.map(item => item.class_name),
   datasets: [
     {
-      label: 'Students',
+      label: t('dashboard.students_label'),
       data: props.data.map(item => item.student_count),
       backgroundColor: [
         'rgba(54, 162, 235, 0.6)',
@@ -92,7 +95,7 @@ onMounted(() => {
 <template>
   <div class="card mb-8">
     <div class="flex items-center justify-between mb-6">
-      <h5 class="text-xl font-semibold">Students by Class</h5>
+      <h5 class="text-xl font-semibold">{{ t('dashboard.students_by_class') }}</h5>
     </div>
 
     <div v-if="data && data.length > 0" style="height: 300px">
@@ -101,7 +104,7 @@ onMounted(() => {
     
     <div v-else class="text-center py-8">
       <i class="pi pi-chart-bar text-4xl text-muted-color mb-3"></i>
-      <p class="text-muted-color">No class data available</p>
+      <p class="text-muted-color">{{ t('dashboard.no_class_data') }}</p>
     </div>
 
     <!-- Class List -->

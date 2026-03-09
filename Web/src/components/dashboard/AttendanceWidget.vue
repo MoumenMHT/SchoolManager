@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 interface Props {
   attendanceRate: number;
@@ -43,14 +46,14 @@ const getPercentage = (value: number) => {
 <template>
   <div class="card mb-8">
     <div class="flex items-center justify-between mb-6">
-      <h5 class="text-xl font-semibold">Attendance Overview</h5>
+      <h5 class="text-xl font-semibold">{{ t('dashboard.attendance_overview') }}</h5>
       <i class="pi pi-calendar text-2xl text-primary"></i>
     </div>
 
     <!-- Overall Attendance Rate -->
     <div class="p-4 bg-surface-50 dark:bg-surface-800 rounded-border mb-6">
       <div class="flex items-center justify-between mb-3">
-        <span class="text-sm font-medium">Overall Attendance Rate (Last 30 Days)</span>
+        <span class="text-sm font-medium">{{ t('dashboard.attendance_rate_subtitle') }}</span>
         <Tag 
           :value="`${attendanceRate.toFixed(1)}%`" 
           :severity="attendanceSeverity"
@@ -72,7 +75,7 @@ const getPercentage = (value: number) => {
             <i class="pi pi-check text-green-600 dark:text-green-400 text-lg"></i>
           </div>
           <div>
-            <div class="text-xs text-green-700 dark:text-green-300 mb-1">Present</div>
+            <div class="text-xs text-green-700 dark:text-green-300 mb-1">{{ t('common.present') }}</div>
             <div class="text-xl font-bold text-green-900 dark:text-green-100">
               {{ breakdown.present || 0 }}
             </div>
@@ -90,7 +93,7 @@ const getPercentage = (value: number) => {
             <i class="pi pi-times text-red-600 dark:text-red-400 text-lg"></i>
           </div>
           <div>
-            <div class="text-xs text-red-700 dark:text-red-300 mb-1">Absent</div>
+            <div class="text-xs text-red-700 dark:text-red-300 mb-1">{{ t('common.absent') }}</div>
             <div class="text-xl font-bold text-red-900 dark:text-red-100">
               {{ breakdown.absent || 0 }}
             </div>
@@ -108,7 +111,7 @@ const getPercentage = (value: number) => {
             <i class="pi pi-clock text-orange-600 dark:text-orange-400 text-lg"></i>
           </div>
           <div>
-            <div class="text-xs text-orange-700 dark:text-orange-300 mb-1">Late</div>
+            <div class="text-xs text-orange-700 dark:text-orange-300 mb-1">{{ t('common.late') }}</div>
             <div class="text-xl font-bold text-orange-900 dark:text-orange-100">
               {{ breakdown.late || 0 }}
             </div>
@@ -126,7 +129,7 @@ const getPercentage = (value: number) => {
             <i class="pi pi-info-circle text-blue-600 dark:text-blue-400 text-lg"></i>
           </div>
           <div>
-            <div class="text-xs text-blue-700 dark:text-blue-300 mb-1">Excused</div>
+            <div class="text-xs text-blue-700 dark:text-blue-300 mb-1">{{ t('common.excused') }}</div>
             <div class="text-xl font-bold text-blue-900 dark:text-blue-100">
               {{ breakdown.excused || 0 }}
             </div>
@@ -140,7 +143,7 @@ const getPercentage = (value: number) => {
 
     <div v-if="totalRecords === 0" class="text-center py-6 mt-4">
       <i class="pi pi-calendar-times text-4xl text-muted-color mb-3"></i>
-      <p class="text-muted-color text-sm">No attendance records for the last 30 days</p>
+      <p class="text-muted-color text-sm">{{ t('dashboard.no_attendance_records') }}</p>
     </div>
   </div>
 </template>

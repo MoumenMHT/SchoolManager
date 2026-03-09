@@ -100,7 +100,7 @@ class scheduleController extends Controller
                 } catch (\Exception $e) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Invalid date format'
+                        'message' => __('messages.invalid_date_format')
                     ], 400);
                 }
             }
@@ -169,7 +169,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve schedules',
+                'message' => __('messages.failed_retrieve_schedules'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -199,7 +199,7 @@ class scheduleController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -209,7 +209,7 @@ class scheduleController extends Controller
             if (!$assignment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class-Subject-Teacher assignment not found'
+                    'message' => __('messages.assignment_not_found')
                 ], 404);
             }
 
@@ -224,7 +224,7 @@ class scheduleController extends Controller
             if ($hasTeacherConflict) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Teacher already has a class scheduled at this time',
+                    'message' => __('messages.teacher_schedule_conflict'),
                     'conflict' => 'teacher_time_conflict'
                 ], 409);
             }
@@ -241,7 +241,7 @@ class scheduleController extends Controller
                 if ($hasRoomConflict) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Room already occupied at this time',
+                        'message' => __('messages.room_conflict'),
                         'conflict' => 'room_conflict'
                     ], 409);
                 }
@@ -258,7 +258,7 @@ class scheduleController extends Controller
             if ($hasClassConflict) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class already has a schedule at this time',
+                    'message' => __('messages.class_schedule_conflict'),
                     'conflict' => 'class_time_conflict'
                 ], 409);
             }
@@ -268,14 +268,14 @@ class scheduleController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Schedule created successfully',
+                'message' => __('messages.schedule_created'),
                 'data' => $schedule
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create schedule',
+                'message' => __('messages.failed_create_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -298,7 +298,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Schedule not found',
+                'message' => __('messages.schedule_not_found'),
                 'error' => $e->getMessage()
             ], 404);
         }
@@ -332,7 +332,7 @@ class scheduleController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -359,7 +359,7 @@ class scheduleController extends Controller
             if ($hasTeacherConflict) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Teacher already has a class scheduled at this time',
+                    'message' => __('messages.teacher_schedule_conflict'),
                     'conflict' => 'teacher_time_conflict'
                 ], 409);
             }
@@ -376,7 +376,7 @@ class scheduleController extends Controller
                 if ($hasRoomConflict) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Room already occupied at this time',
+                        'message' => __('messages.room_conflict'),
                         'conflict' => 'room_conflict'
                     ], 409);
                 }
@@ -393,7 +393,7 @@ class scheduleController extends Controller
             if ($hasClassConflict) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class already has a schedule at this time',
+                    'message' => __('messages.class_schedule_conflict'),
                     'conflict' => 'class_time_conflict'
                 ], 409);
             }
@@ -403,14 +403,14 @@ class scheduleController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Schedule updated successfully',
+                'message' => __('messages.schedule_updated'),
                 'data' => $schedule
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update schedule',
+                'message' => __('messages.failed_update_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -427,13 +427,13 @@ class scheduleController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Schedule deleted successfully'
+                'message' => __('messages.schedule_deleted')
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete schedule',
+                'message' => __('messages.failed_delete_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -485,7 +485,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve class schedule',
+                'message' => __('messages.failed_retrieve_class_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -520,7 +520,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve teacher schedule',
+                'message' => __('messages.failed_retrieve_teacher_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -549,7 +549,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve subject schedule',
+                'message' => __('messages.failed_retrieve_subject_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -568,7 +568,7 @@ class scheduleController extends Controller
             if (!in_array($day, $validDays)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid day. Must be one of: ' . implode(', ', $validDays)
+                    'message' => __('messages.invalid_day')
                 ], 400);
             }
 
@@ -600,7 +600,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve day schedule',
+                'message' => __('messages.failed_retrieve_day_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -631,7 +631,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve room schedule',
+                'message' => __('messages.failed_retrieve_room_schedule'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -664,7 +664,7 @@ class scheduleController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -729,7 +729,7 @@ class scheduleController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => count($created) . ' schedules created successfully',
+                    'message' => __('messages.schedules_created', ['count' => count($created)]),
                     'data' => $created,
                     'errors' => $errors,
                     'summary' => [
@@ -747,7 +747,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create schedules',
+                'message' => __('messages.failed_create_schedules'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -780,7 +780,7 @@ class scheduleController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -801,7 +801,7 @@ class scheduleController extends Controller
             )) {
                 $conflicts[] = [
                     'type' => 'teacher',
-                    'message' => 'Teacher has another class at this time'
+                    'message' => __('messages.teacher_conflict')
                 ];
             }
 
@@ -815,7 +815,7 @@ class scheduleController extends Controller
             )) {
                 $conflicts[] = [
                     'type' => 'room',
-                    'message' => 'Room is occupied at this time'
+                    'message' => __('messages.room_occupied')
                 ];
             }
 
@@ -829,7 +829,7 @@ class scheduleController extends Controller
             )) {
                 $conflicts[] = [
                     'type' => 'class',
-                    'message' => 'Class has another subject at this time'
+                    'message' => __('messages.class_conflict')
                 ];
             }
 
@@ -842,7 +842,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to check conflicts',
+                'message' => __('messages.failed_check_conflicts'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -866,7 +866,7 @@ class scheduleController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -914,7 +914,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get available slots',
+                'message' => __('messages.failed_get_available_slots'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -969,7 +969,7 @@ class scheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get weekly overview',
+                'message' => __('messages.failed_get_weekly_overview'),
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppMenuItem from './AppMenuItem.vue';
 import apiService from '@/service/ApiService';
 
+const { t } = useI18n();
 const currentUser = computed(() => apiService.getUser());
 const userRole = computed(() => currentUser.value?.role || 'admin');
 const isTeacher = computed(() => userRole.value === 'teacher');
@@ -10,10 +12,10 @@ const isAdmin = computed(() => userRole.value === 'admin');
 
 const model = computed(() => {
     const homeSection = {
-        label: 'Home',
+        label: t('nav.home'),
         items: [
             {
-                label: 'Dashboard',
+                label: t('nav.dashboard'),
                 icon: 'pi pi-fw pi-home',
                 to: '/'
             }
@@ -21,10 +23,10 @@ const model = computed(() => {
     };
 
     const teacherSection = {
-        label: 'Academic',
+        label: t('nav.academic'),
         items: [
             {
-                label: 'My Classes',
+                label: t('nav.my_classes'),
                 icon: 'pi pi-fw pi-building',
                 to: '/teacher/portal'
             }
@@ -32,30 +34,30 @@ const model = computed(() => {
     };
 
     const adminSection = {
-        label: 'Management',
+        label: t('nav.management'),
         items: [
             {
-                label: 'Parents',
+                label: t('nav.parents'),
                 icon: 'pi pi-fw pi-users',
                 to: '/parents'
             },
             {
-                label: 'Teachers',
+                label: t('nav.teachers'),
                 icon: 'pi pi-fw pi-id-card',
                 to: '/teachers'
             },
             {
-                label: 'Students',
+                label: t('nav.students'),
                 icon: 'pi pi-fw pi-graduation-cap',
                 to: '/students'
             },
             {
-                label: 'Classes',
+                label: t('nav.classes'),
                 icon: 'pi pi-fw pi-building',
                 to: '/classes'
             },
             {
-                label: 'Attendance',
+                label: t('nav.attendance'),
                 icon: 'pi pi-fw pi-check-circle',
                 to: '/attendance'
             }

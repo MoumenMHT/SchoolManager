@@ -60,7 +60,7 @@ class ParentController extends Controller
             if ($existingParent) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A parent with the same first and last name already exists.'
+                    'message' => __('messages.parent_name_exists')
                 ], 409);
             }
         }
@@ -97,7 +97,7 @@ class ParentController extends Controller
         if (!$parent) {
             return response()->json([
                 'success' => false,
-                'message' => 'Parent not found'
+                'message' => __('messages.parent_not_found')
             ], 404);
         }
         return response()->json([
@@ -123,7 +123,7 @@ class ParentController extends Controller
         if (!$parent) {
             return response()->json([
                 'success' => false,
-                'message' => 'Parent not found'
+                'message' => __('messages.parent_not_found')
             ], 404);
         }
 
@@ -147,7 +147,7 @@ class ParentController extends Controller
             if ($existingParent) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A parent with the same first and last name already exists.'
+                    'message' => __('messages.parent_name_exists')
                 ], 409);
             }
         }
@@ -176,13 +176,13 @@ class ParentController extends Controller
         if (!$parent) {
             return response()->json([
                 'success' => false,
-                'message' => 'Parent not found'
+                'message' => __('messages.parent_not_found')
             ], 404);
         }
         $parent->delete();
         return response()->json([
             'success' => true,
-            'message' => 'Parent deleted successfully'
+            'message' => __('messages.parent_deleted')
         ]);
     }
 
@@ -195,14 +195,14 @@ class ParentController extends Controller
         if (!$parent) {
             return response()->json([
                 'success' => false,
-                'message' => 'Parent not found'
+                'message' => __('messages.parent_not_found')
             ], 404);
         }
 
         if ($parent->user_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Parent already has an account'
+                'message' => __('messages.parent_has_account')
             ], 409);
         }
 
@@ -235,7 +235,7 @@ class ParentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User account created successfully',
+            'message' => __('messages.account_created'),
             'data' => $parent->load('user')
         ], 201);
     }

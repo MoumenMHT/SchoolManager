@@ -39,7 +39,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve payments',
+                'message' => __('messages.failed_retrieve_payments'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -62,7 +62,7 @@ class PaymentController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -125,7 +125,7 @@ class PaymentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment processed successfully',
+                'message' => __('messages.payment_processed'),
                 'data' => $payment,
                 'overpayment' => $remainingAmount > 0 ? $remainingAmount : 0
             ], 201);
@@ -134,7 +134,7 @@ class PaymentController extends Controller
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to process payment',
+                'message' => __('messages.failed_process_payment'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -155,7 +155,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found',
+                'message' => __('messages.payment_not_found'),
                 'error' => $e->getMessage()
             ], 404);
         }
@@ -179,7 +179,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve contract payments',
+                'message' => __('messages.failed_retrieve_contract_payments'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -202,7 +202,7 @@ class PaymentController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -217,7 +217,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update payment',
+                'message' => __('messages.failed_update_payment'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -260,13 +260,13 @@ class PaymentController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Payment deleted successfully'
+                'message' => __('messages.payment_deleted')
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete payment',
+                'message' => __('messages.failed_delete_payment'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -310,7 +310,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate receipt',
+                'message' => __('messages.failed_generate_receipt'),
                 'error' => $e->getMessage()
             ], 404);
         }
@@ -330,7 +330,7 @@ class PaymentController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -342,7 +342,7 @@ class PaymentController extends Controller
             if ($request->refund_amount > $payment->amount) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Refund amount cannot exceed payment amount'
+                    'message' => __('messages.refund_exceeds_payment')
                 ], 422);
             }
 
@@ -399,7 +399,7 @@ class PaymentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Refund processed successfully',
+                'message' => __('messages.payment_refunded'),
                 'data' => [
                     'original_payment' => $payment,
                     'refund_payment' => $refundPayment
@@ -410,7 +410,7 @@ class PaymentController extends Controller
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to process refund',
+                'message' => __('messages.failed_process_refund'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -456,7 +456,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve statistics',
+                'message' => __('messages.failed_retrieve_statistics'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -507,7 +507,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve payment history',
+                'message' => __('messages.failed_retrieve_payment_history'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -551,7 +551,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve parent dashboard',
+                'message' => __('messages.failed_retrieve_parent_dashboard'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -616,7 +616,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate financial report',
+                'message' => __('messages.failed_generate_report'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -636,7 +636,7 @@ class PaymentController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -689,7 +689,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to calculate payment',
+                'message' => __('messages.failed_calculate_payment'),
                 'error' => $e->getMessage()
             ], 500);
         }

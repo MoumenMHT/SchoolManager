@@ -81,7 +81,7 @@ class TeacherSubjectController extends Controller
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher is already assigned to this subject',
+                'message' => __('messages.teacher_subject_already_assigned'),
             ], 422);
         }
 
@@ -89,7 +89,7 @@ class TeacherSubjectController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Subject assigned to teacher successfully',
+            'message' => __('messages.teacher_subject_assigned'),
             'data' => $teacherSubject->load(['teacher', 'subject']),
         ], 201);
     }
@@ -110,7 +110,7 @@ class TeacherSubjectController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Subjects assigned to teacher successfully',
+            'message' => __('messages.teacher_subjects_assigned'),
             'data' => $teacher->teachableSubjects,
         ]);
     }
@@ -125,7 +125,7 @@ class TeacherSubjectController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Subject removed from teacher successfully',
+            'message' => __('messages.teacher_subject_removed'),
         ]);
     }
 
@@ -146,13 +146,13 @@ class TeacherSubjectController extends Controller
         if (!$deleted) {
             return response()->json([
                 'success' => false,
-                'message' => 'Assignment not found',
+                'message' => __('messages.assignment_not_found'),
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Subject removed from teacher successfully',
+            'message' => __('messages.teacher_subject_removed'),
         ]);
     }
 }

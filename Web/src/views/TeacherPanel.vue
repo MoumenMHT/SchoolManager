@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useToast } from 'primevue/usetoast';
 import ApiService from '@/service/ApiService';
 import AttendanceService from '@/service/AttendanceService';
@@ -7,6 +8,7 @@ import GradeService from '@/service/GradeService';
 import ScheduleService from '@/service/ScheduleService';
 
 const toast = useToast();
+const { t } = useI18n();
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const loading = ref(false);
@@ -104,7 +106,7 @@ const init = async () => {
     const classesResp = await ApiService.get<any[]>('/teacher/classes');
     myClasses.value = (classesResp.data as any) || [];
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: err?.response?.data?.message || 'Failed to load your classes', life: 4000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: err?.response?.data?.message || t('teacher_portal.load_classes_error'), life: 4000 });
   } finally {
     loading.value = false;
   }
@@ -122,7 +124,7 @@ const openSchedule = async () => {
     const resp = await ScheduleService.getTeacherSchedule(teacherId.value);
     teacherSchedules.value = (resp as any)?.data ?? resp ?? {};
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load schedule', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_schedule_error'), life: 3000 });
   } finally {
     scheduleLoading.value = false;
   }
@@ -183,7 +185,7 @@ const loadAttendanceRows = async () => {
       };
     });
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load attendance', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_attendance_error'), life: 3000 });
   } finally {
     attendanceLoading.value = false;
   }
@@ -229,7 +231,7 @@ const saveAttendance = async () => {
     toast.add({ severity: 'success', summary: 'Saved', detail: 'Attendance saved successfully', life: 3000 });
     attendanceDialog.value = false;
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: err?.response?.data?.message || 'Failed to save attendance', life: 4000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: err?.response?.data?.message || t('teacher_portal.save_attendance_error'), life: 4000 });
   } finally {
     savingAttendance.value = false;
   }
@@ -309,7 +311,7 @@ const saveGrades = async () => {
 
     gradesDialog.value = false;
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: err?.response?.data?.message || 'Failed to save grades', life: 4000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: err?.response?.data?.message || t('teacher_portal.save_grades_error'), life: 4000 });
   } finally {
     savingGrades.value = false;
   }

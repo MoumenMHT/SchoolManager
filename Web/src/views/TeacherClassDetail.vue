@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { useToast } from 'primevue/usetoast';
 import apiService from '@/service/ApiService';
 import ApiService from '@/service/ApiService';
@@ -10,6 +11,7 @@ import GradeService, { type GradeRecord } from '@/service/GradeService';
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const { t } = useI18n();
 
 const classId = computed(() => Number(route.params.classId));
 const activeTab = ref<string>((route.query.tab as string) === 'grades' ? '1' : '0');
@@ -113,7 +115,7 @@ async function loadClass() {
 
     initAttStatuses();
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load class', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_class_error'), life: 3000 });
   } finally {
     classLoading.value = false;
   }
@@ -174,7 +176,7 @@ async function loadAttendance() {
       }
     }
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load attendance', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_attendance_error'), life: 3000 });
   } finally {
     attLoading.value = false;
   }
@@ -200,7 +202,7 @@ async function saveAttendance() {
     toast.add({ severity: 'success', summary: 'Saved', detail: 'Attendance saved', life: 3000 });
     await loadAttendance();
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save attendance', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.save_attendance_error'), life: 3000 });
   } finally {
     attSaving.value = false;
   }
@@ -236,7 +238,7 @@ async function loadGrades() {
     }
     gradeValues.value = vals;
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load grades', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_grades_error'), life: 3000 });
   } finally {
     gradeLoading.value = false;
   }
@@ -285,7 +287,7 @@ async function saveGrades() {
     toast.add({ severity: 'success', summary: 'Saved', detail: `${toCreate.length + toUpdate.length} grade(s) saved`, life: 3000 });
     await loadGrades();
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save grades', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.save_grades_error'), life: 3000 });
   } finally {
     gradeSaving.value = false;
   }

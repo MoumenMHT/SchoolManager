@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { BillRecord } from '@/types';
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { daysAhead: 30 });
+const { t } = useI18n();
 
 const upcomingBills = computed(() => {
   const now  = Date.now();
@@ -54,14 +56,14 @@ const parentName = (b: BillRecord) =>
       <div>
         <h5 class="text-xl font-semibold flex items-center gap-2">
           <i class="pi pi-calendar-clock text-orange-500"></i>
-          Upcoming Dues
+          {{ t('dashboard.upcoming_dues') }}
         </h5>
         <p class="text-sm text-muted-color mt-1">
-          Bills due in the next {{ daysAhead }} days ·
-          <span class="font-semibold text-orange-500">{{ formatCurrency(totalDue) }}</span> expected
+          {{ t('dashboard.bills_due_next', { days: daysAhead }) }} ·
+          <span class="font-semibold text-orange-500">{{ formatCurrency(totalDue) }}</span> {{ t('dashboard.expected') }}
         </p>
       </div>
-      <Tag :value="`${upcomingBills.length} due`" severity="warn" />
+      <Tag :value="`${upcomingBills.length} ${t('dashboard.due_label')}`" severity="warn" />
     </div>
 
     <div v-if="upcomingBills.length > 0" class="space-y-3 max-h-80 overflow-y-auto pr-1">
@@ -91,7 +93,7 @@ const parentName = (b: BillRecord) =>
           </div>
           <div class="min-w-0">
             <div class="text-sm font-medium truncate">{{ parentName(b) }}</div>
-            <div class="text-xs text-muted-color">{{ b.month_year }} · due {{ formatDate(b.due_date) }}</div>
+            <div class="text-xs text-muted-color">{{ b.month_year }} · {{ t('dashboard.due_label') }} {{ formatDate(b.due_date) }}</div>
           </div>
         </div>
 
@@ -107,7 +109,7 @@ const parentName = (b: BillRecord) =>
 
     <div v-else class="text-center py-10">
       <i class="pi pi-calendar-times text-4xl text-muted-color mb-3"></i>
-      <p class="text-muted-color">No bills due in the next {{ daysAhead }} days</p>
+      <p class="text-muted-color">{{ t('dashboard.no_bills_due', { days: daysAhead }) }}</p>
     </div>
   </div>
 </template>

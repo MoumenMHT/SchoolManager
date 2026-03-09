@@ -2,9 +2,11 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
+import { useI18n } from 'vue-i18n';
 import apiService from '@/service/ApiService';
 import ApiService from '@/service/ApiService';
 
+const { t } = useI18n();
 const router = useRouter();
 const toast = useToast();
 const loading = ref(false);
@@ -19,6 +21,15 @@ const sessionAttLoading = ref(false);
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const translatedWeekDays = computed(() => [
+  t('common.monday'),
+  t('common.tuesday'),
+  t('common.wednesday'),
+  t('common.thursday'),
+  t('common.friday'),
+  t('common.saturday'),
+]);
 
 const currentUser = computed(() => apiService.getUser());
 const teacher = computed(() => currentUser.value?.teacher ?? null);
@@ -59,7 +70,7 @@ async function loadClasses() {
     const raw = (response.data as any)?.data ?? response.data ?? [];
     classes.value = Array.isArray(raw) ? raw : Object.values(raw);
   } catch (e: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load classes', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_classes_error'), life: 3000 });
   } finally {
     loading.value = false;
   }
@@ -131,7 +142,7 @@ async function openSchedule() {
     }
     scheduleByDay.value = grouped;
   } catch (e: any) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load schedule', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_schedule_error'), life: 3000 });
   } finally {
     scheduleLoading.value = false;
   }
@@ -191,12 +202,12 @@ onMounted(() => {
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
       <div>
         <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-1">
-          Welcome back, {{ teacherName }}
+          {{ t('teacher_portal.title', { name: teacherName }) }}
         </h1>
-        <p class="text-surface-500 dark:text-surface-400">Manage your classes, attendance and grades</p>
+        <p class="text-surface-500 dark:text-surface-400">{{ t('teacher_portal.subtitle') }}</p>
       </div>
       <Button
-        label="My Schedule"
+        :label="t('teacher_portal.my_schedule')"
         icon="pi pi-calendar"
         severity="secondary"
         outlined
@@ -212,7 +223,7 @@ onMounted(() => {
         </div>
         <div>
           <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ classes.length }}</div>
-          <div class="text-sm text-blue-600 dark:text-blue-400">Classes</div>
+          <div class="text-sm text-blue-600 dark:text-blue-400">{{ t('teacher_portal.classes') }}</div>
         </div>
       </div>
       <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 flex items-center gap-3">
@@ -223,7 +234,7 @@ onMounted(() => {
           <div class="text-2xl font-bold text-green-700 dark:text-green-300">
             {{ classes.reduce((s, c) => s + (c.students_count ?? 0), 0) }}
           </div>
-          <div class="text-sm text-green-600 dark:text-green-400">Total Students</div>
+          <div class="text-sm text-green-600 dark:text-green-400">{{ t('teacher_portal.total_students') }}</div>
         </div>
       </div>
       <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 flex items-center gap-3">
@@ -234,7 +245,7 @@ onMounted(() => {
           <div class="text-2xl font-bold text-purple-700 dark:text-purple-300">
             {{ [...new Set(classes.flatMap(c => (c.subjects ?? []).map((s: any) => s.id)))].length }}
           </div>
-          <div class="text-sm text-purple-600 dark:text-purple-400">Subjects Taught</div>
+          <div class="text-sm text-purple-600 dark:text-purple-400">{{ t('teacher_portal.subjects_taught') }}</div>
         </div>
       </div>
     </div>
@@ -242,7 +253,7 @@ onMounted(() => {
     <!-- Today's Sessions -->
     <div class="mb-6">
       <div class="flex items-center gap-2 mb-3">
-        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">Today's Sessions</h2>
+        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">{{ t('teacher_portal.todays_sessions') }}</h2>
         <span class="text-xs text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-700 px-2 py-0.5 rounded-full">
           {{ todayDayName() }}
         </span>
@@ -254,7 +265,7 @@ onMounted(() => {
 
       <div v-else-if="todaysSessions.length === 0" class="flex items-center gap-3 p-4 bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 text-surface-400">
         <i class="pi pi-calendar-times text-xl"></i>
-        <span class="text-sm">No sessions scheduled for today.</span>
+        <span class="text-sm">{{ t('teacher_portal.no_sessions_today') }}</span>
       </div>
 
       <div v-else class="flex flex-wrap gap-3">
@@ -283,25 +294,25 @@ onMounted(() => {
           <div class="mt-3 pt-2 border-t border-surface-100 dark:border-surface-700">
             <!-- Loading summaries -->
             <span v-if="!(slot.id in sessionAttMap)" class="text-xs text-surface-400 dark:text-surface-500 flex items-center gap-1">
-              <i class="pi pi-spin pi-spinner text-[10px]"></i> Checking...
+              <i class="pi pi-spin pi-spinner text-[10px]"></i> {{ t('teacher_portal.checking') }}
             </span>
             <!-- Attendance already marked -->
             <template v-else-if="sessionAttMap[slot.id].total > 0">
               <div class="flex items-center gap-1 mb-1">
                 <span class="text-xs text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
-                  <i class="pi pi-check-circle text-[10px]"></i> Attendance Marked
+                  <i class="pi pi-check-circle text-[10px]"></i> {{ t('teacher_portal.attendance_marked') }}
                 </span>
               </div>
               <div class="flex gap-2 text-[10px]">
-                <span class="text-green-600 dark:text-green-400 font-medium">{{ sessionAttMap[slot.id].present }} present</span>
-                <span v-if="sessionAttMap[slot.id].absent > 0" class="text-red-500 dark:text-red-400 font-medium">{{ sessionAttMap[slot.id].absent }} absent</span>
-                <span v-if="sessionAttMap[slot.id].late > 0" class="text-amber-500 dark:text-amber-400 font-medium">{{ sessionAttMap[slot.id].late }} late</span>
+                <span class="text-green-600 dark:text-green-400 font-medium">{{ sessionAttMap[slot.id].present }} {{ t('teacher_portal.present') }}</span>
+                <span v-if="sessionAttMap[slot.id].absent > 0" class="text-red-500 dark:text-red-400 font-medium">{{ sessionAttMap[slot.id].absent }} {{ t('teacher_portal.absent') }}</span>
+                <span v-if="sessionAttMap[slot.id].late > 0" class="text-amber-500 dark:text-amber-400 font-medium">{{ sessionAttMap[slot.id].late }} {{ t('teacher_portal.late') }}</span>
               </div>
             </template>
             <!-- Not yet marked -->
             <span v-else class="text-xs text-primary-600 dark:text-primary-400 font-medium flex items-center gap-1">
               <i class="pi pi-check-circle text-[10px]"></i>
-              Take Attendance
+              {{ t('teacher_portal.take_attendance') }}
             </span>
           </div>
         </div>
@@ -310,7 +321,7 @@ onMounted(() => {
 
     <!-- Classes grid -->
     <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">My Classes</h2>
+      <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">{{ t('teacher_portal.my_classes') }}</h2>
     </div>
 
     <div v-if="loading" class="flex justify-center py-16">
@@ -319,7 +330,7 @@ onMounted(() => {
 
     <div v-else-if="classes.length === 0" class="flex flex-col items-center py-16 text-surface-400">
       <i class="pi pi-building text-5xl mb-3"></i>
-      <p class="text-lg">No classes assigned yet.</p>
+      <p class="text-lg">{{ t('teacher_portal.no_classes') }}</p>
     </div>
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -360,14 +371,14 @@ onMounted(() => {
           <div class="border-t border-surface-100 dark:border-surface-700 pt-3 flex items-center justify-between">
             <div class="flex items-center gap-1 text-surface-600 dark:text-surface-300 text-sm">
               <i class="pi pi-users text-xs"></i>
-              <span>{{ cls.students_count ?? (cls.students?.length ?? 0) }} students</span>
+              <span>{{ cls.students_count ?? (cls.students?.length ?? 0) }} {{ t('teacher_portal.students') }}</span>
             </div>
             <div class="flex gap-2">
-              
+
               <Button
                 icon="pi pi-star"
                 size="small"
-                label="Grades"
+                :label="t('teacher_portal.grades')"
                 text
                 severity="info"
                 @click.stop="router.push({ name: 'teacher-class', params: { classId: cls.id }, query: { tab: 'grades' } })"
@@ -381,7 +392,7 @@ onMounted(() => {
     <!-- Schedule Dialog -->
     <Dialog
       v-model:visible="scheduleDialog"
-      header="My Weekly Schedule"
+      :header="t('teacher_portal.my_weekly_schedule')"
       :style="{ width: '90vw', maxWidth: '1100px' }"
       :modal="true"
       :closable="true"
@@ -392,7 +403,7 @@ onMounted(() => {
 
       <div v-else-if="Object.keys(scheduleByDay).length === 0" class="flex flex-col items-center py-10 text-surface-400">
         <i class="pi pi-calendar text-4xl mb-2"></i>
-        <p>No schedule found.</p>
+        <p>{{ t('teacher_portal.no_schedule') }}</p>
       </div>
 
       <div v-else class="overflow-x-auto">
@@ -400,11 +411,11 @@ onMounted(() => {
           <thead>
             <tr>
               <th class="border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 p-2 text-left w-20 text-surface-500">
-                Time
+                {{ t('common.time') }}
               </th>
               <th
-                v-for="day in WEEK_DAYS"
-                :key="day"
+                v-for="(day, idx) in translatedWeekDays"
+                :key="WEEK_DAYS[idx]"
                 class="border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 p-2 text-center font-semibold text-surface-700 dark:text-surface-200"
               >
                 {{ day }}

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import ParentService, { type Parent, type CreateParentDTO, type UpdateParentDTO } from '@/service/ParentService';
@@ -7,6 +8,7 @@ import StudentService, { type CreateStudentDTO } from '@/service/StudentService'
 import ScheduleService from '@/service/ScheduleService';
 import ClassesService from '@/service/ClassesService';
 
+const { t } = useI18n();
 const toast = useToast();
 const dt = ref();
 const parents = ref<Parent[]>([]);
@@ -44,7 +46,20 @@ const addChildSubmitted = ref(false);
 const availableClasses = ref<any[]>([]);
 
 // Days and hours for schedule grid
-const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const weekDays = computed(() => [
+  t('common.monday'),
+  t('common.tuesday'),
+  t('common.wednesday'),
+  t('common.thursday'),
+  t('common.friday'),
+  t('common.saturday')
+]);
+
+const genderOptions = computed(() => [
+  { label: t('common.male'), value: 'male' },
+  { label: t('common.female'), value: 'female' }
+]);
+
 const schoolHours = [
   { hour: 8, label: '08:00 - 09:00' },
   { hour: 9, label: '09:00 - 10:00' },
@@ -78,7 +93,7 @@ const loadParents = async () => {
   try {
     loading.value = true;
     parents.value = await ParentService.getParents();
-    
+
     // Add computed properties for each parent
     parents.value = parents.value.map(p => ({
       ...p,
@@ -88,8 +103,8 @@ const loadParents = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load parents',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.load_error'),
       life: 3000
     });
   } finally {
@@ -132,8 +147,8 @@ const saveParent = async () => {
       }
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Parent updated successfully',
+        summary: t('common.success'),
+        detail: t('parents.update_success'),
         life: 3000
       });
     } else {
@@ -146,8 +161,8 @@ const saveParent = async () => {
       });
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Parent created successfully',
+        summary: t('common.success'),
+        detail: t('parents.create_success'),
         life: 3000
       });
     }
@@ -157,8 +172,8 @@ const saveParent = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to save parent',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.save_error'),
       life: 3000
     });
   }
@@ -185,15 +200,15 @@ const deleteParent = async () => {
     parent.value = {};
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Parent deleted successfully',
+      summary: t('common.success'),
+      detail: t('parents.delete_success'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete parent',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.delete_error'),
       life: 3000
     });
   }
@@ -219,15 +234,15 @@ const deleteSelectedParents = async () => {
     selectedParents.value = [];
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Parents deleted successfully',
+      summary: t('common.success'),
+      detail: t('parents.delete_multiple_success'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete parents',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.delete_multiple_error'),
       life: 3000
     });
   }
@@ -239,7 +254,7 @@ const getAccountStatusSeverity = (hasAccount: boolean) => {
 };
 
 const getAccountStatusLabel = (hasAccount: boolean) => {
-  return hasAccount ? 'Active Account' : 'No Account';
+  return hasAccount ? t('common.active_account') : t('common.no_account');
 };
 
 // Open create account dialog
@@ -278,11 +293,11 @@ const hideCreateAccountDialog = () => {
 // Validate email
 const validateEmail = (email: string): string => {
   if (!email || !email.trim()) {
-    return 'Email is required';
+    return t('validation.email_required');
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return 'Please enter a valid email address';
+    return t('validation.email_invalid');
   }
   return '';
 };
@@ -290,10 +305,10 @@ const validateEmail = (email: string): string => {
 // Validate password
 const validatePassword = (password: string): string => {
   if (!password || !password.trim()) {
-    return 'Password is required';
+    return t('validation.password_required');
   }
   if (password.length < 8) {
-    return 'Password must be at least 8 characters long';
+    return t('validation.password_min_length');
   }
   return '';
 };
@@ -301,10 +316,10 @@ const validatePassword = (password: string): string => {
 // Validate confirm password
 const validateConfirmPassword = (password: string, confirmPassword: string): string => {
   if (!confirmPassword || !confirmPassword.trim()) {
-    return 'Please confirm your password';
+    return t('validation.confirm_password_required');
   }
   if (password !== confirmPassword) {
-    return 'Passwords do not match';
+    return t('validation.passwords_no_match');
   }
   return '';
 };
@@ -314,7 +329,7 @@ const showParentDetails = async (parentData: Parent) => {
   try {
     loadingDetails.value = true;
     parentDetailsDialog.value = true;
-    
+
     // Fetch full parent details with children
     const response = await ParentService.getParent(parentData.id);
     selectedParentDetails.value = response;
@@ -324,8 +339,8 @@ const showParentDetails = async (parentData: Parent) => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load parent details',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.load_details_error'),
       life: 3000
     });
     parentDetailsDialog.value = false;
@@ -339,15 +354,15 @@ const showStudentDetails = async (student: any) => {
   try {
     loadingStudentDetails.value = true;
     studentDetailsDialog.value = true;
-    
+
     // Fetch full student details and schedule
     const [studentDetails, scheduleData] = await Promise.all([
       StudentService.getStudent(student.id),
       ScheduleService.getStudentSchedule(student.class?.id, student.class?.academic_year) // Pass class ID and academic year to get the schedule
     ]);
-    
+
     selectedStudentDetails.value = studentDetails;
-    
+
     // Organize schedule data
     if (Array.isArray(scheduleData)) {
       const organizedSchedules: { [day: string]: any[] } = {};
@@ -365,8 +380,8 @@ const showStudentDetails = async (student: any) => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load student details',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.load_student_error'),
       life: 3000
     });
     studentDetailsDialog.value = false;
@@ -408,7 +423,7 @@ const saveNewChild = async () => {
     };
 
     const created = await StudentService.createStudent(childData);
-    
+
     // Refresh parent details to show the new child
     const updatedParent = await ParentService.getParent(selectedParentDetails.value.id);
     selectedParentDetails.value = updatedParent;
@@ -418,8 +433,8 @@ const saveNewChild = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Child added successfully',
+      summary: t('common.success'),
+      detail: t('parents.child_added'),
       life: 3000
     });
 
@@ -428,8 +443,8 @@ const saveNewChild = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to add child',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.add_child_error'),
       life: 3000
     });
   }
@@ -441,13 +456,13 @@ const getScheduleForSlot = (day: string, hour: number): any | null => {
   const daySchedules = studentSchedule.value?.[dayKey] || [];
   const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
   const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
-  
+
   const found = daySchedules.find((schedule: any) => {
     const scheduleStart = schedule.start_time;
     const scheduleEnd = schedule.end_time;
     return scheduleStart <= startTime && scheduleEnd > startTime;
   }) || null;
-  
+
   return found;
 };
 
@@ -459,7 +474,7 @@ const createUserAccount = async () => {
   validationErrors.value.email = validateEmail(accountData.value.email);
   validationErrors.value.password = validatePassword(accountData.value.password);
   validationErrors.value.confirmPassword = validateConfirmPassword(
-    accountData.value.password, 
+    accountData.value.password,
     accountData.value.confirmPassword
   );
 
@@ -474,7 +489,7 @@ const createUserAccount = async () => {
       accountData.value.email,
       accountData.value.password
     );
-    
+
     // Update the parent in the list
     const index = parents.value.findIndex(p => p.id === parent.value.id);
     if (index !== -1) {
@@ -484,14 +499,14 @@ const createUserAccount = async () => {
         has_account: !!updated.user_id
       };
     }
-    
+
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'User account created successfully',
+      summary: t('common.success'),
+      detail: t('parents.account_created'),
       life: 3000
     });
-    
+
     createAccountDialog.value = false;
     accountData.value = {
       email: '',
@@ -513,8 +528,8 @@ const createUserAccount = async () => {
     } else {
       toast.add({
         severity: 'error',
-        summary: 'Error',
-        detail: error.response?.data?.message || 'Failed to create user account',
+        summary: t('common.error'),
+        detail: error.response?.data?.message || t('parents.account_error'),
         life: 3000
       });
     }
@@ -525,32 +540,32 @@ const createUserAccount = async () => {
 <template>
   <div class="card">
     <Toast />
-    
+
     <!-- Toolbar -->
     <Toolbar class="mb-6">
       <template #start>
-        <Button 
-          label="New Parent" 
-          icon="pi pi-plus" 
-          severity="secondary" 
-          class="mr-2" 
-          @click="openNew" 
+        <Button
+          :label="t('parents.new_parent')"
+          icon="pi pi-plus"
+          severity="secondary"
+          class="mr-2"
+          @click="openNew"
         />
-        <Button 
-          label="Delete" 
-          icon="pi pi-trash" 
-          severity="secondary" 
-          :disabled="!selectedParents || !selectedParents.length" 
-          @click="confirmDeleteSelected" 
+        <Button
+          :label="t('common.delete')"
+          icon="pi pi-trash"
+          severity="secondary"
+          :disabled="!selectedParents || !selectedParents.length"
+          @click="confirmDeleteSelected"
         />
       </template>
 
       <template #end>
-        <Button 
-          label="Export" 
-          icon="pi pi-upload" 
-          severity="secondary" 
-          @click="exportCSV" 
+        <Button
+          :label="t('common.export')"
+          icon="pi pi-upload"
+          severity="secondary"
+          @click="exportCSV"
         />
       </template>
     </Toolbar>
@@ -568,20 +583,20 @@ const createUserAccount = async () => {
       exportFilename="parents"
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       :rowsPerPageOptions="[5, 10, 25, 50]"
-      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} parents"
+      :currentPageReportTemplate="t('parents.page_report')"
       class="p-datatable-sm "
       @row-click="showParentDetails($event.data)"
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
-          <h4 class="m-0 text-xl font-semibold">Manage Parents</h4>
+          <h4 class="m-0 text-xl font-semibold">{{ t('parents.title') }}</h4>
           <IconField>
             <InputIcon>
               <i class="pi pi-search" />
             </InputIcon>
-            <InputText 
-              v-model="filters['global'].value" 
-              placeholder="Search parents..." 
+            <InputText
+              v-model="filters['global'].value"
+              :placeholder="t('parents.search_placeholder')"
             />
           </IconField>
         </div>
@@ -590,13 +605,13 @@ const createUserAccount = async () => {
       <template #empty>
         <div class="text-center py-8">
           <i class="pi pi-users text-4xl text-muted-color mb-3 block"></i>
-          <p class="text-muted-color">No parents found.</p>
+          <p class="text-muted-color">{{ t('parents.no_parents') }}</p>
         </div>
       </template>
 
       <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-      
-      <Column field="full_name" header="Full Name" sortable style="min-width: 14rem">
+
+      <Column field="full_name" :header="t('common.full_name')" sortable style="min-width: 14rem">
         <template #body="{ data }">
           <div class="flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
@@ -606,73 +621,73 @@ const createUserAccount = async () => {
       </Column>
 
 
-      <Column field="phone" header="Phone" sortable style="min-width: 12rem">
+      <Column field="phone" :header="t('common.phone')" sortable style="min-width: 12rem">
         <template #body="{ data }">
           <div v-if="data.phone" class="flex items-center gap-2">
             <i class="pi pi-phone text-sm text-muted-color"></i>
             <span>{{ data.phone }}</span>
           </div>
-          <span v-else class="text-muted-color">N/A</span>
+          <span v-else class="text-muted-color">{{ t('common.na') }}</span>
         </template>
       </Column>
 
-      
 
-      <Column field="has_account" header="Account Status" sortable style="min-width: 12rem">
+
+      <Column field="has_account" :header="t('common.account_status')" sortable style="min-width: 12rem">
         <template #body="{ data }">
-          <Tag 
-            :value="getAccountStatusLabel(data.has_account)" 
-            :severity="getAccountStatusSeverity(data.has_account)" 
+          <Tag
+            :value="getAccountStatusLabel(data.has_account)"
+            :severity="getAccountStatusSeverity(data.has_account)"
           />
         </template>
       </Column>
 
-      <Column field="students_count" header="Children" sortable style="min-width: 8rem">
+      <Column field="students_count" :header="t('parents.children')" sortable style="min-width: 8rem">
         <template #body="{ data }">
-          <Badge 
-            :value="data.students_count || 0" 
-            :severity="data.students_count > 0 ? 'info' : 'secondary'" 
+          <Badge
+            :value="data.students_count || 0"
+            :severity="data.students_count > 0 ? 'info' : 'secondary'"
           />
         </template>
       </Column>
 
-      <Column header="Actions" :exportable="false" style="min-width: 13rem">
+      <Column :header="t('common.actions')" :exportable="false" style="min-width: 13rem">
         <template #body="{ data }">
-          <Button 
+          <Button
             v-if="!data.has_account"
-            icon="pi pi-user-plus" 
-            outlined 
-            rounded 
+            icon="pi pi-user-plus"
+            outlined
+            rounded
             severity="success"
-            class="mr-2" 
-            @click="openCreateAccount(data)" 
-            v-tooltip.top="'Create Account'"
+            class="mr-2"
+            @click="openCreateAccount(data)"
+            v-tooltip.top="t('common.create_account')"
           />
-          <Button 
-            icon="pi pi-pencil" 
-            outlined 
-            rounded 
-            class="mr-2" 
-            @click="editParent(data)" 
-            v-tooltip.top="'Edit'"
+          <Button
+            icon="pi pi-pencil"
+            outlined
+            rounded
+            class="mr-2"
+            @click="editParent(data)"
+            v-tooltip.top="t('common.edit')"
           />
-          <Button 
-            icon="pi pi-trash" 
-            outlined 
-            rounded 
-            severity="danger" 
-            @click="confirmDeleteParent(data)" 
-            v-tooltip.top="'Delete'"
+          <Button
+            icon="pi pi-trash"
+            outlined
+            rounded
+            severity="danger"
+            @click="confirmDeleteParent(data)"
+            v-tooltip.top="t('common.delete')"
           />
         </template>
       </Column>
     </DataTable>
 
     <!-- Add/Edit Parent Dialog -->
-    <Dialog 
-      v-model:visible="parentDialog" 
-      :style="{ width: '550px' }" 
-      header="Parent Details" 
+    <Dialog
+      v-model:visible="parentDialog"
+      :style="{ width: '550px' }"
+      :header="t('parents.parent_details')"
       :modal="true"
       class="p-fluid"
     >
@@ -681,205 +696,205 @@ const createUserAccount = async () => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="first_name" class="block font-semibold mb-2">
-              First Name <span class="text-red-500">*</span>
+              {{ t('common.first_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="first_name" 
-              v-model="parent.first_name" 
-              required 
-              autofocus 
-              :invalid="submitted && !parent.first_name" 
-              placeholder="Enter first name"
+            <InputText
+              id="first_name"
+              v-model="parent.first_name"
+              required
+              autofocus
+              :invalid="submitted && !parent.first_name"
+              :placeholder="t('parents.enter_first_name')"
             />
             <small v-if="submitted && !parent.first_name" class="text-red-500">
-              First name is required.
+              {{ t('validation.first_name_required') }}
             </small>
           </div>
-          
+
           <div>
             <label for="last_name" class="block font-semibold mb-2">
-              Last Name <span class="text-red-500">*</span>
+              {{ t('common.last_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="last_name" 
-              v-model="parent.last_name" 
-              required 
-              :invalid="submitted && !parent.last_name" 
-              placeholder="Enter last name"
+            <InputText
+              id="last_name"
+              v-model="parent.last_name"
+              required
+              :invalid="submitted && !parent.last_name"
+              :placeholder="t('parents.enter_last_name')"
             />
             <small v-if="submitted && !parent.last_name" class="text-red-500">
-              Last name is required.
+              {{ t('validation.last_name_required') }}
             </small>
           </div>
         </div>
 
         <!-- CIN -->
         <div>
-          <label for="cin" class="block font-semibold mb-2">CIN (National ID)</label>
-          <InputText 
-            id="cin" 
-            v-model="parent.cin" 
-            placeholder="Enter national ID number"
+          <label for="cin" class="block font-semibold mb-2">{{ t('common.cin') }}</label>
+          <InputText
+            id="cin"
+            v-model="parent.cin"
+            :placeholder="t('parents.enter_cin')"
           />
         </div>
 
         <!-- Contact Fields -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="phone" class="block font-semibold mb-2">Phone</label>
-            <InputText 
-              id="phone" 
-              v-model="parent.phone" 
-              placeholder="+212 xxx xxx xxx"
+            <label for="phone" class="block font-semibold mb-2">{{ t('common.phone') }}</label>
+            <InputText
+              id="phone"
+              v-model="parent.phone"
+              :placeholder="t('parents.phone_placeholder')"
             />
           </div>
-          
+
           <div>
-            <label for="email" class="block font-semibold mb-2">Email</label>
-            <InputText 
-              id="email" 
-              v-model="parent.email" 
+            <label for="email" class="block font-semibold mb-2">{{ t('common.email') }}</label>
+            <InputText
+              id="email"
+              v-model="parent.email"
               type="email"
-              placeholder="email@example.com"
+              :placeholder="t('parents.email_placeholder')"
             />
           </div>
         </div>
 
         <!-- Profession -->
         <div>
-          <label for="profession" class="block font-semibold mb-2">Profession</label>
-          <InputText 
-            id="profession" 
-            v-model="parent.profession" 
-            placeholder="Enter profession"
+          <label for="profession" class="block font-semibold mb-2">{{ t('parents.profession') }}</label>
+          <InputText
+            id="profession"
+            v-model="parent.profession"
+            :placeholder="t('parents.enter_profession')"
           />
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideDialog" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideDialog"
         />
-        <Button 
-          label="Save" 
-          icon="pi pi-check" 
-          @click="saveParent" 
+        <Button
+          :label="t('common.save')"
+          icon="pi pi-check"
+          @click="saveParent"
         />
       </template>
     </Dialog>
 
-    
+
 
     <!-- Delete Parent Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="deleteParentDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Deletion" 
+    <Dialog
+      v-model:visible="deleteParentDialog"
+      :style="{ width: '450px' }"
+      :header="t('common.confirm_deletion')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-3xl text-red-500"></i>
         <span v-if="parent">
-          Are you sure you want to delete <b>{{ parent.full_name }}</b>?
+          {{ t('common.are_you_sure_delete') }} <b>{{ parent.full_name }}</b>?
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteParentDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteParentDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteParent" 
+          @click="deleteParent"
         />
       </template>
     </Dialog>
 
     <!-- Delete Multiple Parents Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="deleteParentsDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Deletion" 
+    <Dialog
+      v-model:visible="deleteParentsDialog"
+      :style="{ width: '450px' }"
+      :header="t('common.confirm_deletion')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-3xl text-red-500"></i>
-        <span>Are you sure you want to delete the selected parents?</span>
+        <span>{{ t('parents.confirm_delete_selected') }}</span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteParentsDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteParentsDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteSelectedParents" 
+          @click="deleteSelectedParents"
         />
       </template>
     </Dialog>
 
     <!-- Parent Details Dialog -->
-    <Dialog 
-      v-model:visible="parentDetailsDialog" 
-      :style="{ width: '700px' }" 
-      header="Parent Details" 
+    <Dialog
+      v-model:visible="parentDetailsDialog"
+      :style="{ width: '700px' }"
+      :header="t('parents.parent_details')"
       :modal="true"
     >
       <div v-if="loadingDetails" class="flex justify-center items-center py-8">
         <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
       </div>
-      
+
       <div v-else-if="selectedParentDetails" class="flex flex-col gap-6">
         <!-- Parent Information Section -->
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
-            Personal Information
+            {{ t('common.personal_information') }}
           </h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="text-sm text-muted-color">Full Name</label>
+              <label class="text-sm text-muted-color">{{ t('common.full_name') }}</label>
               <p class="font-semibold">{{ selectedParentDetails.first_name }} {{ selectedParentDetails.last_name }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">CIN</label>
-              <p class="font-semibold">{{ selectedParentDetails.cin || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.cin') }}</label>
+              <p class="font-semibold">{{ selectedParentDetails.cin || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Phone</label>
+              <label class="text-sm text-muted-color">{{ t('common.phone') }}</label>
               <p class="font-semibold">
                 <i class="pi pi-phone text-sm mr-2"></i>
-                {{ selectedParentDetails.phone || 'N/A' }}
+                {{ selectedParentDetails.phone || t('common.na') }}
               </p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Email</label>
+              <label class="text-sm text-muted-color">{{ t('common.email') }}</label>
               <p class="font-semibold">
                 <i class="pi pi-envelope text-sm mr-2"></i>
-                {{ selectedParentDetails.email || 'N/A' }}
+                {{ selectedParentDetails.email || t('common.na') }}
               </p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Profession</label>
-              <p class="font-semibold">{{ selectedParentDetails.profession || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('parents.profession') }}</label>
+              <p class="font-semibold">{{ selectedParentDetails.profession || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Account Status</label>
+              <label class="text-sm text-muted-color">{{ t('common.account_status') }}</label>
               <p>
-                <Tag 
-                  :value="getAccountStatusLabel(!!selectedParentDetails.user_id)" 
-                  :severity="getAccountStatusSeverity(!!selectedParentDetails.user_id)" 
+                <Tag
+                  :value="getAccountStatusLabel(!!selectedParentDetails.user_id)"
+                  :severity="getAccountStatusSeverity(!!selectedParentDetails.user_id)"
                 />
               </p>
             </div>
@@ -891,21 +906,21 @@ const createUserAccount = async () => {
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold flex items-center gap-2">
               <i class="pi pi-users text-primary"></i>
-              Children
+              {{ t('parents.children') }}
               <Badge :value="selectedParentDetails.students?.length || 0" severity="info" />
             </h3>
-            <Button 
-              icon="pi pi-plus" 
-              label="Add Child"
+            <Button
+              icon="pi pi-plus"
+              :label="t('parents.add_child')"
               size="small"
-              @click="openAddChildDialog" 
-              v-tooltip.top="'Add New Child'"
+              @click="openAddChildDialog"
+              v-tooltip.top="t('parents.add_new_child')"
             />
           </div>
-          
+
           <div v-if="selectedParentDetails.students && selectedParentDetails.students.length > 0" class="flex flex-col gap-3">
-            <div 
-              v-for="student in selectedParentDetails.students" 
+            <div
+              v-for="student in selectedParentDetails.students"
               :key="student.id"
               class="flex items-center justify-between p-3 bg-surface-50 dark:bg-surface-800 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
               @click="showStudentDetails(student)"
@@ -916,37 +931,37 @@ const createUserAccount = async () => {
                 </div>
                 <div>
                   <p class="font-semibold">{{ student.first_name }} {{ student.last_name }}</p>
-                  <p class="text-sm text-muted-color">{{ student.class.name || 'No class assigned' }}</p>
+                  <p class="text-sm text-muted-color">{{ student.class.name || t('parents.no_class') }}</p>
                 </div>
               </div>
               <div class="text-right">
-                <p class="text-sm text-muted-color">Date of Birth</p>
-                <p class="font-semibold">{{ student.birth_date || 'N/A' }}</p>
+                <p class="text-sm text-muted-color">{{ t('common.date_of_birth') }}</p>
+                <p class="font-semibold">{{ student.birth_date || t('common.na') }}</p>
               </div>
             </div>
           </div>
-          
+
           <div v-else class="text-center py-6">
             <i class="pi pi-users text-4xl text-muted-color mb-2 block"></i>
-            <p class="text-muted-color">No children registered</p>
+            <p class="text-muted-color">{{ t('parents.no_children') }}</p>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="parentDetailsDialog = false" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="parentDetailsDialog = false"
         />
       </template>
     </Dialog>
 
     <!-- Add Child Dialog -->
-    <Dialog 
-      v-model:visible="addChildDialog" 
-      :style="{ width: '600px' }" 
-      header="Add New Child" 
+    <Dialog
+      v-model:visible="addChildDialog"
+      :style="{ width: '600px' }"
+      :header="t('parents.add_new_child')"
       :modal="true"
       class="p-fluid"
     >
@@ -955,34 +970,34 @@ const createUserAccount = async () => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="child_first_name" class="block font-semibold mb-2">
-              First Name <span class="text-red-500">*</span>
+              {{ t('common.first_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="child_first_name" 
-              v-model="newChild.first_name" 
-              required 
-              autofocus 
-              :invalid="addChildSubmitted && !newChild.first_name" 
-              placeholder="Enter first name"
+            <InputText
+              id="child_first_name"
+              v-model="newChild.first_name"
+              required
+              autofocus
+              :invalid="addChildSubmitted && !newChild.first_name"
+              :placeholder="t('parents.enter_first_name')"
             />
             <small v-if="addChildSubmitted && !newChild.first_name" class="text-red-500">
-              First name is required.
+              {{ t('validation.first_name_required') }}
             </small>
           </div>
-          
+
           <div>
             <label for="child_last_name" class="block font-semibold mb-2">
-              Last Name <span class="text-red-500">*</span>
+              {{ t('common.last_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="child_last_name" 
-              v-model="newChild.last_name" 
-              required 
-              :invalid="addChildSubmitted && !newChild.last_name" 
-              placeholder="Enter last name"
+            <InputText
+              id="child_last_name"
+              v-model="newChild.last_name"
+              required
+              :invalid="addChildSubmitted && !newChild.last_name"
+              :placeholder="t('parents.enter_last_name')"
             />
             <small v-if="addChildSubmitted && !newChild.last_name" class="text-red-500">
-              Last name is required.
+              {{ t('validation.last_name_required') }}
             </small>
           </div>
         </div>
@@ -991,29 +1006,29 @@ const createUserAccount = async () => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="child_code" class="block font-semibold mb-2">
-              Student Code <span class="text-red-500">*</span>
+              {{ t('students.student_code') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="child_code" 
-              v-model="newChild.code" 
-              required 
-              :invalid="addChildSubmitted && !newChild.code" 
-              placeholder="Enter student code"
+            <InputText
+              id="child_code"
+              v-model="newChild.code"
+              required
+              :invalid="addChildSubmitted && !newChild.code"
+              :placeholder="t('parents.enter_student_code')"
             />
             <small v-if="addChildSubmitted && !newChild.code" class="text-red-500">
-              Student code is required.
+              {{ t('parents.student_code_required') }}
             </small>
           </div>
-          
+
           <div>
-            <label for="child_gender" class="block font-semibold mb-2">Gender</label>
-            <Select 
-              id="child_gender" 
-              v-model="newChild.gender" 
-              :options="[{label: 'Male', value: 'male'}, {label: 'Female', value: 'female'}]" 
-              optionLabel="label" 
+            <label for="child_gender" class="block font-semibold mb-2">{{ t('common.gender') }}</label>
+            <Select
+              id="child_gender"
+              v-model="newChild.gender"
+              :options="genderOptions"
+              optionLabel="label"
               optionValue="value"
-              placeholder="Select gender"
+              :placeholder="t('parents.select_gender')"
             />
           </div>
         </div>
@@ -1021,36 +1036,36 @@ const createUserAccount = async () => {
         <!-- Dates -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="child_birth_date" class="block font-semibold mb-2">Date of Birth</label>
-            <DatePicker 
-              id="child_birth_date" 
-              v-model="newChild.birth_date" 
+            <label for="child_birth_date" class="block font-semibold mb-2">{{ t('common.date_of_birth') }}</label>
+            <DatePicker
+              id="child_birth_date"
+              v-model="newChild.birth_date"
               dateFormat="yy-mm-dd"
-              placeholder="Select date of birth"
+              :placeholder="t('parents.select_birth_date')"
             />
           </div>
-          
+
           <div>
-            <label for="child_enrollment_date" class="block font-semibold mb-2">Enrollment Date</label>
-            <DatePicker 
-              id="child_enrollment_date" 
-              v-model="newChild.enrollment_date" 
+            <label for="child_enrollment_date" class="block font-semibold mb-2">{{ t('common.enrollment_date') }}</label>
+            <DatePicker
+              id="child_enrollment_date"
+              v-model="newChild.enrollment_date"
               dateFormat="yy-mm-dd"
-              placeholder="Select enrollment date"
+              :placeholder="t('parents.select_enrollment_date')"
             />
           </div>
         </div>
 
         <!-- Class -->
         <div>
-          <label for="child_class" class="block font-semibold mb-2">Class</label>
-          <Select 
-            id="child_class" 
-            v-model="newChild.class_id" 
-            :options="availableClasses" 
-            optionLabel="name" 
+          <label for="child_class" class="block font-semibold mb-2">{{ t('common.class') }}</label>
+          <Select
+            id="child_class"
+            v-model="newChild.class_id"
+            :options="availableClasses"
+            optionLabel="name"
             optionValue="id"
-            placeholder="Select class"
+            :placeholder="t('parents.select_class')"
             filter
             showClear
           />
@@ -1058,77 +1073,77 @@ const createUserAccount = async () => {
 
         <!-- Medical Info -->
         <div>
-          <label for="child_medical_info" class="block font-semibold mb-2">Medical Information</label>
-          <Textarea 
-            id="child_medical_info" 
-            v-model="newChild.medical_info" 
+          <label for="child_medical_info" class="block font-semibold mb-2">{{ t('common.medical_info') }}</label>
+          <Textarea
+            id="child_medical_info"
+            v-model="newChild.medical_info"
             rows="3"
-            placeholder="Enter any medical information or notes"
+            :placeholder="t('parents.medical_info_placeholder')"
           />
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="addChildDialog = false" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="addChildDialog = false"
         />
-        <Button 
-          label="Add Child" 
-          icon="pi pi-check" 
-          @click="saveNewChild" 
+        <Button
+          :label="t('parents.add_child')"
+          icon="pi pi-check"
+          @click="saveNewChild"
         />
       </template>
     </Dialog>
 
     <!-- Student Details Dialog -->
-    <Dialog 
-      v-model:visible="studentDetailsDialog" 
-      :style="{ width: '800px', maxHeight: '90vh' }" 
-      header="Student Details" 
+    <Dialog
+      v-model:visible="studentDetailsDialog"
+      :style="{ width: '800px', maxHeight: '90vh' }"
+      :header="t('students.student_details')"
       :modal="true"
     >
       <div v-if="loadingStudentDetails" class="flex justify-center items-center py-8">
         <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
       </div>
-      
+
       <div v-else-if="selectedStudentDetails" class="flex flex-col gap-6">
         <!-- Student Information Section -->
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
-            Personal Information
+            {{ t('common.personal_information') }}
           </h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="text-sm text-muted-color">Full Name</label>
+              <label class="text-sm text-muted-color">{{ t('common.full_name') }}</label>
               <p class="font-semibold">{{ selectedStudentDetails.first_name }} {{ selectedStudentDetails.last_name }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Student Code</label>
-              <p class="font-semibold">{{ selectedStudentDetails.code || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('students.student_code') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.code || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Date of Birth</label>
-              <p class="font-semibold">{{ selectedStudentDetails.birth_date ? new Date(selectedStudentDetails.birth_date).toLocaleDateString() : 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.date_of_birth') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.birth_date ? new Date(selectedStudentDetails.birth_date).toLocaleDateString() : t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Gender</label>
-              <p class="font-semibold">{{ selectedStudentDetails.gender || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.gender') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.gender || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Class</label>
-              <p class="font-semibold">{{ selectedStudentDetails.class?.name || 'No class assigned' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.class') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.class?.name || t('parents.no_class') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Enrollment Date</label>
-              <p class="font-semibold">{{ selectedStudentDetails.enrollment_date ? new Date(selectedStudentDetails.enrollment_date).toLocaleDateString() : 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.enrollment_date') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.enrollment_date ? new Date(selectedStudentDetails.enrollment_date).toLocaleDateString() : t('common.na') }}</p>
             </div>
             <div class="col-span-2">
-              <label class="text-sm text-muted-color">Medical Information</label>
-              <p class="font-semibold">{{ selectedStudentDetails.medical_info || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.medical_info') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.medical_info || t('common.na') }}</p>
             </div>
           </div>
         </div>
@@ -1137,17 +1152,17 @@ const createUserAccount = async () => {
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-calendar text-primary"></i>
-            Weekly Schedule
+            {{ t('common.weekly_schedule') }}
           </h3>
-          
+
           <div v-if="studentSchedule && Object.keys(studentSchedule).length > 0" class="overflow-x-auto">
             <table class="schedule-table w-full border-collapse   ">
               <thead>
                 <tr>
-                  <th class="schedule-header time-column">Time</th>
-                  <th 
-                    v-for="day in weekDays" 
-                    :key="day" 
+                  <th class="schedule-header time-column">{{ t('common.time') }}</th>
+                  <th
+                    v-for="day in weekDays"
+                    :key="day"
                     class="schedule-header"
                   >
                     {{ day }}
@@ -1159,8 +1174,8 @@ const createUserAccount = async () => {
                   <td class="time-column font-semibold text-sm">
                     {{ timeSlot.label }}
                   </td>
-                  <td 
-                    v-for="day in weekDays" 
+                  <td
+                    v-for="day in weekDays"
                     :key="day"
                     class="schedule-cell"
                   >
@@ -1170,7 +1185,7 @@ const createUserAccount = async () => {
                           {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name || getScheduleForSlot(day, timeSlot.hour)?.subject?.name }}
                         </div>
                         <div class="text-xs mt-1 text-muted-color">
-                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.first_name }} 
+                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.first_name }}
                           {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.last_name }}
                         </div>
                         <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
@@ -1186,28 +1201,28 @@ const createUserAccount = async () => {
               </tbody>
             </table>
           </div>
-          
+
           <div v-else class="text-center py-6">
             <i class="pi pi-calendar-times text-4xl text-muted-color mb-2 block"></i>
-            <p class="text-muted-color">No schedule available</p>
+            <p class="text-muted-color">{{ t('common.no_schedule') }}</p>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="studentDetailsDialog = false" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="studentDetailsDialog = false"
         />
       </template>
     </Dialog>
 
     <!-- Create User Account Dialog -->
-    <Dialog 
-      v-model:visible="createAccountDialog" 
-      :style="{ width: '500px' }" 
-      header="Create User Account" 
+    <Dialog
+      v-model:visible="createAccountDialog"
+      :style="{ width: '500px' }"
+      :header="t('common.create_user_account')"
       :modal="true"
       class="p-fluid"
     >
@@ -1216,7 +1231,7 @@ const createUserAccount = async () => {
           <div class="flex items-start gap-3">
             <i class="pi pi-info-circle text-blue-600 text-xl mt-1"></i>
             <div>
-              <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">Creating account for:</p>
+              <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">{{ t('common.creating_account_for') }}</p>
               <p class="text-blue-700 dark:text-blue-300">{{ parent.full_name }}</p>
             </div>
           </div>
@@ -1225,16 +1240,16 @@ const createUserAccount = async () => {
         <!-- Email -->
         <div>
           <label for="account_email" class="block font-semibold mb-2">
-            Email <span class="text-red-500">*</span>
+            {{ t('common.email') }} <span class="text-red-500">*</span>
           </label>
-          <InputText 
-            id="account_email" 
-            v-model="accountData.email" 
+          <InputText
+            id="account_email"
+            v-model="accountData.email"
             type="email"
-            required 
+            required
             autofocus
-            :invalid="submitted && !!validationErrors.email" 
-            placeholder="Enter email address"
+            :invalid="submitted && !!validationErrors.email"
+            :placeholder="t('parents.enter_email')"
             @blur="validationErrors.email = validateEmail(accountData.email)"
           />
           <small v-if="submitted && validationErrors.email" class="text-red-500">
@@ -1245,15 +1260,15 @@ const createUserAccount = async () => {
         <!-- Password -->
         <div>
           <label for="account_password" class="block font-semibold mb-2">
-            Password <span class="text-red-500">*</span>
+            {{ t('common.password') }} <span class="text-red-500">*</span>
           </label>
-          <Password 
-            id="account_password" 
-            v-model="accountData.password" 
+          <Password
+            id="account_password"
+            v-model="accountData.password"
             required
             toggleMask
-            :invalid="submitted && !!validationErrors.password" 
-            placeholder="Enter password (min. 8 characters)"
+            :invalid="submitted && !!validationErrors.password"
+            :placeholder="t('parents.enter_password')"
             :feedback="true"
             @blur="validationErrors.password = validatePassword(accountData.password)"
           />
@@ -1265,15 +1280,15 @@ const createUserAccount = async () => {
         <!-- Confirm Password -->
         <div>
           <label for="account_confirm_password" class="block font-semibold mb-2">
-            Confirm Password <span class="text-red-500">*</span>
+            {{ t('common.confirm_password') }} <span class="text-red-500">*</span>
           </label>
-          <Password 
-            id="account_confirm_password" 
-            v-model="accountData.confirmPassword" 
+          <Password
+            id="account_confirm_password"
+            v-model="accountData.confirmPassword"
             required
             toggleMask
-            :invalid="submitted && !!validationErrors.confirmPassword" 
-            placeholder="Confirm password"
+            :invalid="submitted && !!validationErrors.confirmPassword"
+            :placeholder="t('parents.confirm_password_placeholder')"
             :feedback="false"
             @blur="validationErrors.confirmPassword = validateConfirmPassword(accountData.password, accountData.confirmPassword)"
           />
@@ -1284,17 +1299,17 @@ const createUserAccount = async () => {
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideCreateAccountDialog" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideCreateAccountDialog"
         />
-        <Button 
-          label="Create Account" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.create_account')"
+          icon="pi pi-check"
           severity="success"
-          @click="createUserAccount" 
+          @click="createUserAccount"
         />
       </template>
     </Dialog>

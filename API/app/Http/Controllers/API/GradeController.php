@@ -84,7 +84,7 @@ class GradeController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found.'
+                'message' => __('messages.student_not_found')
             ], 404);
         }
 
@@ -93,7 +93,7 @@ class GradeController extends Controller
         if (!$subject) {
             return response()->json([
                 'success' => false,
-                'message' => 'Subject not found.'
+                'message' => __('messages.subject_not_found')
             ], 404);
         }
 
@@ -127,7 +127,7 @@ class GradeController extends Controller
         if (!$grade) {
             return response()->json([
                 'success' => false,
-                'message' => 'Grade not found.'
+                'message' => __('messages.grade_not_found')
             ], 404);
         }
 
@@ -155,7 +155,7 @@ class GradeController extends Controller
         if (!$grade) {
             return response()->json([
                 'success' => false,
-                'message' => 'Grade not found.'
+                'message' => __('messages.grade_not_found')
             ], 404);
         }
 
@@ -180,7 +180,7 @@ class GradeController extends Controller
             if ($request->grade > $request->max_grade) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Grade cannot be greater than max grade.'
+                    'message' => __('messages.grade_exceeds_max')
                 ], 422);
             }
         }
@@ -204,7 +204,7 @@ class GradeController extends Controller
         if (!$grade) {
             return response()->json([
                 'success' => false,
-                'message' => 'Grade not found.'
+                'message' => __('messages.grade_not_found')
             ], 404);
         }
 
@@ -212,7 +212,7 @@ class GradeController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Grade deleted successfully.'
+            'message' => __('messages.grade_deleted')
         ]);
     }
 
@@ -227,7 +227,7 @@ class GradeController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found.'
+                'message' => __('messages.student_not_found')
             ], 404);
         }
 
@@ -271,7 +271,7 @@ class GradeController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found.'
+                'message' => __('messages.student_not_found')
             ], 404);
         }
 
@@ -378,7 +378,7 @@ class GradeController extends Controller
         if (!$subject) {
             return response()->json([
                 'success' => false,
-                'message' => 'Subject not found.'
+                'message' => __('messages.subject_not_found')
             ], 404);
         }
 
@@ -469,7 +469,7 @@ class GradeController extends Controller
             if ($gradeData['grade'] > $gradeData['max_grade']) {
                 $errors[] = [
                     'index' => $index,
-                    'message' => 'Grade cannot be greater than max grade.'
+                    'message' => __('messages.grade_exceeds_max')
                 ];
                 continue;
             }
@@ -481,7 +481,7 @@ class GradeController extends Controller
             } catch (\Exception $e) {
                 $errors[] = [
                     'index' => $index,
-                    'message' => 'Failed to create grade: ' . $e->getMessage()
+                    'message' => __('messages.failed_create_grade') . ': ' . $e->getMessage()
                 ];
             }
         }

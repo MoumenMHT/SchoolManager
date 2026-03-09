@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Chart, registerables } from 'chart.js';
 import type { BillRecord } from '@/types';
 
 Chart.register(...registerables);
+const { t } = useI18n();
 
 interface Props {
   bills: BillRecord[];
@@ -13,15 +15,15 @@ const props = defineProps<Props>();
 const chartRef = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart | null = null;
 
-const STATUSES = [
-  { key: 'paid',    label: 'Paid',    color: 'rgba(34,197,94,0.8)',   text: 'text-green-600 dark:text-green-400'  },
-  { key: 'partial', label: 'Partial', color: 'rgba(245,158,11,0.8)',  text: 'text-orange-500 dark:text-orange-400' },
-  { key: 'late',    label: 'Late',    color: 'rgba(239,68,68,0.8)',   text: 'text-red-600 dark:text-red-400'      },
-  { key: 'unpaid',  label: 'Unpaid',  color: 'rgba(148,163,184,0.6)', text: 'text-slate-500 dark:text-slate-400'  },
-];
+const STATUSES = computed(() => [
+  { key: 'paid',    label: t('dashboard.bill_status_paid'),    color: 'rgba(34,197,94,0.8)',   text: 'text-green-600 dark:text-green-400'  },
+  { key: 'partial', label: t('dashboard.bill_status_partial'), color: 'rgba(245,158,11,0.8)',  text: 'text-orange-500 dark:text-orange-400' },
+  { key: 'late',    label: t('dashboard.bill_status_late'),    color: 'rgba(239,68,68,0.8)',   text: 'text-red-600 dark:text-red-400'      },
+  { key: 'unpaid',  label: t('dashboard.bill_status_unpaid'),  color: 'rgba(148,163,184,0.6)', text: 'text-slate-500 dark:text-slate-400'  },
+]);
 
 const stats = computed(() =>
-  STATUSES.map(s => {
+  STATUSES.value.map(s => {
     const filtered = props.bills.filter(b => b.status === s.key);
     return {
       ...s,
@@ -61,7 +63,7 @@ const initChart = () => {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ` ${ctx.label}: ${ctx.parsed} bills`
+            label: ctx => ` ${ctx.label}: ${ctx.parsed} ${t('dashboard.bills_label')}`
           }
         }
       }
@@ -77,8 +79,8 @@ watch(() => props.bills, () => initChart(), { deep: true });
   <div class="card">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h5 class="text-xl font-semibold">Bill Status Overview</h5>
-        <p class="text-sm text-muted-color mt-1">{{ bills.length }} total bills this year</p>
+        <h5 class="text-xl font-semibold">{{ t('dashboard.bill_status_overview') }}</h5>
+        <p class="text-sm text-muted-color mt-1">{{ t('dashboard.total_bills_year', { count: bills.length }) }}</p>
       </div>
       <i class="pi pi-file-check text-2xl text-primary"></i>
     </div>
@@ -97,14 +99,14 @@ watch(() => props.bills, () => initChart(), { deep: true });
           <div class="flex items-center gap-3">
             <div class="rounded-full" :style="`background:${s.color};width:12px;height:12px;flex-shrink:0`"></div>
             <span class="font-medium text-sm">{{ s.label }}</span>
-            <Tag :value="`${s.count} bills`" severity="secondary" />
+            <Tag :value="`${s.count} ${t('dashboard.bills_label')}`" severity="secondary" />
           </div>
           <div class="text-right">
             <div class="font-semibold text-sm" :class="s.text">
               {{ formatCurrency(s.key === 'paid' ? s.amount : s.balance) }}
             </div>
             <div class="text-xs text-muted-color">
-              {{ s.key === 'paid' ? 'collected' : 'outstanding' }}
+              {{ s.key === 'paid' ? t('dashboard.collected_label') : t('dashboard.outstanding_label') }}
             </div>
           </div>
         </div>
@@ -113,7 +115,7 @@ watch(() => props.bills, () => initChart(), { deep: true });
 
     <div v-else class="text-center py-10">
       <i class="pi pi-file text-4xl text-muted-color mb-3"></i>
-      <p class="text-muted-color">No bill data available</p>
+      <p class="text-muted-color">{{ t('dashboard.no_bill_data') }}</p>
     </div>
   </div>
 </template>

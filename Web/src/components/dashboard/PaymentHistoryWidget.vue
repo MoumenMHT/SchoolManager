@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { PaymentRecord } from '@/types';
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { limit: 20 });
+const { t } = useI18n();
 
 const recent = computed(() =>
   [...props.payments]
@@ -47,9 +49,9 @@ const typeIcon = (type: string) => {
       <div>
         <h5 class="text-xl font-semibold flex items-center gap-2">
           <i class="pi pi-history text-green-500"></i>
-          Payment History
+          {{ t('dashboard.payment_history') }}
         </h5>
-        <p class="text-sm text-muted-color mt-1">Last {{ recent.length }} transactions</p>
+        <p class="text-sm text-muted-color mt-1">{{ t('dashboard.last_transactions', { count: recent.length }) }}</p>
       </div>
       <Tag :value="`${payments.length} total`" severity="success" />
     </div>
@@ -63,19 +65,19 @@ const typeIcon = (type: string) => {
       size="small"
       stripedRows
     >
-      <Column header="Parent" style="min-width:140px">
+      <Column :header="t('dashboard.parent_col')" style="min-width:140px">
         <template #body="{ data }">
           <span class="font-medium text-sm">{{ parentName(data) }}</span>
         </template>
       </Column>
 
-      <Column header="Contract" style="min-width:130px">
+      <Column :header="t('dashboard.contract_col')" style="min-width:130px">
         <template #body="{ data }">
           <span class="text-xs font-mono text-muted-color">{{ data.contract?.contract_number ?? '—' }}</span>
         </template>
       </Column>
 
-      <Column header="Type" style="min-width:110px">
+      <Column :header="t('dashboard.type_col')" style="min-width:110px">
         <template #body="{ data }">
           <span class="flex items-center gap-1 text-sm capitalize">
             <i :class="`pi ${typeIcon(data.payment_type)} text-xs`"></i>
@@ -84,13 +86,13 @@ const typeIcon = (type: string) => {
         </template>
       </Column>
 
-      <Column header="Date" style="min-width:110px">
+      <Column :header="t('dashboard.date_col')" style="min-width:110px">
         <template #body="{ data }">
           <span class="text-sm text-muted-color">{{ formatDate(data.paid_date) }}</span>
         </template>
       </Column>
 
-      <Column header="Amount" style="min-width:110px">
+      <Column :header="t('dashboard.amount_col')" style="min-width:110px">
         <template #body="{ data }">
           <span
             class="text-sm font-semibold"
@@ -101,7 +103,7 @@ const typeIcon = (type: string) => {
         </template>
       </Column>
 
-      <Column header="Status" style="min-width:90px">
+      <Column :header="t('common.status')" style="min-width:90px">
         <template #body="{ data }">
           <Tag :value="data.status" :severity="statusSeverity(data.status)" />
         </template>
@@ -110,7 +112,7 @@ const typeIcon = (type: string) => {
       <template #empty>
         <div class="text-center py-8">
           <i class="pi pi-inbox text-3xl text-muted-color mb-2"></i>
-          <p class="text-muted-color">No payment records found</p>
+          <p class="text-muted-color">{{ t('dashboard.no_payment_records') }}</p>
         </div>
       </template>
     </DataTable>

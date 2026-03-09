@@ -78,7 +78,7 @@ class ClassController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve classes',
+                'message' => __('messages.failed_retrieve_classes'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -109,7 +109,7 @@ class ClassController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -127,13 +127,13 @@ class ClassController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class created successfully',
+                'message' => __('messages.class_created'),
                 'data' => $class
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create class',
+                'message' => __('messages.failed_create_class'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -150,7 +150,7 @@ class ClassController extends Controller
             if (!$class) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class not found'
+                    'message' => __('messages.class_not_found')
                 ], 404);
             }
             
@@ -211,7 +211,7 @@ class ClassController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve class',
+                'message' => __('messages.failed_retrieve_class'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -236,7 +236,7 @@ class ClassController extends Controller
             if (!$class) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class not found'
+                    'message' => __('messages.class_not_found')
                 ], 404);
             }
 
@@ -251,7 +251,7 @@ class ClassController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -268,13 +268,13 @@ class ClassController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'Class updated successfully',
+                'message' => __('messages.class_updated'),
                 'data' => $class
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update class',
+                'message' => __('messages.failed_update_class'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -291,7 +291,7 @@ class ClassController extends Controller
             if (!$class) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class not found'
+                    'message' => __('messages.class_not_found')
                 ], 404);
             }
 
@@ -299,7 +299,7 @@ class ClassController extends Controller
             if ($class->students()->count() > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cannot delete class with enrolled students'
+                    'message' => __('messages.cannot_delete_with_students')
                 ], 409);
             }
 
@@ -307,12 +307,12 @@ class ClassController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Class deleted successfully'
+                'message' => __('messages.class_deleted')
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete class',
+                'message' => __('messages.failed_delete_class'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -335,7 +335,7 @@ class ClassController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Student removed from class successfully',
+            'message' => __('messages.student_removed_from_class'),
             'data' => $student
         ]);
 

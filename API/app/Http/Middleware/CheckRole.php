@@ -19,14 +19,14 @@ class CheckRole
         if (!$request->user()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthenticated'
+                'message' => __('messages.unauthenticated')
             ], 401);
         }
 
         if (!in_array($request->user()->role, $roles)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized. Insufficient permissions.'
+                'message' => __('messages.unauthorized')
             ], 403);
         }
 

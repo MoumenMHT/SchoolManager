@@ -82,7 +82,7 @@ class ClassSubjectTeacherController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => __('messages.validation_failed'),
                 'errors' => $validator->errors(),
             ], 422);
         }
@@ -130,7 +130,7 @@ class ClassSubjectTeacherController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => __('messages.validation_failed'),
                 'errors' => $validator->errors(),
             ], 422);
         }
@@ -142,7 +142,7 @@ class ClassSubjectTeacherController extends Controller
         if (!$teacher->canTeachSubject($validated['subject_id'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'This teacher is not qualified to teach this subject',
+                'message' => __('messages.teacher_not_qualified'),
             ], 422);
         }
 
@@ -151,7 +151,7 @@ class ClassSubjectTeacherController extends Controller
         if (!$class->is_active) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot assign teacher to an inactive class',
+                'message' => __('messages.cannot_assign_inactive_class'),
              ], 422);
         }
 
@@ -163,7 +163,7 @@ class ClassSubjectTeacherController extends Controller
         if ($existingAssignment) {
             return response()->json([
                 'success' => false,
-                'message' => 'This class already has a teacher assigned for this subject and academic year',
+                'message' => __('messages.class_subject_already_assigned'),
             ], 422);
         }
 
@@ -177,7 +177,7 @@ class ClassSubjectTeacherController extends Controller
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'This assignment already exists',
+                'message' => __('messages.assignment_already_exists'),
             ], 422);
         }
 
@@ -188,7 +188,7 @@ class ClassSubjectTeacherController extends Controller
         if (!$coefficient) {
             return response()->json([
                 'success' => false,
-                'message' => "No coefficient configured for this subject at level {$class->level}",
+                'message' => __('messages.no_coefficient_configured', ['level' => $class->level]),
             ], 422);
         }
 
@@ -203,7 +203,7 @@ class ClassSubjectTeacherController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Teacher assigned successfully',
+            'message' => __('messages.teacher_assigned'),
             'data' => $assignment->load(['class', 'subject', 'teacher']),
         ], 201);
     }
@@ -223,7 +223,7 @@ class ClassSubjectTeacherController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Assignment updated successfully',
+            'message' => __('messages.assignment_updated'),
             'data' => $assignment->load(['class', 'subject', 'teacher']),
         ]);
     }
@@ -238,7 +238,7 @@ class ClassSubjectTeacherController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Assignment removed successfully',
+            'message' => __('messages.assignment_removed'),
         ]);
     }
 
@@ -255,7 +255,7 @@ class ClassSubjectTeacherController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => __('messages.validation_failed'),
                 'errors' => $validator->errors(),
             ], 422);
         }

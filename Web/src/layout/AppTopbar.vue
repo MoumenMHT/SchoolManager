@@ -3,12 +3,15 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useLayout } from '@/layout/composables/layout';
 import { useToast } from 'primevue/usetoast';
+import { useI18n } from 'vue-i18n';
 import apiService from '@/service/ApiService';
 import AppConfigurator from './AppConfigurator.vue';
+import { SUPPORTED_LOCALES } from '@/i18n/index.js';
 
 const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
 const router = useRouter();
 const toast = useToast();
+const { t, locale } = useI18n();
 
 const currentUser = ref(null);
 
@@ -26,18 +29,23 @@ const handleLogout = async () => {
         await apiService.logout();
         toast.add({
             severity: 'success',
-            summary: 'Logged Out',
-            detail: 'You have been successfully logged out',
+            summary: t('topbar.logged_out'),
+            detail: t('topbar.logged_out_message'),
             life: 3000
         });
         router.push('/auth/login');
     } catch (error) {
         console.error('Logout error:', error);
-        // Even if API call fails, clear local data and redirect
         apiService.removeToken();
         router.push('/auth/login');
     }
 };
+
+const changeLocale = (code) => {
+    locale.value = code;
+};
+
+const currentLocale = computed(() => SUPPORTED_LOCALES.find(l => l.code === locale.value) || SUPPORTED_LOCALES[0]);
 </script>
 
 <template>
@@ -67,6 +75,30 @@ const handleLogout = async () => {
                     </button>
                     <AppConfigurator />
                 </div>
+
+                <!-- Language Switcher -->
+                <div class="relative">
+                    <button
+                        v-styleclass="{ selector: '@next', enterFromClass: 'hidden', enterActiveClass: 'p-anchored-overlay-enter-active', leaveToClass: 'hidden', leaveActiveClass: 'p-anchored-overlay-leave-active', hideOnOutsideClick: true }"
+                        type="button"
+                        class="layout-topbar-action"
+                        :title="t('topbar.language')"
+                    >
+                        <span class="text-base">{{ currentLocale.flag }}</span>
+                    </button>
+                    <div class="hidden absolute end-0 top-full mt-1 z-50 bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl shadow-lg min-w-36 p-1">
+                        <button
+                            v-for="loc in SUPPORTED_LOCALES"
+                            :key="loc.code"
+                            class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+                            :class="{ 'font-semibold text-primary-600 dark:text-primary-400': locale === loc.code }"
+                            @click="changeLocale(loc.code)"
+                        >
+                            <span>{{ loc.flag }}</span>
+                            <span>{{ loc.label }}</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <button
@@ -84,7 +116,7 @@ const handleLogout = async () => {
                     </button>
                     <button type="button" class="layout-topbar-action" @click="handleLogout">
                         <i class="pi pi-sign-out"></i>
-                        <span>Logout</span>
+                        <span>{{ t('topbar.logout') }}</span>
                     </button>
                 </div>
             </div>

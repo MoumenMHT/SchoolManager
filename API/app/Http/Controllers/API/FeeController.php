@@ -53,7 +53,7 @@ class FeeController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve fees',
+                'message' => __('messages.failed_retrieve_fees'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -76,7 +76,7 @@ class FeeController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -91,14 +91,14 @@ class FeeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Fee created successfully and available for contract creation',
+                'message' => __('messages.fee_created'),
                 'data' => $fee
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create fee',
+                'message' => __('messages.failed_create_fee'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -131,7 +131,7 @@ class FeeController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Fee not found',
+                'message' => __('messages.fee_not_found'),
                 'error' => $e->getMessage()
             ], 404);
         }
@@ -156,7 +156,7 @@ class FeeController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -172,7 +172,7 @@ class FeeController extends Controller
             if ($request->has('base_amount') && $activeUsage && $request->base_amount != $fee->base_amount) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cannot modify fee amount. This fee is currently used in active contracts.',
+                    'message' => __('messages.cannot_modify_active_fee'),
                     'suggestion' => 'Create a new fee version for the next academic year instead.'
                 ], 422);
             }
@@ -181,14 +181,14 @@ class FeeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Fee updated successfully',
+                'message' => __('messages.fee_updated'),
                 'data' => $fee
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update fee',
+                'message' => __('messages.failed_update_fee'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -214,7 +214,7 @@ class FeeController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Fee deactivated successfully. Cannot delete as it is being used in contracts.',
+                    'message' => __('messages.fee_deactivated'),
                     'data' => $fee
                 ]);
             }
@@ -224,13 +224,13 @@ class FeeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Fee deleted successfully'
+                'message' => __('messages.fee_deleted')
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete fee',
+                'message' => __('messages.failed_delete_fee'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -248,13 +248,13 @@ class FeeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Fee status updated successfully',
+                'message' => __('messages.fee_status_updated'),
                 'data' => $fee
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to toggle fee status',
+                'message' => __('messages.failed_toggle_fee_status'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -273,7 +273,7 @@ class FeeController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -285,14 +285,14 @@ class FeeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Available fees for contract creation',
+                'message' => __('messages.available_fees'),
                 'data' => $fees,
                 'total_if_all_selected' => $fees->sum('base_amount')
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve available fees',
+                'message' => __('messages.failed_retrieve_fees'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -315,7 +315,7 @@ class FeeController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -346,7 +346,7 @@ class FeeController extends Controller
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create fees',
+                'message' => __('messages.failed_create_fee'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -367,7 +367,7 @@ class FeeController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -403,13 +403,13 @@ class FeeController extends Controller
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to copy fees',
+                'message' => __('messages.failed_copy_fees'),
                 'error' => $e->getMessage()
             ], 500);
         }catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to copy fees',
+                'message' => __('messages.failed_copy_fees'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -461,7 +461,7 @@ class FeeController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve fee statistics',
+                'message' => __('messages.failed_retrieve_fee_statistics'),
                 'error' => $e->getMessage()
             ], 500);
         }

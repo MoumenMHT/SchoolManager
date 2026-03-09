@@ -34,7 +34,7 @@ class BillController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve bills',
+                'message' => __('messages.failed_retrieve_bills'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -56,7 +56,7 @@ class BillController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Bill not found',
+                'message' => __('messages.bill_not_found'),
                 'error' => $e->getMessage()
             ], 404);
         }
@@ -80,7 +80,7 @@ class BillController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve unpaid bills',
+                'message' => __('messages.failed_retrieve_bills'),
                 'error' => $e->getMessage()
             ], 500);
         }

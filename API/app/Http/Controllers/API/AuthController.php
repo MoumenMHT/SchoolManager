@@ -43,14 +43,14 @@ class AuthController extends Controller
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false, 
-                'message' => 'Invalid credentials'
+                'message' => __('messages.invalid_credentials')
             ], 401);
         }
 
         if (!$user->is_active) {
             return response()->json([
                 'success' => false,
-                'message' => 'Account is inactive'
+                'message' => __('messages.account_inactive')
             ], 403);
         }
 
@@ -110,7 +110,7 @@ class AuthController extends Controller
             if ($teacher->user_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'This teacher already has an account'
+                    'message' => __('messages.teacher_has_account')
                 ], 409);
             }
         } elseif ($request->role === 'parent') {
@@ -118,7 +118,7 @@ class AuthController extends Controller
             if ($parent->user_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'This parent already has an account'
+                    'message' => __('messages.parent_has_account_new')
                 ], 409);
             }
         }
@@ -140,7 +140,7 @@ class AuthController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'User registered successfully',
+                'message' => __('messages.user_registered'),
                 'data' => $teacher->fresh()
             ], 201);
         } elseif ($user->role === 'parent') {
@@ -149,7 +149,7 @@ class AuthController extends Controller
             
             return response()->json([
                 'success' => true,
-                'message' => 'User registered successfully',
+                'message' => __('messages.user_registered'),
                 'data' => $parent->fresh()
             ], 201);
         }
@@ -157,7 +157,7 @@ class AuthController extends Controller
         // For admin role, return user object
         return response()->json([
             'success' => true,
-            'message' => 'User registered successfully',
+            'message' => __('messages.user_registered'),
             'user' => $user
         ], 201);
     }
@@ -171,7 +171,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Logged out successfully'
+            'message' => __('messages.logged_out')
         ]);
     }
 
@@ -219,7 +219,7 @@ class AuthController extends Controller
         if (!Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Current password is incorrect'
+                'message' => __('messages.wrong_current_password')
             ], 400);
         }
 
@@ -228,7 +228,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Password changed successfully'
+            'message' => __('messages.password_changed')
         ]);
     }
 }

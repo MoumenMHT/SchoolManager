@@ -3,10 +3,12 @@ import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
+import { useI18n } from 'vue-i18n';
 import apiService from '@/service/ApiService';
 
 const router = useRouter();
 const toast = useToast();
+const { t } = useI18n();
 
 // Form fields
 const email = ref('admin@schoolmanager.com');
@@ -35,27 +37,27 @@ const clearErrors = () => {
 // Validate form
 const validateForm = (): boolean => {
   errors.value = {};
-  
+
   if (!email.value) {
-    errors.value.email = 'Email is required';
+    errors.value.email = t('login.email_required');
     return false;
   }
-  
+
   if (!isEmailValid.value) {
-    errors.value.email = 'Please enter a valid email address';
+    errors.value.email = t('login.email_invalid');
     return false;
   }
-  
+
   if (!password.value) {
-    errors.value.password = 'Password is required';
+    errors.value.password = t('login.password_required');
     return false;
   }
-  
+
   if (password.value.length < 6) {
-    errors.value.password = 'Password must be at least 6 characters';
+    errors.value.password = t('login.password_min_length');
     return false;
   }
-  
+
   return true;
 };
 
@@ -64,28 +66,28 @@ const handleLogin = async () => {
   if (!validateForm()) {
     return;
   }
-  
+
   loading.value = true;
   clearErrors();
-  
+
   try {
     const response = await apiService.login(email.value, password.value);
-    
+
     if (response.success) {
       toast.add({
         severity: 'success',
-        summary: 'Login Successful',
-        detail: `Welcome back, ${response.user.username}!`,
+        summary: t('login.login_successful'),
+        detail: t('login.welcome_back', { name: response.user.username }),
         life: 3000
       });
-      
+
       // Store remember me preference
       if (rememberMe.value) {
         localStorage.setItem('remember_me', 'true');
       } else {
         localStorage.removeItem('remember_me');
       }
-      
+
       // Redirect based on role
       setTimeout(() => {
         const role = response.user?.role;
@@ -94,16 +96,16 @@ const handleLogin = async () => {
     }
   } catch (error: any) {
     console.error('Login error:', error);
-    
-    const errorMessage = error.response?.data?.message || 'Invalid email or password';
-    
+
+    const errorMessage = error.response?.data?.message || t('login.invalid_credentials');
+
     toast.add({
       severity: 'error',
-      summary: 'Login Failed',
+      summary: t('login.login_failed'),
       detail: errorMessage,
       life: 5000
     });
-    
+
     // Set field errors if available
     if (error.response?.data?.errors) {
       errors.value = error.response.data.errors;
@@ -129,17 +131,17 @@ const handleKeyPress = (event: KeyboardEvent) => {
                 <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px">
                     <div class="text-center mb-8">
                         <i class="pi pi-graduation-cap text-6xl text-primary mb-4"></i>
-                        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to SchoolHub!</div>
-                        <span class="text-muted-color font-medium">Sign in to continue</span>
+                        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">{{ t('login.welcome') }}</div>
+                        <span class="text-muted-color font-medium">{{ t('login.sign_in_continue') }}</span>
                     </div>
 
                     <div>
-                        <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-                        <InputText 
-                            id="email1" 
-                            type="email" 
-                            placeholder="Email address" 
-                            class="w-full md:w-[30rem]" 
+                        <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">{{ t('login.email') }}</label>
+                        <InputText
+                            id="email1"
+                            type="email"
+                            :placeholder="t('login.email_placeholder')"
+                            class="w-full md:w-[30rem]"
                             :class="{ 'p-invalid': errors.email }"
                             v-model="email"
                             @input="clearErrors"
@@ -149,14 +151,14 @@ const handleKeyPress = (event: KeyboardEvent) => {
                         <small v-if="errors.email" class="p-error block mb-4 mt-1">{{ errors.email }}</small>
                         <div v-else class="mb-8"></div>
 
-                        <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Password</label>
-                        <Password 
-                            id="password1" 
-                            v-model="password" 
-                            placeholder="Password" 
-                            :toggleMask="true" 
-                            class="mb-1" 
-                            fluid 
+                        <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">{{ t('login.password') }}</label>
+                        <Password
+                            id="password1"
+                            v-model="password"
+                            :placeholder="t('login.password_placeholder')"
+                            :toggleMask="true"
+                            class="mb-1"
+                            fluid
                             :feedback="false"
                             :class="{ 'p-invalid': errors.password }"
                             @input="clearErrors"
@@ -169,27 +171,27 @@ const handleKeyPress = (event: KeyboardEvent) => {
                         <div class="flex items-center justify-between mt-2 mb-8 gap-8">
                             <div class="flex items-center">
                                 <Checkbox v-model="rememberMe" id="rememberme1" binary class="mr-2" :disabled="loading"></Checkbox>
-                                <label for="rememberme1" class="cursor-pointer">Remember me</label>
+                                <label for="rememberme1" class="cursor-pointer">{{ t('login.remember_me') }}</label>
                             </div>
-                            <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary hover:underline">Forgot password?</span>
+                            <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary hover:underline">{{ t('login.forgot_password') }}</span>
                         </div>
-                        
-                        <Button 
-                            label="Sign In" 
-                            class="w-full" 
+
+                        <Button
+                            :label="t('login.sign_in')"
+                            class="w-full"
                             @click="handleLogin"
                             :loading="loading"
                             :disabled="!isFormValid || loading"
                             icon="pi pi-sign-in"
                         />
-                        
+
                         <!-- Demo Credentials -->
                         <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-border border border-blue-200 dark:border-blue-800">
-                            <div class="text-sm text-blue-900 dark:text-blue-100 font-semibold mb-2">Demo Credentials</div>
+                            <div class="text-sm text-blue-900 dark:text-blue-100 font-semibold mb-2">{{ t('login.demo_credentials') }}</div>
                             <div class="text-xs text-blue-700 dark:text-blue-300">
-                                <div class="mb-1"><strong>Admin:</strong> admin@schoolmanager.com / password123</div>
-                                <div class="mb-1"><strong>Teacher:</strong> teacher@schoolmanager.com / password123</div>
-                                <div><strong>Parent:</strong> parent@schoolmanager.com / password123</div>
+                                <div class="mb-1"><strong>{{ t('login.admin') }}:</strong> admin@schoolmanager.com / password123</div>
+                                <div class="mb-1"><strong>{{ t('login.teacher') }}:</strong> teacher@schoolmanager.com / password123</div>
+                                <div><strong>{{ t('login.parent') }}:</strong> parent@schoolmanager.com / password123</div>
                             </div>
                         </div>
                     </div>

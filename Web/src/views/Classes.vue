@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import ClassesService, { type SchoolClass, type CreateTeacherDTO, type UpdateTeacherDTO } from '@/service/ClassesService';
@@ -7,6 +8,8 @@ import TeacherService, { type Teacher } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
 import StudentService, { type Student } from '@/service/StudentService';
 import ScheduleService, { type Schedule, type CreateScheduleDTO } from '@/service/ScheduleService';
+
+const { t } = useI18n();
 
 const toast = useToast();
 const dt = ref();
@@ -56,7 +59,7 @@ const selectedScheduleSlot = ref<{ day: string; hour: number } | null>(null);
 const scheduleToEdit = ref<Partial<Schedule> | null>(null);
 const scheduleSubmitted = ref(false);
 
-// Days and hours for schedule grid
+// Days (English values kept for API/logic use — display via t() in template)
 const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const schoolHours = [
   { hour: 8, label: '8:00 - 9:00' },
@@ -81,20 +84,21 @@ const academicYears = computed(() => {
   return years;
 });
 
-const levels = [
-  '1st Grade',
-  '2nd Grade',
-  '3rd Grade',
-  '4th Grade',
-  '5th Grade',
-  '6th Grade',
-  '7th Grade',
-  '8th Grade',
-  '9th Grade',
-  '10th Grade',
-  '11th Grade',
-  '12th Grade'
-];
+// Grade levels — label is translated, value is numeric string sent to the API
+const levels = computed(() => [
+  { label: t('classes.grade_1'),  value: '1' },
+  { label: t('classes.grade_2'),  value: '2' },
+  { label: t('classes.grade_3'),  value: '3' },
+  { label: t('classes.grade_4'),  value: '4' },
+  { label: t('classes.grade_5'),  value: '5' },
+  { label: t('classes.grade_6'),  value: '6' },
+  { label: t('classes.grade_7'),  value: '7' },
+  { label: t('classes.grade_8'),  value: '8' },
+  { label: t('classes.grade_9'),  value: '9' },
+  { label: t('classes.grade_10'), value: '10' },
+  { label: t('classes.grade_11'), value: '11' },
+  { label: t('classes.grade_12'), value: '12' },
+]);
 
 // Load classes on mount
 onMounted(async () => {
@@ -107,24 +111,24 @@ const loadClasses = async () => {
   try {
     loading.value = true;
     classes.value = await ClassesService.getClasses();
-    
+
     // Add computed properties for each class
     classes.value = classes.value.map(c => ({
       ...c,
-      subjects_text: c.subjects && Array.isArray(c.subjects) 
-        ? c.subjects.map(s => s.name).join(', ') 
-        : 'No subjects',
-      teachers_text: c.teachers && Array.isArray(c.teachers) 
-        ? c.teachers.map(t => t.name).join(', ') 
-        : 'No teachers',
+      subjects_text: c.subjects && Array.isArray(c.subjects)
+        ? c.subjects.map(s => s.name).join(', ')
+        : t('classes.no_subjects'),
+      teachers_text: c.teachers && Array.isArray(c.teachers)
+        ? c.teachers.map(teacher => teacher.name).join(', ')
+        : t('classes.no_teachers'),
       students_display: c.students_count || 0,
       teachers_display: c.teachers_count || 0,
     }));
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load classes',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_failed'),
       life: 3000
     });
   } finally {
@@ -139,8 +143,8 @@ const loadTeachers = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load teachers',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_teachers_failed'),
       life: 3000
     });
   }
@@ -155,7 +159,7 @@ const openNew = () => {
   submitted.value = false;
   classDialog.value = true;
 };
- 
+
 const hideDialog = () => {
   classDialog.value = false;
   submitted.value = false;
@@ -169,8 +173,8 @@ const saveClass = async () => {
   if (!schoolClass.value.name?.trim() || !schoolClass.value.level?.trim()) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please fill in all required fields',
+      summary: t('classes.validation_error'),
+      detail: t('classes.fill_required_fields'),
       life: 3000
     });
     return;
@@ -191,8 +195,8 @@ const saveClass = async () => {
       await loadClasses(); // Reload to get fresh data
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Class updated successfully',
+        summary: t('common.success'),
+        detail: t('classes.class_updated'),
         life: 3000
       });
     } else {
@@ -201,8 +205,8 @@ const saveClass = async () => {
       await loadClasses(); // Reload to get fresh data
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Class created successfully',
+        summary: t('common.success'),
+        detail: t('classes.class_created'),
         life: 3000
       });
     }
@@ -212,8 +216,8 @@ const saveClass = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to save class',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.save_failed'),
       life: 3000
     });
   }
@@ -230,17 +234,17 @@ const viewClass = async (classToView: SchoolClass) => {
   try {
     loading.value = true;
     selectedClassDetails.value = await ClassesService.getClass(classToView.id);
-    
+
     // Load class assignments (teacher-subject mappings)
     const assignmentsData = await ClassesService.getClassAssignments(classToView.id);
     classAssignments.value = assignmentsData.assignments || [];
-    
+
     viewDetailsDialog.value = true;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load class details',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_details_failed'),
       life: 3000
     });
   } finally {
@@ -269,15 +273,15 @@ const deleteClass = async () => {
     schoolClass.value = {};
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Class deleted successfully',
+      summary: t('common.success'),
+      detail: t('classes.class_deleted'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete class',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.delete_failed'),
       life: 3000
     });
   }
@@ -303,15 +307,15 @@ const deleteSelectedClasses = async () => {
     selectedClasses.value = [];
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Classes deleted successfully',
+      summary: t('common.success'),
+      detail: t('classes.classes_deleted'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete classes',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.delete_selected_failed'),
       life: 3000
     });
   }
@@ -323,7 +327,7 @@ const getStatusSeverity = (isActive: boolean | null) => {
 };
 
 const getStatusLabel = (isActive: boolean | null) => {
-  return isActive ? 'Active' : 'Inactive';
+  return isActive ? t('common.active') : t('common.inactive');
 };
 
 // Get capacity status
@@ -342,8 +346,8 @@ const loadSubjects = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load subjects',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_subjects_failed'),
       life: 3000
     });
   }
@@ -364,15 +368,15 @@ const onSubjectChange = async () => {
     availableTeachersForSubject.value = [];
     return;
   }
-  
+
   try {
     assignmentLoading.value = true;
     availableTeachersForSubject.value = await SubjectService.getTeachersBySubject(selectedSubjectForAssignment.value);
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load teachers for subject',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_teachers_for_subject_failed'),
       life: 3000
     });
   } finally {
@@ -385,8 +389,8 @@ const assignTeacherToClass = async () => {
   if (!selectedSubjectForAssignment.value || !selectedTeacherToAssign.value || !selectedClassDetails.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please select both subject and teacher',
+      summary: t('classes.validation_error'),
+      detail: t('classes.select_subject_and_teacher'),
       life: 3000
     });
     return;
@@ -394,10 +398,10 @@ const assignTeacherToClass = async () => {
 
   try {
     assignmentLoading.value = true;
-    
+
     // Get the coefficient for this subject and class level
     const academicYear = selectedClassDetails.value.academic_year || `${currentYear.value}-${currentYear.value + 1}`;
-    
+
     await SubjectService.assignSubjectToTeacher(
       selectedSubjectForAssignment.value,
       selectedTeacherToAssign.value,
@@ -410,14 +414,14 @@ const assignTeacherToClass = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Teacher assigned successfully',
+      summary: t('common.success'),
+      detail: t('classes.teacher_assigned'),
       life: 3000
     });
 
     // Reload class details
     await viewClass(selectedClassDetails.value);
-    
+
     // Close dialog
     assignTeacherDialog.value = false;
     selectedSubjectForAssignment.value = null;
@@ -426,8 +430,8 @@ const assignTeacherToClass = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to assign teacher',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.assign_teacher_failed'),
       life: 3000
     });
   } finally {
@@ -449,7 +453,7 @@ const removeTeacherFromClass = async () => {
 
   try {
     const academicYear = selectedClassDetails.value.academic_year || `${currentYear.value}-${currentYear.value + 1}`;
-    
+
     await SubjectService.unassignSubjectFromTeacher(
       subjectId,
       teacherId,
@@ -459,21 +463,21 @@ const removeTeacherFromClass = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Teacher removed successfully',
+      summary: t('common.success'),
+      detail: t('classes.teacher_removed'),
       life: 3000
     });
 
     // Reload class details
     await viewClass(selectedClassDetails.value);
-    
+
     removeTeacherConfirmDialog.value = false;
     teacherToRemove.value = null;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to remove teacher',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.remove_teacher_failed'),
       life: 3000
     });
   }
@@ -485,14 +489,14 @@ const loadAvailableStudents = async () => {
     studentAssignmentLoading.value = true;
     const allStudents = await StudentService.searchStudentsWithoutClass();
     // Filter students that are not in any class or are in the current class
-    availableStudents.value = allStudents.filter(student => 
+    availableStudents.value = allStudents.filter(student =>
       !student.class_id || student.class_id === selectedClassDetails.value?.id
     );
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load students',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_students_failed'),
       life: 3000
     });
   } finally {
@@ -512,8 +516,8 @@ const assignStudentToClass = async () => {
   if (!selectedStudentToAssign.value || !selectedClassDetails.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please select a student',
+      summary: t('classes.validation_error'),
+      detail: t('classes.select_a_student'),
       life: 3000
     });
     return;
@@ -521,7 +525,7 @@ const assignStudentToClass = async () => {
 
   try {
     studentAssignmentLoading.value = true;
-    
+
     await StudentService.assignStudentToClass(
       selectedStudentToAssign.value,
       selectedClassDetails.value.id
@@ -532,22 +536,22 @@ const assignStudentToClass = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Student assigned successfully',
+      summary: t('common.success'),
+      detail: t('classes.student_assigned'),
       life: 3000
     });
 
     // Reload class details
     await viewClass(selectedClassDetails.value);
-    
+
     // Close dialog
     assignStudentDialog.value = false;
     selectedStudentToAssign.value = null;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to assign student',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.assign_student_failed'),
       life: 3000
     });
   } finally {
@@ -573,21 +577,21 @@ const removeStudentFromClass = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Student removed from class',
+      summary: t('common.success'),
+      detail: t('classes.student_removed'),
       life: 3000
     });
 
     // Reload class details
     await viewClass(selectedClassDetails.value);
-    
+
     removeStudentConfirmDialog.value = false;
     studentToRemove.value = null;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to remove student',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.remove_student_failed'),
       life: 3000
     });
   }
@@ -600,11 +604,11 @@ const viewSchedule = async (classToView: SchoolClass) => {
   try {
     scheduleLoading.value = true;
     selectedClassForSchedule.value = classToView;
-    
+
     // Fetch class schedule with academic year filter
     const academic_year = classToView.academic_year || `${currentYear.value}-${currentYear.value + 1}`;
     const scheduleData = await ScheduleService.getClassSchedule(classToView.id, academic_year);
-    
+
     // If scheduleData is an object with day keys, use it directly
     // If it's an array, we need to organize it by day
     if (Array.isArray(scheduleData)) {
@@ -622,17 +626,17 @@ const viewSchedule = async (classToView: SchoolClass) => {
       // It's already organized by day
       classSchedules.value = scheduleData;
     }
-    
+
     // Load class assignments (teacher-subject mappings) for the schedule edit dialog
     const assignmentsData = await ClassesService.getClassAssignments(classToView.id);
     classAssignments.value = assignmentsData.assignments || [];
-    
+
     scheduleDialog.value = true;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load class schedule',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_schedule_failed'),
       life: 3000
     });
   } finally {
@@ -646,21 +650,21 @@ const getScheduleForSlot = (day: string, hour: number): Schedule | null => {
   const daySchedules = classSchedules.value[dayKey] || [];
   const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
   const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
-  
+
   const found = daySchedules.find(schedule => {
     const scheduleStart = schedule.start_time;
     const scheduleEnd = schedule.end_time;
     const matches = scheduleStart <= startTime && scheduleEnd > startTime;
     return matches;
   }) || null;
-  
+
   return found;
 };
 
 // Handle clicking on a schedule slot
 const handleSlotClick = (day: string, hour: number) => {
   const existingSchedule = getScheduleForSlot(day, hour);
-  
+
   if (existingSchedule) {
     // Edit existing schedule
     scheduleToEdit.value = { ...existingSchedule };
@@ -668,7 +672,7 @@ const handleSlotClick = (day: string, hour: number) => {
     // Create new schedule
     const startTime = `${hour.toString().padStart(2, '0')}:00`;
     const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
-    
+
     scheduleToEdit.value = {
       day: day.toLowerCase(),
       start_time: startTime,
@@ -678,7 +682,7 @@ const handleSlotClick = (day: string, hour: number) => {
       academic_year: selectedClassForSchedule.value?.academic_year || null
     };
   }
-  
+
   selectedScheduleSlot.value = { day, hour };
   scheduleSubmitted.value = false;
   scheduleEditDialog.value = true;
@@ -687,23 +691,23 @@ const handleSlotClick = (day: string, hour: number) => {
 // Save schedule (create or update)
 const saveSchedule = async () => {
   scheduleSubmitted.value = true;
-  
+
   if (!scheduleToEdit.value || !selectedClassForSchedule.value) return;
-  
+
   // Validate that a teacher-subject assignment is selected
   if (!scheduleToEdit.value.class_subject_teacher_id) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please select a subject and teacher',
+      summary: t('classes.validation_error'),
+      detail: t('classes.select_subject_and_teacher'),
       life: 3000
     });
     return;
   }
-  
+
   try {
     scheduleLoading.value = true;
-    
+
     const scheduleData: CreateScheduleDTO = {
       class_subject_teacher_id: scheduleToEdit.value.class_subject_teacher_id,
       day: scheduleToEdit.value.day!,
@@ -713,14 +717,14 @@ const saveSchedule = async () => {
       notes: scheduleToEdit.value.notes || null,
       academic_year: scheduleToEdit.value.academic_year || null
     };
-    
+
     if (scheduleToEdit.value.id) {
       // Update existing schedule
       await ScheduleService.updateSchedule(scheduleToEdit.value.id, scheduleData);
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Schedule updated successfully',
+        summary: t('common.success'),
+        detail: t('classes.schedule_updated'),
         life: 3000
       });
     } else {
@@ -728,22 +732,22 @@ const saveSchedule = async () => {
       await ScheduleService.createSchedule(scheduleData);
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Schedule created successfully',
+        summary: t('common.success'),
+        detail: t('classes.schedule_created'),
         life: 3000
       });
     }
-    
+
     // Reload schedule
     await viewSchedule(selectedClassForSchedule.value);
-    
+
     scheduleEditDialog.value = false;
     scheduleToEdit.value = null;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to save schedule',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.save_schedule_failed'),
       life: 3000
     });
   } finally {
@@ -754,30 +758,30 @@ const saveSchedule = async () => {
 // Delete schedule
 const deleteSchedule = async () => {
   if (!scheduleToEdit.value?.id) return;
-  
+
   try {
     scheduleLoading.value = true;
     await ScheduleService.deleteSchedule(scheduleToEdit.value.id);
-    
+
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Schedule deleted successfully',
+      summary: t('common.success'),
+      detail: t('classes.schedule_deleted'),
       life: 3000
     });
-    
+
     // Reload schedule
     if (selectedClassForSchedule.value) {
       await viewSchedule(selectedClassForSchedule.value);
     }
-    
+
     scheduleEditDialog.value = false;
     scheduleToEdit.value = null;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete schedule',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.delete_schedule_failed'),
       life: 3000
     });
   } finally {
@@ -803,32 +807,32 @@ const hideScheduleEditDialog = () => {
 <template>
   <div class="card">
     <Toast />
-    
+
     <!-- Toolbar -->
     <Toolbar class="mb-6">
       <template #start>
-        <Button 
-          label="New Class" 
-          icon="pi pi-plus" 
-          severity="secondary" 
-          class="mr-2" 
-          @click="openNew" 
+        <Button
+          :label="t('classes.new_class')"
+          icon="pi pi-plus"
+          severity="secondary"
+          class="mr-2"
+          @click="openNew"
         />
-        <Button 
-          label="Delete" 
-          icon="pi pi-trash" 
-          severity="secondary" 
-          :disabled="!selectedClasses || !selectedClasses.length" 
-          @click="confirmDeleteSelected" 
+        <Button
+          :label="t('common.delete')"
+          icon="pi pi-trash"
+          severity="secondary"
+          :disabled="!selectedClasses || !selectedClasses.length"
+          @click="confirmDeleteSelected"
         />
       </template>
 
       <template #end>
-        <Button 
-          label="Export" 
-          icon="pi pi-upload" 
-          severity="secondary" 
-          @click="exportCSV" 
+        <Button
+          :label="t('common.export')"
+          icon="pi pi-upload"
+          severity="secondary"
+          @click="exportCSV"
         />
       </template>
     </Toolbar>
@@ -846,21 +850,21 @@ const hideScheduleEditDialog = () => {
       exportFilename="classes"
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       :rowsPerPageOptions="[5, 10, 25, 50]"
-      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} classes"
+      :currentPageReportTemplate="t('classes.page_report')"
       class="p-datatable-sm"
       @row-click="viewClass($event.data)"
 
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
-          <h4 class="m-0 text-xl font-semibold">Manage Classes</h4>
+          <h4 class="m-0 text-xl font-semibold">{{ t('classes.manage_classes') }}</h4>
           <IconField>
             <InputIcon>
               <i class="pi pi-search" />
             </InputIcon>
-            <InputText 
-              v-model="filters['global'].value" 
-              placeholder="Search classes..." 
+            <InputText
+              v-model="filters['global'].value"
+              :placeholder="t('common.search')"
             />
           </IconField>
         </div>
@@ -869,13 +873,13 @@ const hideScheduleEditDialog = () => {
       <template #empty>
         <div class="text-center py-8">
           <i class="pi pi-building text-4xl text-muted-color mb-3 block"></i>
-          <p class="text-muted-color">No classes found.</p>
+          <p class="text-muted-color">{{ t('classes.no_classes_found') }}</p>
         </div>
       </template>
 
       <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-      
-      <Column field="name" header="Class Name" sortable style="min-width: 12rem">
+
+      <Column field="name" :header="t('classes.class_name')" sortable style="min-width: 12rem">
         <template #body="{ data }">
           <div class="flex items-center gap-2">
             <i class="pi pi-building text-primary"></i>
@@ -884,101 +888,101 @@ const hideScheduleEditDialog = () => {
         </template>
       </Column>
 
-      <Column field="level" header="Level" sortable style="min-width: 10rem">
+      <Column field="level" :header="t('classes.level')" sortable style="min-width: 10rem">
         <template #body="{ data }">
           <Tag :value="data.level" severity="info" />
         </template>
       </Column>
 
-      <Column field="academic_year" header="Academic Year" sortable style="min-width: 10rem">
+      <Column field="academic_year" :header="t('classes.academic_year')" sortable style="min-width: 10rem">
         <template #body="{ data }">
-          <span>{{ data.academic_year || 'N/A' }}</span>
+          <span>{{ data.academic_year || t('common.na') }}</span>
         </template>
       </Column>
 
-      <Column field="students_display" header="Students" sortable style="min-width: 10rem">
+      <Column field="students_display" :header="t('common.students')" sortable style="min-width: 10rem">
         <template #body="{ data }">
           <div class="flex items-center gap-2">
-            <Badge 
-              :value="data.students_display" 
-              :severity="getCapacityStatus(data.students_display, data.capacity)" 
+            <Badge
+              :value="data.students_display"
+              :severity="getCapacityStatus(data.students_display, data.capacity)"
             />
             <span v-if="data.capacity" class="text-sm text-muted-color">/ {{ data.capacity }}</span>
           </div>
         </template>
       </Column>
 
-      <Column field="teachers_display" header="Teachers" sortable style="min-width: 8rem">
+      <Column field="teachers_display" :header="t('common.teachers')" sortable style="min-width: 8rem">
         <template #body="{ data }">
-          <Badge 
-            :value="data.teachers_display" 
-            :severity="data.teachers_display > 0 ? 'info' : 'secondary'" 
+          <Badge
+            :value="data.teachers_display"
+            :severity="data.teachers_display > 0 ? 'info' : 'secondary'"
           />
         </template>
       </Column>
 
-      <Column field="subjects_text" header="Subjects" style="min-width: 15rem">
+      <Column field="subjects_text" :header="t('common.subjects')" style="min-width: 15rem">
         <template #body="{ data }">
           <span class="text-sm">{{ data.subjects_text }}</span>
         </template>
       </Column>
 
-      <Column field="is_active" header="Status" sortable style="min-width: 10rem">
+      <Column field="is_active" :header="t('common.status')" sortable style="min-width: 10rem">
         <template #body="{ data }">
-          <Tag 
-            :value="getStatusLabel(data.is_active)" 
-            :severity="getStatusSeverity(data.is_active)" 
+          <Tag
+            :value="getStatusLabel(data.is_active)"
+            :severity="getStatusSeverity(data.is_active)"
           />
         </template>
       </Column>
 
-      
+
 
       <Column :exportable="false" style="min-width: 12rem">
         <template #body="{ data }">
-          <Button 
-            icon="pi pi-calendar" 
-            outlined 
-            rounded 
+          <Button
+            icon="pi pi-calendar"
+            outlined
+            rounded
             severity="success"
-            class="mr-2" 
-            @click="viewSchedule(data)" 
-            v-tooltip.top="'View Schedule'"
+            class="mr-2"
+            @click="viewSchedule(data)"
+            v-tooltip.top="t('classes.view_schedule')"
           />
-          <Button 
-            icon="pi pi-eye" 
-            outlined 
-            rounded 
+          <Button
+            icon="pi pi-eye"
+            outlined
+            rounded
             severity="info"
-            class="mr-2" 
-            @click="viewClass(data)" 
-            v-tooltip.top="'View Details'"
+            class="mr-2"
+            @click="viewClass(data)"
+            v-tooltip.top="t('classes.view_details')"
           />
-          <Button 
-            icon="pi pi-pencil" 
-            outlined 
-            rounded 
-            class="mr-2" 
-            @click="editClass(data)" 
-            v-tooltip.top="'Edit'"
+          <Button
+            icon="pi pi-pencil"
+            outlined
+            rounded
+            class="mr-2"
+            @click="editClass(data)"
+            v-tooltip.top="t('classes.edit')"
           />
-          <Button 
-            icon="pi pi-trash" 
-            outlined 
-            rounded 
-            severity="danger" 
-            @click="confirmDeleteClass(data)" 
-            v-tooltip.top="'Delete'"
+          <Button
+            icon="pi pi-trash"
+            outlined
+            rounded
+            severity="danger"
+            @click="confirmDeleteClass(data)"
+            v-tooltip.top="t('common.delete')"
           />
         </template>
       </Column>
     </DataTable>
 
     <!-- Add/Edit Class Dialog -->
-    <Dialog 
-      v-model:visible="classDialog" 
-      :style="{ width: '550px' }" 
-      header="Class Details" 
+    <Dialog
+      v-model:visible="classDialog"
+      :style="{ width: '550px' }"
+      :header="t('classes.class_details')"
       :modal="true"
       class="p-fluid"
     >
@@ -986,81 +990,83 @@ const hideScheduleEditDialog = () => {
         <!-- Class Name -->
         <div>
           <label for="name" class="block font-semibold mb-2">
-            Class Name <span class="text-red-500">*</span>
+            {{ t('classes.class_name') }} <span class="text-red-500">*</span>
           </label>
-          <InputText 
-            id="name" 
-            v-model="schoolClass.name" 
-            required 
-            autofocus 
-            :invalid="submitted && !schoolClass.name" 
-            placeholder="e.g., Class A, Section 1"
+          <InputText
+            id="name"
+            v-model="schoolClass.name"
+            required
+            autofocus
+            :invalid="submitted && !schoolClass.name"
+            :placeholder="t('classes.class_name_placeholder')"
           />
           <small v-if="submitted && !schoolClass.name" class="text-red-500">
-            Class name is required.
+            {{ t('classes.class_name_required') }}
           </small>
         </div>
 
         <!-- Level -->
         <div>
           <label for="level" class="block font-semibold mb-2">
-            Level <span class="text-red-500">*</span>
+            {{ t('classes.level') }} <span class="text-red-500">*</span>
           </label>
-          <Select 
-            id="level" 
-            v-model="schoolClass.level" 
-            :options="levels" 
-            placeholder="Select a level"
+          <Select
+            id="level"
+            v-model="schoolClass.level"
+            :options="levels"
+            optionLabel="label"
+            optionValue="value"
+            :placeholder="t('classes.select_level')"
             :invalid="submitted && !schoolClass.level"
           />
           <small v-if="submitted && !schoolClass.level" class="text-red-500">
-            Level is required.
+            {{ t('classes.level_required') }}
           </small>
         </div>
 
         <!-- Academic Year -->
         <div>
           <label for="academic_year" class="block font-semibold mb-2">
-            Academic Year
+            {{ t('classes.academic_year') }}
           </label>
-          <Select 
-            id="academic_year" 
-            v-model="schoolClass.academic_year" 
-            :options="academicYears" 
-            placeholder="Select academic year"
+          <Select
+            id="academic_year"
+            v-model="schoolClass.academic_year"
+            :options="academicYears"
+            :placeholder="t('classes.select_academic_year')"
           />
         </div>
 
         <!-- Capacity -->
         <div>
           <label for="capacity" class="block font-semibold mb-2">
-            Capacity
+            {{ t('classes.capacity') }}
           </label>
-          <InputNumber 
-            id="capacity" 
-            v-model="schoolClass.capacity" 
-            placeholder="Maximum number of students"
+          <InputNumber
+            id="capacity"
+            v-model="schoolClass.capacity"
+            :placeholder="t('classes.capacity_placeholder')"
             :min="1"
             :max="100"
             showButtons
           />
           <small class="text-muted-color">
-            Maximum number of students allowed in this class
+            {{ t('classes.capacity_hint') }}
           </small>
         </div>
 
         <!-- Main Teacher -->
         <div>
           <label for="main_teacher" class="block font-semibold mb-2">
-            Main Teacher (Class Supervisor)
+            {{ t('classes.main_teacher') }}
           </label>
-          <Select 
-            id="main_teacher" 
-            v-model="schoolClass.main_teacher_id" 
-            :options="availableTeachers" 
+          <Select
+            id="main_teacher"
+            v-model="schoolClass.main_teacher_id"
+            :options="availableTeachers"
             optionLabel="first_name"
             optionValue="id"
-            placeholder="Select main teacher"
+            :placeholder="t('classes.select_main_teacher')"
             filter
           >
             <template #option="{ option }">
@@ -1068,78 +1074,78 @@ const hideScheduleEditDialog = () => {
             </template>
             <template #value="{ value }">
               <div v-if="value">
-                {{ availableTeachers.find(t => t.id === value)?.first_name }} 
+                {{ availableTeachers.find(t => t.id === value)?.first_name }}
                 {{ availableTeachers.find(t => t.id === value)?.last_name }}
               </div>
-              <span v-else>Select main teacher</span>
+              <span v-else>{{ t('classes.select_main_teacher') }}</span>
             </template>
           </Select>
         </div>
 
         <!-- Status -->
         <div v-if="schoolClass.id" class="flex items-center gap-2">
-          <Checkbox 
-            id="is_active" 
-            v-model="schoolClass.is_active" 
-            :binary="true" 
+          <Checkbox
+            id="is_active"
+            v-model="schoolClass.is_active"
+            :binary="true"
           />
-          <label for="is_active" class="font-semibold">Active Class</label>
+          <label for="is_active" class="font-semibold">{{ t('classes.active_class') }}</label>
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideDialog" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideDialog"
         />
-        <Button 
-          label="Save" 
-          icon="pi pi-check" 
-          @click="saveClass" 
+        <Button
+          :label="t('common.save')"
+          icon="pi pi-check"
+          @click="saveClass"
         />
       </template>
     </Dialog>
 
     <!-- View Class Details Dialog -->
-    <Dialog 
-      v-model:visible="viewDetailsDialog" 
-      :style="{ width: '700px' }" 
-      header="Class Details" 
+    <Dialog
+      v-model:visible="viewDetailsDialog"
+      :style="{ width: '700px' }"
+      :header="t('classes.class_details')"
       :modal="true"
     >
       <div v-if="selectedClassDetails" class="flex flex-col gap-6">
         <!-- Class Info -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <h6 class="text-sm font-semibold text-muted-color mb-1">Class Name</h6>
+            <h6 class="text-sm font-semibold text-muted-color mb-1">{{ t('classes.class_name') }}</h6>
             <p class="text-lg font-semibold">{{ selectedClassDetails.name }}</p>
           </div>
           <div>
-            <h6 class="text-sm font-semibold text-muted-color mb-1">Level</h6>
+            <h6 class="text-sm font-semibold text-muted-color mb-1">{{ t('classes.level') }}</h6>
             <Tag :value="selectedClassDetails.level" severity="info" />
           </div>
           <div>
-            <h6 class="text-sm font-semibold text-muted-color mb-1">Academic Year</h6>
-            <p>{{ selectedClassDetails.academic_year || 'N/A' }}</p>
+            <h6 class="text-sm font-semibold text-muted-color mb-1">{{ t('classes.academic_year') }}</h6>
+            <p>{{ selectedClassDetails.academic_year || t('common.na') }}</p>
           </div>
           <div>
-            <h6 class="text-sm font-semibold text-muted-color mb-1">Status</h6>
-            <Tag 
-              :value="getStatusLabel(selectedClassDetails.is_active)" 
-              :severity="getStatusSeverity(selectedClassDetails.is_active)" 
+            <h6 class="text-sm font-semibold text-muted-color mb-1">{{ t('common.status') }}</h6>
+            <Tag
+              :value="getStatusLabel(selectedClassDetails.is_active)"
+              :severity="getStatusSeverity(selectedClassDetails.is_active)"
             />
           </div>
           <div>
-            <h6 class="text-sm font-semibold text-muted-color mb-1">Capacity</h6>
-            <p>{{ selectedClassDetails.capacity || 'Not set' }}</p>
+            <h6 class="text-sm font-semibold text-muted-color mb-1">{{ t('classes.capacity') }}</h6>
+            <p>{{ selectedClassDetails.capacity || t('common.na') }}</p>
           </div>
           <div>
-            <h6 class="text-sm font-semibold text-muted-color mb-1">Current Students</h6>
-            <Badge 
-              :value="selectedClassDetails.students_count || 0" 
-              :severity="getCapacityStatus(selectedClassDetails.students_count || 0, selectedClassDetails.capacity)" 
+            <h6 class="text-sm font-semibold text-muted-color mb-1">{{ t('classes.current_students') }}</h6>
+            <Badge
+              :value="selectedClassDetails.students_count || 0"
+              :severity="getCapacityStatus(selectedClassDetails.students_count || 0, selectedClassDetails.capacity)"
             />
           </div>
         </div>
@@ -1149,19 +1155,19 @@ const hideScheduleEditDialog = () => {
         <!-- Subjects -->
         <div>
           <h6 class="text-sm font-semibold text-muted-color mb-3">
-            <i class="pi pi-book mr-2"></i>Subjects
+            <i class="pi pi-book mr-2"></i>{{ t('common.subjects') }}
           </h6>
           <div v-if="selectedClassDetails.subjects && selectedClassDetails.subjects.length > 0">
             <div class="grid grid-cols-2 gap-2">
-              <Tag 
-                v-for="(subject, index) in selectedClassDetails.subjects" 
+              <Tag
+                v-for="(subject, index) in selectedClassDetails.subjects"
                 :key="index"
                 :value="subject.name"
                 severity="secondary"
               />
             </div>
           </div>
-          <p v-else class="text-muted-color">No subjects assigned</p>
+          <p v-else class="text-muted-color">{{ t('classes.no_subjects_assigned') }}</p>
         </div>
 
         <Divider />
@@ -1170,29 +1176,29 @@ const hideScheduleEditDialog = () => {
         <div>
           <div class="flex items-center justify-between mb-3">
             <h6 class="text-sm font-semibold text-muted-color">
-              <i class="pi pi-users mr-2"></i>Teachers
+              <i class="pi pi-users mr-2"></i>{{ t('common.teachers') }}
             </h6>
-            <Button 
-              icon="pi pi-plus" 
-              label="Assign Teacher"
+            <Button
+              icon="pi pi-plus"
+              :label="t('classes.assign_teacher')"
               size="small"
               @click="openAssignTeacherDialog"
             />
           </div>
-          
-          <DataTable 
+
+          <DataTable
             v-if="classAssignments && classAssignments.length > 0"
-            :value="classAssignments" 
+            :value="classAssignments"
             :rows="5"
             :paginator="classAssignments.length > 5"
             class="p-datatable-sm"
           >
-            <Column field="subject.name" header="Subject" sortable>
+            <Column field="subject.name" :header="t('classes.subject')" sortable>
               <template #body="{ data }">
-                <Tag :value="data.subject?.name || 'N/A'" severity="secondary" />
+                <Tag :value="data.subject?.name || t('common.na')" severity="secondary" />
               </template>
             </Column>
-            <Column header="Teacher" sortable>
+            <Column :header="t('classes.teacher')" sortable>
               <template #body="{ data }">
                 <div class="flex items-center gap-2">
                   <i class="pi pi-user text-muted-color"></i>
@@ -1200,26 +1206,26 @@ const hideScheduleEditDialog = () => {
                 </div>
               </template>
             </Column>
-            <Column field="coefficient" header="Coefficient" sortable>
+            <Column field="coefficient" :header="t('classes.coefficient')" sortable>
               <template #body="{ data }">
                 <Badge :value="data.coefficient || 1" severity="info" />
               </template>
             </Column>
-            <Column header="Actions">
+            <Column :header="t('common.actions')">
               <template #body="{ data }">
-                <Button 
-                  icon="pi pi-trash" 
+                <Button
+                  icon="pi pi-trash"
                   severity="danger"
                   text
                   rounded
                   @click="confirmRemoveTeacher(data.teacher_id, data.subject_id)"
-                  v-tooltip.top="'Remove'"
+                  v-tooltip.top="t('classes.remove')"
                 />
               </template>
             </Column>
           </DataTable>
-          
-          <p v-else class="text-muted-color">No teacher-subject assignments yet. Click "Assign Teacher" to add one.</p>
+
+          <p v-else class="text-muted-color">{{ t('classes.no_assignments_yet') }}</p>
         </div>
 
         <Divider />
@@ -1228,13 +1234,13 @@ const hideScheduleEditDialog = () => {
         <div>
           <div class="flex items-center justify-between mb-3">
             <h6 class="text-sm font-semibold text-muted-color">
-              <i class="pi pi-user mr-2"></i>Students ({{ selectedClassDetails.sudents?.length || 0 }})
+              <i class="pi pi-user mr-2"></i>{{ t('common.students') }} ({{ selectedClassDetails.sudents?.length || 0 }})
             </h6>
           </div>
           <div v-if="selectedClassDetails.sudents && selectedClassDetails.sudents.length > 0" class="max-h-60 overflow-y-auto">
             <div class="grid grid-cols-1 gap-2">
-              <div 
-                v-for="(student, index) in selectedClassDetails.sudents" 
+              <div
+                v-for="(student, index) in selectedClassDetails.sudents"
                 :key="index"
                 class="p-3 border border-surface rounded-lg flex items-center justify-between hover:bg-surface-hover transition-colors"
               >
@@ -1244,46 +1250,46 @@ const hideScheduleEditDialog = () => {
                   </div>
                   <div class="flex-1">
                     <p class="font-semibold">{{ student.first_name }} {{ student.last_name }}</p>
-                    <p class="text-sm text-muted-color">Code: {{ student.code }}</p>
+                    <p class="text-sm text-muted-color">{{ t('classes.code') }}: {{ student.code }}</p>
                   </div>
-                  <Badge 
-                    :value="student.birth_date ? new Date(student.birth_date).toLocaleDateString() : 'N/A'" 
-                    severity="secondary" 
+                  <Badge
+                    :value="student.birth_date ? new Date(student.birth_date).toLocaleDateString() : t('common.na')"
+                    severity="secondary"
                   />
                 </div>
-                <Button 
-                  icon="pi pi-times" 
+                <Button
+                  icon="pi pi-times"
                   severity="danger"
                   text
                   rounded
                   size="small"
                   @click="confirmRemoveStudent(student.id)"
-                  v-tooltip.top="'Remove from class'"
+                  v-tooltip.top="t('classes.remove_from_class')"
                 />
               </div>
-              
+
               <!-- Add Student Card -->
-              <div 
+              <div
                 @click="openAssignStudentDialog"
                 class="p-3 border-2 border-dashed border-surface rounded-lg flex items-center justify-center gap-2 hover:bg-surface-hover hover:border-primary transition-all cursor-pointer"
                 style="min-height: 70px;"
               >
                 <i class="pi pi-plus text-2xl text-muted-color"></i>
-                <span class="font-semibold text-muted-color">Add Student</span>
+                <span class="font-semibold text-muted-color">{{ t('classes.add_student') }}</span>
               </div>
             </div>
           </div>
           <div v-else>
             <!-- Add Student Card (when no students) -->
-            <div 
+            <div
               @click="openAssignStudentDialog"
               class="p-4 border-2 border-dashed border-surface rounded-lg flex flex-col items-center justify-center gap-3 hover:bg-surface-hover hover:border-primary transition-all cursor-pointer"
               style="min-height: 120px;"
             >
               <i class="pi pi-user-plus text-4xl text-muted-color"></i>
               <div class="text-center">
-                <p class="font-semibold text-muted-color">No students enrolled</p>
-                <p class="text-sm text-muted-color">Click to add students to this class</p>
+                <p class="font-semibold text-muted-color">{{ t('classes.no_students_enrolled') }}</p>
+                <p class="text-sm text-muted-color">{{ t('classes.click_to_add_students') }}</p>
               </div>
             </div>
           </div>
@@ -1291,124 +1297,124 @@ const hideScheduleEditDialog = () => {
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="hideDetailsDialog" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="hideDetailsDialog"
         />
       </template>
     </Dialog>
 
     <!-- Delete Class Dialog -->
-    <Dialog 
-      v-model:visible="deleteClassDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Deletion" 
+    <Dialog
+      v-model:visible="deleteClassDialog"
+      :style="{ width: '450px' }"
+      :header="t('common.confirm_deletion')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-4xl text-red-500"></i>
         <span v-if="schoolClass">
-          Are you sure you want to delete <b>{{ schoolClass.name }}</b>?
+          {{ t('classes.confirm_delete_class', { name: schoolClass.name }) }}
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteClassDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteClassDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteClass" 
+          @click="deleteClass"
         />
       </template>
     </Dialog>
 
     <!-- Delete Multiple Classes Dialog -->
-    <Dialog 
-      v-model:visible="deleteClassesDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Deletion" 
+    <Dialog
+      v-model:visible="deleteClassesDialog"
+      :style="{ width: '450px' }"
+      :header="t('common.confirm_deletion')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-4xl text-red-500"></i>
         <span v-if="selectedClasses">
-          Are you sure you want to delete the selected classes?
+          {{ t('classes.confirm_delete_selected') }}
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteClassesDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteClassesDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteSelectedClasses" 
+          @click="deleteSelectedClasses"
         />
       </template>
     </Dialog>
 
     <!-- Assign Teacher Dialog -->
-    <Dialog 
-      v-model:visible="assignTeacherDialog" 
-      :style="{ width: '550px' }" 
-      header="Assign Teacher to Class" 
+    <Dialog
+      v-model:visible="assignTeacherDialog"
+      :style="{ width: '550px' }"
+      :header="t('classes.assign_teacher_to_class')"
       :modal="true"
       class="p-fluid"
     >
       <div class="flex flex-col gap-6">
         <p class="text-muted-color">
-          First, select the subject you want to assign, then choose from the available teachers who can teach that subject.
+          {{ t('classes.assign_teacher_hint') }}
         </p>
 
         <!-- Subject Selection -->
         <div>
           <label for="subject" class="block font-semibold mb-2">
-            Subject <span class="text-red-500">*</span>
+            {{ t('classes.subject') }} <span class="text-red-500">*</span>
           </label>
-          <Select 
-            id="subject" 
-            v-model="selectedSubjectForAssignment" 
-            :options="availableSubjects" 
+          <Select
+            id="subject"
+            v-model="selectedSubjectForAssignment"
+            :options="availableSubjects"
             optionLabel="name"
             optionValue="id"
-            placeholder="Select a subject"
+            :placeholder="t('classes.select_subject')"
             filter
             @change="onSubjectChange"
           />
           <small class="text-muted-color">
-            Choose the subject that the teacher will teach for this class
+            {{ t('classes.subject_hint') }}
           </small>
         </div>
 
         <!-- Teacher Selection (shows only after subject is selected) -->
         <div v-if="selectedSubjectForAssignment">
           <label for="teacher" class="block font-semibold mb-2">
-            Teacher <span class="text-red-500">*</span>
+            {{ t('classes.teacher') }} <span class="text-red-500">*</span>
           </label>
-          
+
           <div v-if="assignmentLoading" class="flex items-center gap-2 p-3">
             <i class="pi pi-spin pi-spinner"></i>
-            <span>Loading available teachers...</span>
+            <span>{{ t('classes.loading_teachers') }}</span>
           </div>
-          
-          <Select 
+
+          <Select
             v-else-if="availableTeachersForSubject.length > 0"
-            id="teacher" 
-            v-model="selectedTeacherToAssign" 
-            :options="availableTeachersForSubject" 
+            id="teacher"
+            v-model="selectedTeacherToAssign"
+            :options="availableTeachersForSubject"
             optionLabel="first_name"
             optionValue="id"
-            placeholder="Select a teacher"
+            :placeholder="t('classes.select_teacher')"
             filter
           >
             <template #option="{ option }">
@@ -1418,17 +1424,17 @@ const hideScheduleEditDialog = () => {
             </template>
             <template #value="{ value }">
               <div v-if="value">
-                {{ availableTeachersForSubject.find(t => t.id === value)?.first_name }} 
+                {{ availableTeachersForSubject.find(t => t.id === value)?.first_name }}
                 {{ availableTeachersForSubject.find(t => t.id === value)?.last_name }}
               </div>
-              <span v-else>Select a teacher</span>
+              <span v-else>{{ t('classes.select_teacher') }}</span>
             </template>
           </Select>
-          
+
           <div v-else class="p-3 border border-surface rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
             <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
               <i class="pi pi-info-circle"></i>
-              <span>No teachers available for this subject. Teachers need to be qualified for this subject first.</span>
+              <span>{{ t('classes.no_teachers_for_subject') }}</span>
             </div>
           </div>
         </div>
@@ -1437,23 +1443,23 @@ const hideScheduleEditDialog = () => {
         <div v-if="!selectedSubjectForAssignment" class="p-3 border border-surface rounded-lg bg-blue-50 dark:bg-blue-900/20">
           <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
             <i class="pi pi-info-circle"></i>
-            <span>Please select a subject to see available teachers</span>
+            <span>{{ t('classes.select_subject_first') }}</span>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="assignTeacherDialog = false" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="assignTeacherDialog = false"
           :disabled="assignmentLoading"
         />
-        <Button 
-          label="Assign" 
-          icon="pi pi-check" 
-          @click="assignTeacherToClass" 
+        <Button
+          :label="t('classes.assign')"
+          icon="pi pi-check"
+          @click="assignTeacherToClass"
           :disabled="!selectedSubjectForAssignment || !selectedTeacherToAssign || assignmentLoading"
           :loading="assignmentLoading"
         />
@@ -1461,37 +1467,37 @@ const hideScheduleEditDialog = () => {
     </Dialog>
 
     <!-- Assign Student Dialog -->
-    <Dialog 
-      v-model:visible="assignStudentDialog" 
-      :style="{ width: '550px' }" 
-      header="Assign Student to Class" 
+    <Dialog
+      v-model:visible="assignStudentDialog"
+      :style="{ width: '550px' }"
+      :header="t('classes.assign_student_to_class')"
       :modal="true"
       class="p-fluid"
     >
       <div class="flex flex-col gap-6">
         <p class="text-muted-color">
-          Select a student to assign to <strong>{{ selectedClassDetails?.name }}</strong>
+          {{ t('classes.assign_student_hint', { name: selectedClassDetails?.name }) }}
         </p>
 
         <!-- Student Selection -->
         <div>
           <label for="student" class="block font-semibold mb-2">
-            Student <span class="text-red-500">*</span>
+            {{ t('classes.student') }} <span class="text-red-500">*</span>
           </label>
-          
+
           <div v-if="studentAssignmentLoading" class="flex items-center gap-2 p-3">
             <i class="pi pi-spin pi-spinner"></i>
-            <span>Loading available students...</span>
+            <span>{{ t('classes.loading_students') }}</span>
           </div>
-          
-          <Select 
+
+          <Select
             v-else-if="availableStudents.length > 0"
-            id="student" 
-            v-model="selectedStudentToAssign" 
-            :options="availableStudents" 
+            id="student"
+            v-model="selectedStudentToAssign"
+            :options="availableStudents"
             optionLabel="first_name"
             optionValue="id"
-            placeholder="Select a student"
+            :placeholder="t('classes.select_student')"
             filter
           >
             <template #option="{ option }">
@@ -1501,7 +1507,7 @@ const hideScheduleEditDialog = () => {
                 </div>
                 <div class="flex flex-col">
                   <span class="font-semibold">{{ option.first_name }} {{ option.last_name }}</span>
-                  <span class="text-sm text-muted-color">Code: {{ option.code }}</span>
+                  <span class="text-sm text-muted-color">{{ t('classes.code') }}: {{ option.code }}</span>
                 </div>
               </div>
             </template>
@@ -1511,23 +1517,23 @@ const hideScheduleEditDialog = () => {
                   {{ availableStudents.find(s => s.id === value)?.first_name?.[0] }}{{ availableStudents.find(s => s.id === value)?.last_name?.[0] }}
                 </div>
                 <span>
-                  {{ availableStudents.find(s => s.id === value)?.first_name }} 
+                  {{ availableStudents.find(s => s.id === value)?.first_name }}
                   {{ availableStudents.find(s => s.id === value)?.last_name }}
                 </span>
               </div>
-              <span v-else>Select a student</span>
+              <span v-else>{{ t('classes.select_student') }}</span>
             </template>
           </Select>
-          
+
           <div v-else class="p-3 border border-surface rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
             <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
               <i class="pi pi-info-circle"></i>
-              <span>No available students. All students are already assigned to classes.</span>
+              <span>{{ t('classes.no_available_students') }}</span>
             </div>
           </div>
-          
+
           <small class="text-muted-color mt-2 block">
-            Only students without a class assignment are shown
+            {{ t('classes.students_without_class_hint') }}
           </small>
         </div>
 
@@ -1536,24 +1542,24 @@ const hideScheduleEditDialog = () => {
           <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
             <i class="pi pi-info-circle"></i>
             <span>
-              Class capacity: {{ selectedClassDetails.students_count || 0 }}/{{ selectedClassDetails.capacity }}
+              {{ t('classes.class_capacity_info', { current: selectedClassDetails.students_count || 0, max: selectedClassDetails.capacity }) }}
             </span>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="assignStudentDialog = false" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="assignStudentDialog = false"
           :disabled="studentAssignmentLoading"
         />
-        <Button 
-          label="Assign" 
-          icon="pi pi-check" 
-          @click="assignStudentToClass" 
+        <Button
+          :label="t('classes.assign')"
+          icon="pi pi-check"
+          @click="assignStudentToClass"
           :disabled="!selectedStudentToAssign || studentAssignmentLoading"
           :loading="studentAssignmentLoading"
         />
@@ -1561,80 +1567,80 @@ const hideScheduleEditDialog = () => {
     </Dialog>
 
     <!-- Remove Teacher Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="removeTeacherConfirmDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Removal" 
+    <Dialog
+      v-model:visible="removeTeacherConfirmDialog"
+      :style="{ width: '450px' }"
+      :header="t('classes.confirm_removal')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-4xl text-orange-500"></i>
         <span>
-          Are you sure you want to remove this teacher from the class?
+          {{ t('classes.confirm_remove_teacher') }}
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="removeTeacherConfirmDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="removeTeacherConfirmDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="removeTeacherFromClass" 
+          @click="removeTeacherFromClass"
         />
       </template>
     </Dialog>
 
     <!-- Remove Student Confirmation Dialog -->
-    <Dialog 
-      v-model:visible="removeStudentConfirmDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Removal" 
+    <Dialog
+      v-model:visible="removeStudentConfirmDialog"
+      :style="{ width: '450px' }"
+      :header="t('classes.confirm_removal')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-4xl text-orange-500"></i>
         <span>
-          Are you sure you want to remove this student from the class?
+          {{ t('classes.confirm_remove_student') }}
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="removeStudentConfirmDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="removeStudentConfirmDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="removeStudentFromClass" 
+          @click="removeStudentFromClass"
         />
       </template>
     </Dialog>
 
     <!-- Schedule View Dialog -->
-    <Dialog 
-      v-model:visible="scheduleDialog" 
-      :style="{ width: '95vw', maxWidth: '1200px' }" 
-      :header="'Schedule - ' + (selectedClassForSchedule?.name || '')" 
+    <Dialog
+      v-model:visible="scheduleDialog"
+      :style="{ width: '95vw', maxWidth: '1200px' }"
+      :header="t('common.weekly_schedule') + ' - ' + (selectedClassForSchedule?.name || '')"
       :modal="true"
       @hide="hideScheduleDialog"
     >
       <div v-if="scheduleLoading" class="flex justify-center items-center p-8">
         <i class="pi pi-spin pi-spinner text-4xl"></i>
       </div>
-      
+
       <div v-else class="schedule-container">
         <div class="mb-4 p-3 border border-surface rounded-lg bg-blue-50 dark:bg-blue-900/20">
           <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
             <i class="pi pi-info-circle"></i>
-            <span>Click on any time slot to add or edit the schedule</span>
+            <span>{{ t('classes.schedule_click_hint') }}</span>
           </div>
         </div>
 
@@ -1642,13 +1648,13 @@ const hideScheduleEditDialog = () => {
           <table class="schedule-table w-full border-collapse">
             <thead>
               <tr>
-                <th class="schedule-header time-column">Time</th>
-                <th 
-                  v-for="day in weekDays" 
-                  :key="day" 
+                <th class="schedule-header time-column">{{ t('common.time') }}</th>
+                <th
+                  v-for="day in weekDays"
+                  :key="day"
                   class="schedule-header"
                 >
-                  {{ day }}
+                  {{ t('common.' + day.toLowerCase()) }}
                 </th>
               </tr>
             </thead>
@@ -1657,8 +1663,8 @@ const hideScheduleEditDialog = () => {
                 <td class="time-column font-semibold text-sm">
                   {{ timeSlot.label }}
                 </td>
-                <td 
-                  v-for="day in weekDays" 
+                <td
+                  v-for="day in weekDays"
                   :key="day"
                   class="schedule-cell"
                   @click="handleSlotClick(day, timeSlot.hour)"
@@ -1687,19 +1693,19 @@ const hideScheduleEditDialog = () => {
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="hideScheduleDialog" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="hideScheduleDialog"
         />
       </template>
     </Dialog>
 
     <!-- Schedule Edit Dialog -->
-    <Dialog 
-      v-model:visible="scheduleEditDialog" 
-      :style="{ width: '550px' }" 
-      :header="scheduleToEdit?.id ? 'Edit Schedule' : 'Add Schedule'" 
+    <Dialog
+      v-model:visible="scheduleEditDialog"
+      :style="{ width: '550px' }"
+      :header="scheduleToEdit?.id ? t('classes.edit_schedule') : t('classes.add_schedule')"
       :modal="true"
       class="p-fluid"
       @hide="hideScheduleEditDialog"
@@ -1720,19 +1726,19 @@ const hideScheduleEditDialog = () => {
         <!-- Subject and Teacher Selection -->
         <div>
           <label for="assignment" class="block font-semibold mb-2">
-            Subject & Teacher <span class="text-red-500">*</span>
+            {{ t('classes.subject_and_teacher') }} <span class="text-red-500">*</span>
           </label>
-          <Select 
-            id="assignment" 
-            v-model="scheduleToEdit.class_subject_teacher_id" 
-            :options="classAssignments" 
+          <Select
+            id="assignment"
+            v-model="scheduleToEdit.class_subject_teacher_id"
+            :options="classAssignments"
             optionValue="id"
-            placeholder="Select subject and teacher"
+            :placeholder="t('classes.select_subject_and_teacher')"
             :invalid="scheduleSubmitted && !scheduleToEdit.class_subject_teacher_id"
           >
             <template #option="{ option }">
               <div class="flex flex-col">
-                <span class="font-semibold">{{ option.subject?.name || 'N/A' }}</span>
+                <span class="font-semibold">{{ option.subject?.name || t('common.na') }}</span>
                 <span class="text-sm text-muted-color">{{ option.teacher?.first_name }} {{ option.teacher?.last_name }}</span>
               </div>
             </template>
@@ -1741,60 +1747,60 @@ const hideScheduleEditDialog = () => {
                 <span class="font-semibold">{{ classAssignments.find(a => a.id === value)?.subject?.name }}</span>
                 <span class="text-sm text-muted-color ml-2">- {{ classAssignments.find(a => a.id === value)?.teacher?.first_name }} {{ classAssignments.find(a => a.id === value)?.teacher?.last_name }}</span>
               </div>
-              <span v-else>Select subject and teacher</span>
+              <span v-else>{{ t('classes.select_subject_and_teacher') }}</span>
             </template>
           </Select>
           <small v-if="scheduleSubmitted && !scheduleToEdit.class_subject_teacher_id" class="text-red-500">
-            Subject and teacher selection is required.
+            {{ t('classes.subject_teacher_required') }}
           </small>
         </div>
 
         <!-- Room -->
         <div>
           <label for="room" class="block font-semibold mb-2">
-            Room
+            {{ t('classes.room') }}
           </label>
-          <InputText 
-            id="room" 
-            v-model="scheduleToEdit.room" 
-            placeholder="e.g., Room 101, Lab A"
+          <InputText
+            id="room"
+            v-model="scheduleToEdit.room"
+            :placeholder="t('classes.room_placeholder')"
           />
         </div>
 
         <!-- Notes -->
         <div>
           <label for="notes" class="block font-semibold mb-2">
-            Notes
+            {{ t('classes.notes') }}
           </label>
-          <Textarea 
-            id="notes" 
-            v-model="scheduleToEdit.notes" 
+          <Textarea
+            id="notes"
+            v-model="scheduleToEdit.notes"
             rows="3"
-            placeholder="Additional notes or comments"
+            :placeholder="t('classes.notes_placeholder')"
           />
         </div>
       </div>
 
       <template #footer>
-        <Button 
+        <Button
           v-if="scheduleToEdit?.id"
-          label="Delete" 
-          icon="pi pi-trash" 
+          :label="t('common.delete')"
+          icon="pi pi-trash"
           severity="danger"
           text
-          @click="deleteSchedule" 
+          @click="deleteSchedule"
         />
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideScheduleEditDialog" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideScheduleEditDialog"
         />
-        <Button 
-          label="Save" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.save')"
+          icon="pi pi-check"
           :loading="scheduleLoading"
-          @click="saveSchedule" 
+          @click="saveSchedule"
         />
       </template>
     </Dialog>
@@ -1887,15 +1893,14 @@ const hideScheduleEditDialog = () => {
   .schedule-table {
     font-size: 0.875rem;
   }
-  
+
   .schedule-cell {
     min-width: 100px;
     height: 70px;
   }
-  
+
   .schedule-content {
     padding: 0.25rem;
   }
 }
 </style>
-

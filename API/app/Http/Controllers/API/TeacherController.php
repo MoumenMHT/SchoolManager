@@ -67,7 +67,7 @@ class TeacherController extends Controller
         if ($teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher with the same first and last name already exists.'
+                'message' => __('messages.teacher_name_exists')
             ], 409);
         }
 
@@ -99,7 +99,7 @@ class TeacherController extends Controller
         if (!$teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher not found.'
+                'message' => __('messages.teacher_not_found')
             ], 404);
         }
         return response()->json([
@@ -139,7 +139,7 @@ class TeacherController extends Controller
         if (!$teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher not found.'
+                'message' => __('messages.teacher_not_found')
             ], 404);
         }
 
@@ -168,7 +168,7 @@ class TeacherController extends Controller
         if (!$teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher not found.'
+                'message' => __('messages.teacher_not_found')
             ], 404);
         }
 
@@ -176,7 +176,7 @@ class TeacherController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Teacher deleted successfully.'
+            'message' => __('messages.teacher_deleted')
         ]);
     }
 
@@ -192,7 +192,7 @@ class TeacherController extends Controller
         if (!$teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher profile not found.'
+                'message' => __('messages.teacher_profile_not_found')
             ], 404);
         }
 
@@ -229,7 +229,7 @@ class TeacherController extends Controller
         if (!$teacher) {
             return response()->json([
                 'success' => false,
-                'message' => 'Teacher profile not found.'
+                'message' => __('messages.teacher_profile_not_found')
             ], 404);
         }
 

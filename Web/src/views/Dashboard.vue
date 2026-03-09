@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import StatsWidget from '@/components/dashboard/StatsWidget.vue';
 import StudentsByClassWidget from '@/components/dashboard/StudentsByClassWidget.vue';
 import AttendanceWidget from '@/components/dashboard/AttendanceWidget.vue';
@@ -14,6 +15,8 @@ import UpcomingDuesWidget from '@/components/dashboard/UpcomingDuesWidget.vue';
 import PaymentHistoryWidget from '@/components/dashboard/PaymentHistoryWidget.vue';
 import dashboardService from '@/service/DashboardService';
 import type { DashboardStats, FinancialReport, BillRecord, PaymentRecord } from '@/types';
+
+const { t } = useI18n();
 
 const dashboardStats   = ref<DashboardStats | null>(null);
 const financialReport  = ref<FinancialReport | null>(null);
@@ -41,7 +44,7 @@ const loadDashboardData = async () => {
     error.value = null;
     dashboardStats.value = await dashboardService.getStats(getAcademicYear());
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load dashboard data';
+    error.value = err.response?.data?.message || t('dashboard.failed_load');
     console.error('Dashboard error:', err);
   } finally {
     loading.value = false;
@@ -54,7 +57,7 @@ const loadPaymentReport = async () => {
     paymentError.value = null;
     financialReport.value = await dashboardService.getFinancialReports({ academic_year: getAcademicYear() });
   } catch (err: any) {
-    paymentError.value = err.response?.data?.message || 'Failed to load payment data';
+    paymentError.value = err.response?.data?.message || t('dashboard.failed_payment');
     console.error('Payment report error:', err);
   } finally {
     paymentLoading.value = false;
@@ -72,7 +75,7 @@ const loadBillsAndPayments = async () => {
     allBills.value    = bills;
     allPayments.value = payments;
   } catch (err: any) {
-    billsError.value = err.response?.data?.message || 'Failed to load bills/payments data';
+    billsError.value = err.response?.data?.message || t('dashboard.failed_bills');
     console.error('Bills/payments error:', err);
   } finally {
     billsLoading.value = false;
@@ -91,7 +94,7 @@ onMounted(() => {
     <!-- Loading State -->
     <div v-if="loading" class="col-span-12 text-center py-8">
       <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
-      <p class="mt-4 text-muted-color">Loading dashboard data...</p>
+      <p class="mt-4 text-muted-color">{{ t('dashboard.loading') }}</p>
     </div>
 
     <!-- Error State -->
@@ -100,7 +103,7 @@ onMounted(() => {
         <div class="flex items-center gap-3">
           <i class="pi pi-exclamation-triangle text-red-600 text-2xl"></i>
           <div>
-            <h3 class="text-red-900 dark:text-red-100 font-semibold">Error Loading Dashboard</h3>
+            <h3 class="text-red-900 dark:text-red-100 font-semibold">{{ t('dashboard.error_title') }}</h3>
             <p class="text-red-700 dark:text-red-300">{{ error }}</p>
           </div>
         </div>
@@ -127,7 +130,7 @@ onMounted(() => {
     <div class="col-span-12">
       <div class="flex items-center gap-3 mb-2">
         <i class="pi pi-credit-card text-2xl text-primary"></i>
-        <h4 class="text-2xl font-semibold">Payment Dashboard</h4>
+        <h4 class="text-2xl font-semibold">{{ t('dashboard.payment_dashboard') }}</h4>
       </div>
       <Divider />
     </div>
@@ -135,7 +138,7 @@ onMounted(() => {
     <!-- Payment Loading -->
     <div v-if="paymentLoading" class="col-span-12 text-center py-6">
       <i class="pi pi-spin pi-spinner text-3xl text-primary"></i>
-      <p class="mt-3 text-muted-color">Loading payment data...</p>
+      <p class="mt-3 text-muted-color">{{ t('dashboard.loading_payment') }}</p>
     </div>
 
     <!-- Payment Error -->
@@ -144,7 +147,7 @@ onMounted(() => {
         <div class="flex items-center gap-3">
           <i class="pi pi-exclamation-circle text-orange-600 text-2xl"></i>
           <div>
-            <h3 class="text-orange-900 dark:text-orange-100 font-semibold">Payment Data Unavailable</h3>
+            <h3 class="text-orange-900 dark:text-orange-100 font-semibold">{{ t('dashboard.payment_unavailable') }}</h3>
             <p class="text-orange-700 dark:text-orange-300">{{ paymentError }}</p>
           </div>
         </div>
@@ -167,7 +170,7 @@ onMounted(() => {
     <!-- Bills & Payments loading -->
     <div v-if="billsLoading" class="col-span-12 flex items-center justify-center gap-3 py-4">
       <i class="pi pi-spin pi-spinner text-2xl text-primary"></i>
-      <span class="text-muted-color">Loading bills &amp; transactions...</span>
+      <span class="text-muted-color">{{ t('dashboard.loading_bills') }}</span>
     </div>
 
     <!-- Bills & Payments error -->

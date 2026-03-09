@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Chart, registerables } from 'chart.js';
 import type { PaymentRecord } from '@/types';
 
 Chart.register(...registerables);
+const { t, locale } = useI18n();
 
 interface Props {
   payments: PaymentRecord[];
@@ -26,6 +28,11 @@ const MONTHS = [
   { key: '2026-05', label: 'May' },
   { key: '2026-06', label: 'Jun' },
 ];
+
+const monthLabels = computed(() => {
+  const months = [8, 9, 10, 11, 0, 1, 2, 3, 4, 5]; // Sep=8, Oct=9, ..., Jun=5
+  return months.map(m => new Intl.DateTimeFormat(locale.value, { month: 'short' }).format(new Date(2000, m, 1)));
+});
 
 const buildData = () => {
   const map: Record<string, number> = {};
@@ -64,9 +71,9 @@ const initChart = () => {
   chartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: MONTHS.map(m => m.label),
+      labels: monthLabels.value,
       datasets: [{
-        label: 'Collected (DZD)',
+        label: t('dashboard.collected_currency'),
         data,
         backgroundColor: bgColors,
         borderRadius: 6,
@@ -111,11 +118,11 @@ watch(() => props.payments, () => initChart(), { deep: true });
   <div class="card">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h5 class="text-xl font-semibold">Monthly Revenue</h5>
-        <p class="text-sm text-muted-color mt-1">Collections per month — academic year 2025-2026</p>
+        <h5 class="text-xl font-semibold">{{ t('dashboard.monthly_revenue') }}</h5>
+        <p class="text-sm text-muted-color mt-1">{{ t('dashboard.monthly_revenue_subtitle') }}</p>
       </div>
       <div class="text-right">
-        <div class="text-xs text-muted-color mb-1">Total Collected</div>
+        <div class="text-xs text-muted-color mb-1">{{ t('dashboard.total_collected') }}</div>
         <div class="text-lg font-bold text-green-600 dark:text-green-400">
           {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'DZD', minimumFractionDigits: 0 }).format(totalCollected()) }}
         </div>
@@ -127,19 +134,19 @@ watch(() => props.payments, () => initChart(), { deep: true });
     </div>
     <div v-else class="text-center py-10">
       <i class="pi pi-chart-bar text-4xl text-muted-color mb-3"></i>
-      <p class="text-muted-color">No payment data available</p>
+      <p class="text-muted-color">{{ t('dashboard.no_payment_data') }}</p>
     </div>
 
     <!-- Legend -->
     <div class="flex items-center gap-6 mt-4 text-xs text-muted-color">
       <div class="flex items-center gap-1.5">
-        <span class="inline-block w-3 h-3 rounded-sm" style="background:rgba(34,197,94,0.75)"></span> Past months
+        <span class="inline-block w-3 h-3 rounded-sm" style="background:rgba(34,197,94,0.75)"></span> {{ t('dashboard.past_months') }}
       </div>
       <div class="flex items-center gap-1.5">
-        <span class="inline-block w-3 h-3 rounded-sm" style="background:rgba(59,130,246,0.85)"></span> Current month
+        <span class="inline-block w-3 h-3 rounded-sm" style="background:rgba(59,130,246,0.85)"></span> {{ t('dashboard.current_month') }}
       </div>
       <div class="flex items-center gap-1.5">
-        <span class="inline-block w-3 h-3 rounded-sm" style="background:rgba(148,163,184,0.3)"></span> Upcoming
+        <span class="inline-block w-3 h-3 rounded-sm" style="background:rgba(148,163,184,0.3)"></span> {{ t('dashboard.upcoming_months') }}
       </div>
     </div>
   </div>

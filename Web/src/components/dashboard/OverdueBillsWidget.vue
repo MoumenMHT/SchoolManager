@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { BillRecord } from '@/types';
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { t } = useI18n();
 
 const overdueBills = computed(() =>
   props.bills
@@ -48,11 +50,11 @@ const parentName = (b: BillRecord) =>
       <div>
         <h5 class="text-xl font-semibold flex items-center gap-2">
           <i class="pi pi-exclamation-triangle text-red-500"></i>
-          Overdue Bills
+          {{ t('dashboard.overdue_bills') }}
         </h5>
         <p class="text-sm text-muted-color mt-1">
-          {{ overdueBills.length }} late {{ overdueBills.length === 1 ? 'bill' : 'bills' }} ·
-          <span class="font-semibold text-red-600 dark:text-red-400">{{ formatCurrency(totalAtRisk) }}</span> at risk
+          {{ overdueBills.length }} {{ overdueBills.length === 1 ? t('dashboard.bill_singular') : t('dashboard.bills_plural') }} ·
+          <span class="font-semibold text-red-600 dark:text-red-400">{{ formatCurrency(totalAtRisk) }}</span> {{ t('dashboard.at_risk') }}
         </p>
       </div>
       <Tag
@@ -70,7 +72,7 @@ const parentName = (b: BillRecord) =>
       :rowHover="true"
       size="small"
     >
-      <Column header="Parent" style="min-width:140px">
+      <Column :header="t('dashboard.parent_col')" style="min-width:140px">
         <template #body="{ data }">
           <div class="flex items-center gap-2">
             <div class="flex items-center justify-center bg-red-100 dark:bg-red-900/30 rounded-full" style="width:28px;height:28px;flex-shrink:0">
@@ -84,25 +86,25 @@ const parentName = (b: BillRecord) =>
         </template>
       </Column>
 
-      <Column field="month_year" header="Month" style="min-width:100px">
+      <Column field="month_year" :header="t('dashboard.month_col')" style="min-width:100px">
         <template #body="{ data }">
           <span class="text-sm">{{ data.month_year }}</span>
         </template>
       </Column>
 
-      <Column field="due_date" header="Due Date" style="min-width:110px">
+      <Column field="due_date" :header="t('dashboard.due_date_col')" style="min-width:110px">
         <template #body="{ data }">
           <span class="text-sm text-red-600 dark:text-red-400">{{ formatDate(data.due_date) }}</span>
         </template>
       </Column>
 
-      <Column field="balance" header="Outstanding" style="min-width:120px">
+      <Column field="balance" :header="t('dashboard.outstanding_col')" style="min-width:120px">
         <template #body="{ data }">
           <span class="font-semibold text-red-600 dark:text-red-400">{{ formatCurrency(data.balance) }}</span>
         </template>
       </Column>
 
-      <Column header="Days Late" style="min-width:110px">
+      <Column :header="t('dashboard.days_late_col')" style="min-width:110px">
         <template #body="{ data }">
           <Tag
             :value="`${data.daysOverdue}d`"
@@ -114,8 +116,8 @@ const parentName = (b: BillRecord) =>
 
     <div v-else class="text-center py-10">
       <i class="pi pi-check-circle text-4xl text-green-500 mb-3"></i>
-      <p class="font-semibold text-green-700 dark:text-green-400">No overdue bills!</p>
-      <p class="text-sm text-muted-color mt-1">All parents are up to date</p>
+      <p class="font-semibold text-green-700 dark:text-green-400">{{ t('dashboard.no_overdue') }}</p>
+      <p class="text-sm text-muted-color mt-1">{{ t('dashboard.all_up_to_date') }}</p>
     </div>
   </div>
 </template>

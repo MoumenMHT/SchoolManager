@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import type { FinancialReport } from '@/types';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 Chart.register(...registerables);
 
@@ -13,15 +16,15 @@ const props = defineProps<Props>();
 const chartRef = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart | null = null;
 
-const typeLabels: Record<string, string> = {
-  cash: 'Cash',
-  bank_transfer: 'Bank Transfer',
-  cheque: 'Cheque',
-  online: 'Online',
-  card: 'Card',
-  other: 'Other',
-  refund: 'Refund'
-};
+const typeLabels = computed(() => ({
+  cash: t('dashboard.payment_type_cash'),
+  bank_transfer: t('dashboard.payment_type_transfer'),
+  cheque: t('dashboard.payment_type_cheque'),
+  online: t('dashboard.payment_type_online'),
+  card: t('dashboard.payment_type_card'),
+  other: t('dashboard.payment_type_other'),
+  refund: t('dashboard.payment_type_refund'),
+}));
 
 const typeColors: Record<string, string> = {
   cash: 'rgba(34, 197, 94, 0.8)',
@@ -46,7 +49,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const getLabel = (key: string) => typeLabels[key] ?? key.replace(/_/g, ' ');
+const getLabel = (key: string) => typeLabels.value[key as keyof typeof typeLabels.value] ?? key.replace(/_/g, ' ');
 const getColor = (key: string) => typeColors[key] ?? 'rgba(148, 163, 184, 0.8)';
 
 const totalCollected = computed(() =>
@@ -100,7 +103,7 @@ onMounted(() => {
 <template>
   <div class="card">
     <div class="flex items-center justify-between mb-6">
-      <h5 class="text-xl font-semibold">Payment Methods</h5>
+      <h5 class="text-xl font-semibold">{{ t('dashboard.payment_methods') }}</h5>
       <i class="pi pi-chart-pie text-2xl text-primary"></i>
     </div>
 
@@ -120,7 +123,7 @@ onMounted(() => {
           <div class="flex items-center gap-3">
             <div class="rounded-full" :style="`background: ${getColor(key)}; width: 12px; height: 12px; flex-shrink: 0`"></div>
             <span class="font-medium text-sm capitalize">{{ getLabel(key) }}</span>
-            <Tag :value="`${val.count} txn`" severity="secondary" />
+            <Tag :value="`${val.count} ${t('dashboard.txn')}`" severity="secondary" />
           </div>
           <div class="text-right">
             <div class="font-semibold text-sm">{{ formatCurrency(val.total) }}</div>
@@ -134,7 +137,7 @@ onMounted(() => {
 
     <div v-else class="text-center py-8">
       <i class="pi pi-chart-pie text-4xl text-muted-color mb-3"></i>
-      <p class="text-muted-color">No payment data available</p>
+      <p class="text-muted-color">{{ t('dashboard.no_payment_data') }}</p>
     </div>
   </div>
 </template>

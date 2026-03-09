@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useToast } from 'primevue/usetoast';
 import ApiService from '@/service/ApiService';
 import AttendanceService, { type AttendanceRecord } from '@/service/AttendanceService';
 
 const toast = useToast();
+const { t } = useI18n();
 
 // ─── State ────────────────────────────────────────────────
 const classes = ref<any[]>([]);
@@ -15,10 +17,10 @@ const selectedDate = ref<Date>(new Date());
 
 // View mode: day or week
 const viewMode = ref<'day' | 'week'>('day');
-const viewModeOptions = [
-  { label: 'Day', value: 'day', icon: 'pi pi-calendar' },
-  { label: 'Week', value: 'week', icon: 'pi pi-calendar-plus' },
-];
+const viewModeOptions = computed(() => [
+  { label: t('common.day'), value: 'day', icon: 'pi pi-calendar' },
+  { label: t('common.week'), value: 'week', icon: 'pi pi-calendar-plus' },
+]);
 
 // Period filter (selected schedule slot IDs; empty = show all)
 const selectedPeriodIds = ref<number[]>([]);
@@ -261,7 +263,7 @@ async function loadClasses() {
     const raw = (response.data as any)?.data ?? response.data ?? [];
     classes.value = Array.isArray(raw) ? raw : Object.values(raw);
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load classes', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('attendance.load_classes_error'), life: 3000 });
   } finally {
     classesLoading.value = false;
   }
@@ -317,7 +319,7 @@ async function loadAttendance() {
     const cls = classes.value.find((c: any) => c.id === selectedClassId.value);
     classStudents.value = cls?.students ?? [];
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load attendance', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('attendance.load_attendance_error'), life: 3000 });
   } finally {
     attendanceLoading.value = false;
   }
@@ -340,7 +342,7 @@ async function openStudentTimeline(student: any) {
     const raw = (response.data as any)?.data ?? response.data ?? [];
     studentAttendances.value = Array.isArray(raw) ? raw : Object.values(raw);
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load student attendance', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('attendance.load_student_error'), life: 3000 });
   } finally {
     studentAttLoading.value = false;
   }
@@ -354,9 +356,9 @@ async function excuseAttendance(record: AttendanceRecord) {
     if (idx !== -1) attendanceRecords.value[idx] = { ...attendanceRecords.value[idx], status: 'excused' };
     const sidx = studentAttendances.value.findIndex(r => r.id === record.id);
     if (sidx !== -1) studentAttendances.value[sidx] = { ...studentAttendances.value[sidx], status: 'excused' };
-    toast.add({ severity: 'success', summary: 'Excused', detail: 'Student marked as excused', life: 2000 });
+    toast.add({ severity: 'success', summary: t('common.success'), detail: t('attendance.excuse_success'), life: 2000 });
   } catch {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to excuse student', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('attendance.excuse_error'), life: 3000 });
   } finally {
     excusing.value = excusing.value.filter(id => id !== record.id);
   }
@@ -389,7 +391,13 @@ function statusColor(status: string | null) {
 
 function statusLabel(status: string | null) {
   if (!status) return '—';
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  switch (status) {
+    case 'present': return t('common.present');
+    case 'absent': return t('common.absent');
+    case 'late': return t('common.late');
+    case 'excused': return t('common.excused');
+    default: return status.charAt(0).toUpperCase() + status.slice(1);
+  }
 }
 
 function statusIcon(status: string | null) {
@@ -432,21 +440,21 @@ onMounted(async () => {
   <div class="p-4 md:p-6">
     <!-- Header -->
     <div class="mb-6">
-      <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-1">Attendance</h1>
-      <p class="text-surface-500 dark:text-surface-400">Monitor class attendance by session and student</p>
+      <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-1">{{ t('attendance.title') }}</h1>
+      <p class="text-surface-500 dark:text-surface-400">{{ t('attendance.subtitle') }}</p>
     </div>
 
     <!-- Controls -->
     <div class="flex flex-wrap gap-4 mb-6 p-4 bg-white dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700">
       <!-- Class selector -->
       <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Class</label>
+        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ t('attendance.class') }}</label>
         <Select
           v-model="selectedClassId"
           :options="classes"
           option-label="name"
           option-value="id"
-          placeholder="All classes"
+          :placeholder="t('attendance.all_classes')"
           :loading="classesLoading"
           show-clear
           class="w-full sm:w-64"
@@ -455,7 +463,7 @@ onMounted(async () => {
 
       <!-- View mode toggle -->
       <div class="flex flex-col gap-1">
-        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">View</label>
+        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ t('attendance.view') }}</label>
         <SelectButton
           v-model="viewMode"
           :options="viewModeOptions"
@@ -467,7 +475,7 @@ onMounted(async () => {
 
       <!-- Date picker (day mode) -->
       <div v-if="viewMode === 'day'" class="flex flex-col gap-1">
-        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
+        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ t('attendance.date') }}</label>
         <DatePicker
           v-model="selectedDate"
           show-icon
@@ -479,7 +487,7 @@ onMounted(async () => {
 
       <!-- Week picker (week mode) -->
       <div v-else class="flex flex-col gap-1">
-        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Week</label>
+        <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ t('attendance.week_label') }}</label>
         <div class="flex items-center gap-2">
           <DatePicker
             v-model="selectedDate"
@@ -497,22 +505,22 @@ onMounted(async () => {
       <!-- Day label (day mode) -->
       <div v-if="viewMode === 'day' && selectedClassId" class="flex items-end">
         <span class="text-sm text-surface-500 dark:text-surface-400 bg-surface-50 dark:bg-surface-700 px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-600">
-          <i class="pi pi-calendar mr-1.5"></i>{{ selectedDayName }}
+          <i class="pi pi-calendar mr-1.5"></i>{{ t('common.' + selectedDayName.toLowerCase()) }}
         </span>
       </div>
 
       <!-- Period filter -->
       <div v-if="selectedClassId && allClassSlots.length > 0" class="flex flex-col gap-1">
         <label class="text-sm font-medium text-surface-700 dark:text-surface-200">
-          Periods
-          <span v-if="selectedPeriodIds.length > 0" class="ml-1 text-xs text-primary-600 dark:text-primary-400">({{ selectedPeriodIds.length }} selected)</span>
+          {{ t('attendance.periods') }}
+          <span v-if="selectedPeriodIds.length > 0" class="ml-1 text-xs text-primary-600 dark:text-primary-400">{{ t('attendance.periods_selected', { count: selectedPeriodIds.length }) }}</span>
         </label>
         <MultiSelect
           v-model="selectedPeriodIds"
           :options="periodOptions"
           option-label="label"
           option-value="id"
-          placeholder="All periods"
+          :placeholder="t('attendance.all_periods')"
           :max-selected-labels="2"
           class="w-full sm:w-72"
         />
@@ -523,8 +531,8 @@ onMounted(async () => {
     <div v-if="!selectedClassId">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-0">Today's Attendance</h2>
-          <p class="text-sm text-surface-500 dark:text-surface-400">{{ formatDateStr(new Date()) }} — all classes</p>
+          <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-0">{{ t('attendance.todays_attendance') }}</h2>
+          <p class="text-sm text-surface-500 dark:text-surface-400">{{ formatDateStr(new Date()) }} {{ t('attendance.all_classes_subtitle') }}</p>
         </div>
         <Button icon="pi pi-refresh" text rounded :loading="todayLoading" @click="loadTodayOverview" />
       </div>
@@ -535,25 +543,25 @@ onMounted(async () => {
 
       <div v-else-if="todaySummaries.length === 0" class="flex flex-col items-center py-20 text-surface-400">
         <i class="pi pi-building text-5xl mb-3"></i>
-        <p class="text-lg">No classes found.</p>
+        <p class="text-lg">{{ t('attendance.no_classes') }}</p>
       </div>
 
       <div v-else class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-surface-50 dark:bg-surface-800/80">
-              <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Class</th>
+              <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">{{ t('attendance.class') }}</th>
               <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
-                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Present</span>
+                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>{{ t('common.present') }}</span>
               </th>
               <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
-                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Absent</span>
+                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>{{ t('common.absent') }}</span>
               </th>
               <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">
-                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Late</span>
+                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>{{ t('common.late') }}</span>
               </th>
-              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">Students</th>
-              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Rate</th>
+              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">{{ t('common.students') }}</th>
+              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">{{ t('attendance.rate') }}</th>
               <th class="p-3"></th>
             </tr>
           </thead>
@@ -575,11 +583,11 @@ onMounted(async () => {
               </td>
               <td class="p-3 text-center">
                 <span v-if="row.rate !== null" class="font-semibold text-sm" :class="rateColor(row.rate)">{{ row.rate }}%</span>
-                <span v-else class="text-xs text-surface-400 dark:text-surface-500 italic">Not marked</span>
+                <span v-else class="text-xs text-surface-400 dark:text-surface-500 italic">{{ t('attendance.not_rated') }}</span>
               </td>
               <td class="p-3 text-right">
                 <Button
-                  label="View"
+                  :label="t('common.view')"
                   icon="pi pi-arrow-right"
                   size="small"
                   text
@@ -600,19 +608,19 @@ onMounted(async () => {
           <Tab value="0">
             <span class="flex items-center gap-2">
               <i class="pi pi-calendar"></i>
-              <span>Session Overview</span>
+              <span>{{ t('attendance.session_overview') }}</span>
             </span>
           </Tab>
           <Tab value="1">
             <span class="flex items-center gap-2">
               <i class="pi pi-users"></i>
-              <span>Student List</span>
+              <span>{{ t('attendance.student_list') }}</span>
             </span>
           </Tab>
           <Tab value="2">
             <span class="flex items-center gap-2">
               <i class="pi pi-table"></i>
-              <span>Grid View</span>
+              <span>{{ t('attendance.grid_view') }}</span>
             </span>
           </Tab>
         </TabList>
@@ -630,7 +638,7 @@ onMounted(async () => {
               <template v-else-if="viewMode === 'day'">
                 <div v-if="filteredScheduleSlots.length === 0" class="flex flex-col items-center py-12 text-surface-400">
                   <i class="pi pi-calendar-times text-4xl mb-3"></i>
-                  <p>No sessions scheduled for {{ selectedDayName }}.</p>
+                  <p>{{ t('attendance.no_sessions_day', { day: t('common.' + selectedDayName.toLowerCase()) }) }}</p>
                 </div>
 
                 <div v-else class="space-y-3">
@@ -657,7 +665,7 @@ onMounted(async () => {
                         </div>
                       </div>
                       <div class="flex items-center gap-3 shrink-0">
-                        <div v-if="summary.marked === 0" class="text-xs text-surface-400 dark:text-surface-500 italic">Not marked yet</div>
+                        <div v-if="summary.marked === 0" class="text-xs text-surface-400 dark:text-surface-500 italic">{{ t('attendance.not_marked_yet') }}</div>
                         <template v-else>
                           <span class="flex items-center gap-1.5 text-sm">
                             <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
@@ -688,7 +696,7 @@ onMounted(async () => {
               <template v-else>
                 <div v-if="weekDaySummaries.length === 0" class="flex flex-col items-center py-12 text-surface-400">
                   <i class="pi pi-calendar-times text-4xl mb-3"></i>
-                  <p>No sessions scheduled this week.</p>
+                  <p>{{ t('attendance.no_sessions_week') }}</p>
                 </div>
 
                 <div v-else class="space-y-6">
@@ -696,7 +704,7 @@ onMounted(async () => {
                     <!-- Day header -->
                     <div class="flex items-center gap-3 mb-3">
                       <div class="bg-surface-100 dark:bg-surface-700 rounded-lg px-3 py-1.5 text-sm font-semibold text-surface-700 dark:text-surface-200">
-                        {{ day.dayName }}
+                        {{ t('common.' + day.dayName.toLowerCase()) }}
                       </div>
                       <span class="text-xs text-surface-400 dark:text-surface-500">{{ day.dateStr }}</span>
                       <div class="flex-1 h-px bg-surface-200 dark:bg-surface-700"></div>
@@ -727,7 +735,7 @@ onMounted(async () => {
                             </div>
                           </div>
                           <div class="flex items-center gap-3 shrink-0">
-                            <div v-if="summary.marked === 0" class="text-xs text-surface-400 dark:text-surface-500 italic">Not marked yet</div>
+                            <div v-if="summary.marked === 0" class="text-xs text-surface-400 dark:text-surface-500 italic">{{ t('attendance.not_marked_yet') }}</div>
                             <template v-else>
                               <span class="flex items-center gap-1.5 text-sm">
                                 <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
@@ -767,7 +775,7 @@ onMounted(async () => {
 
               <div v-else-if="classStudents.length === 0" class="flex flex-col items-center py-12 text-surface-400">
                 <i class="pi pi-users text-4xl mb-3"></i>
-                <p>No students in this class.</p>
+                <p>{{ t('attendance.no_students') }}</p>
               </div>
 
               <!-- ── DAY MODE ── -->
@@ -777,9 +785,9 @@ onMounted(async () => {
                     <thead>
                       <tr class="bg-surface-50 dark:bg-surface-800/80">
                         <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Sessions Today</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">{{ t('common.name') }}</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ t('attendance.student_code') }}</th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">{{ t('attendance.sessions_today') }}</th>
                         <th class="text-right p-3 font-semibold text-surface-500 dark:text-surface-400"></th>
                       </tr>
                     </thead>
@@ -804,7 +812,7 @@ onMounted(async () => {
                                 >
                                   {{ formatTime(slot.start_time) }}
                                 </div>
-                                
+
                               </div>
                             </template>
                             <span v-if="filteredScheduleSlots.length === 0" class="text-surface-300 dark:text-surface-600 text-xs">—</span>
@@ -812,7 +820,7 @@ onMounted(async () => {
                         </td>
                         <td class="p-3 text-right">
                           <Button
-                            label="View"
+                            :label="t('common.view')"
                             icon="pi pi-eye"
                             size="small"
                             text
@@ -833,29 +841,29 @@ onMounted(async () => {
                     <thead>
                       <tr class="bg-surface-50 dark:bg-surface-800/80">
                         <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">{{ t('common.name') }}</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ t('attendance.student_code') }}</th>
                         <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
                           <span class="flex items-center justify-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Present
+                            <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>{{ t('common.present') }}
                           </span>
                         </th>
                         <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
                           <span class="flex items-center justify-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Absent
+                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>{{ t('common.absent') }}
                           </span>
                         </th>
                         <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">
                           <span class="flex items-center justify-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Late
+                            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>{{ t('common.late') }}
                           </span>
                         </th>
                         <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">
                           <span class="flex items-center justify-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>Excused
+                            <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>{{ t('common.excused') }}
                           </span>
                         </th>
-                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Rate</th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">{{ t('attendance.rate') }}</th>
                         <th class="text-right p-3 font-semibold text-surface-500 dark:text-surface-400"></th>
                       </tr>
                     </thead>
@@ -882,7 +890,7 @@ onMounted(async () => {
                         </td>
                         <td class="p-3 text-right">
                           <Button
-                            label="View"
+                            :label="t('common.view')"
                             icon="pi pi-eye"
                             size="small"
                             text
@@ -907,12 +915,12 @@ onMounted(async () => {
 
               <div v-else-if="filteredScheduleSlots.length === 0" class="flex flex-col items-center py-12 text-surface-400">
                 <i class="pi pi-calendar-times text-4xl mb-3"></i>
-                <p>No sessions scheduled for this {{ viewMode === 'week' ? 'week' : selectedDayName }}.</p>
+                <p>{{ viewMode === 'week' ? t('attendance.no_schedule_week') : t('attendance.no_schedule_day', { day: t('common.' + selectedDayName.toLowerCase()) }) }}</p>
               </div>
 
               <div v-else-if="classStudents.length === 0" class="flex flex-col items-center py-12 text-surface-400">
                 <i class="pi pi-users text-4xl mb-3"></i>
-                <p>No students in this class.</p>
+                <p>{{ t('attendance.no_students') }}</p>
               </div>
 
               <!-- ── DAY MODE ── -->
@@ -922,7 +930,7 @@ onMounted(async () => {
                     <thead>
                       <tr class="bg-surface-50 dark:bg-surface-800/80">
                         <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-36">
-                          Student
+                          {{ t('common.name') }}
                         </th>
                         <th
                           v-for="slot in filteredScheduleSlots"
@@ -972,7 +980,7 @@ onMounted(async () => {
                       <!-- Day header row -->
                       <tr class="bg-surface-50 dark:bg-surface-800/80">
                         <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-36 sticky left-0 bg-surface-50 dark:bg-surface-800/80 z-10">
-                          Student
+                          {{ t('common.name') }}
                         </th>
                         <th
                           v-for="col in weekGridColumns"
@@ -1020,19 +1028,19 @@ onMounted(async () => {
               <!-- Legend -->
               <div v-if="filteredScheduleSlots.length > 0" class="flex flex-wrap gap-4 mt-3 text-xs text-surface-500 dark:text-surface-400">
                 <span class="flex items-center gap-1.5">
-                  <span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span> Present
+                  <span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span> {{ t('attendance.legend_present') }}
                 </span>
                 <span class="flex items-center gap-1.5">
-                  <span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span> Absent
+                  <span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span> {{ t('attendance.legend_absent') }}
                 </span>
                 <span class="flex items-center gap-1.5">
-                  <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> Late
+                  <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> {{ t('attendance.legend_late') }}
                 </span>
                 <span class="flex items-center gap-1.5">
-                  <span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span> Excused
+                  <span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span> {{ t('attendance.legend_excused') }}
                 </span>
                 <span class="flex items-center gap-1.5">
-                  <span class="w-3 h-3 rounded-full bg-surface-300 inline-block"></span> Not marked
+                  <span class="w-3 h-3 rounded-full bg-surface-300 inline-block"></span> {{ t('attendance.legend_not_marked') }}
                 </span>
               </div>
             </div>
@@ -1056,7 +1064,7 @@ onMounted(async () => {
 
       <div v-else-if="studentAttendances.length === 0" class="flex flex-col items-center py-8 text-surface-400">
         <i class="pi pi-calendar-times text-3xl mb-2"></i>
-        <p class="text-sm">No attendance records for this {{ viewMode === 'week' ? 'week' : 'day' }}.</p>
+        <p class="text-sm">{{ t('attendance.no_records', { period: viewMode === 'week' ? t('common.week') : t('common.day') }) }}</p>
       </div>
 
       <div v-else class="space-y-2 py-2">
@@ -1110,7 +1118,7 @@ onMounted(async () => {
               :disabled="excusing.includes(rec.id)"
               @click="excuseAttendance(rec)"
             >
-              <i class="pi pi-info-circle mr-1 text-[9px]"></i>Excuse
+              <i class="pi pi-info-circle mr-1 text-[9px]"></i>{{ t('attendance.excuse') }}
             </button>
           </div>
         </div>

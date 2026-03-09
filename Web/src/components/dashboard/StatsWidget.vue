@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+
 interface Props {
   stats: {
     total_students: number;
@@ -15,7 +19,7 @@ defineProps<Props>();
     <div class="card mb-0">
       <div class="flex justify-between mb-4">
         <div>
-          <span class="block text-muted-color font-medium mb-4">Students</span>
+          <span class="block text-muted-color font-medium mb-4">{{ t('dashboard.stats_students') }}</span>
           <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
             {{ stats.total_students }}
           </div>
@@ -24,7 +28,7 @@ defineProps<Props>();
           <i class="pi pi-users text-blue-500 text-xl!"></i>
         </div>
       </div>
-      <span class="text-muted-color">Total active students</span>
+      <span class="text-muted-color">{{ t('dashboard.stats_students_subtitle') }}</span>
     </div>
   </div>
   
@@ -32,7 +36,7 @@ defineProps<Props>();
     <div class="card mb-0">
       <div class="flex justify-between mb-4">
         <div>
-          <span class="block text-muted-color font-medium mb-4">Teachers</span>
+          <span class="block text-muted-color font-medium mb-4">{{ t('dashboard.stats_teachers') }}</span>
           <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
             {{ stats.total_teachers }}
           </div>
@@ -41,7 +45,7 @@ defineProps<Props>();
           <i class="pi pi-briefcase text-orange-500 text-xl!"></i>
         </div>
       </div>
-      <span class="text-muted-color">Faculty members</span>
+      <span class="text-muted-color">{{ t('dashboard.stats_teachers_subtitle') }}</span>
     </div>
   </div>
   
@@ -49,7 +53,7 @@ defineProps<Props>();
     <div class="card mb-0">
       <div class="flex justify-between mb-4">
         <div>
-          <span class="block text-muted-color font-medium mb-4">Classes</span>
+          <span class="block text-muted-color font-medium mb-4">{{ t('dashboard.stats_classes') }}</span>
           <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
             {{ stats.total_classes }}
           </div>
@@ -58,7 +62,7 @@ defineProps<Props>();
           <i class="pi pi-book text-cyan-500 text-xl!"></i>
         </div>
       </div>
-      <span class="text-muted-color">Active classes</span>
+      <span class="text-muted-color">{{ t('dashboard.stats_classes_subtitle') }}</span>
     </div>
   </div>
   
@@ -66,7 +70,7 @@ defineProps<Props>();
     <div class="card mb-0">
       <div class="flex justify-between mb-4">
         <div>
-          <span class="block text-muted-color font-medium mb-4">Avg Students/Class</span>
+          <span class="block text-muted-color font-medium mb-4">{{ t('dashboard.stats_avg_students') }}</span>
           <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
             {{ stats.total_classes > 0 ? Math.round(stats.total_students / stats.total_classes) : 0 }}
           </div>
@@ -75,7 +79,7 @@ defineProps<Props>();
           <i class="pi pi-chart-bar text-purple-500 text-xl!"></i>
         </div>
       </div>
-      <span class="text-muted-color">Class capacity usage</span>
+      <span class="text-muted-color">{{ t('dashboard.stats_avg_subtitle') }}</span>
     </div>
   </div>
 </template>

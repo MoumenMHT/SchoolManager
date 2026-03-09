@@ -62,7 +62,7 @@ class SubjectCoefficientController extends Controller
         if (!$coefficient) {
             return response()->json([
                 'success' => false,
-                'message' => 'No coefficient configured for this subject and level',
+                'message' => __('messages.coefficient_not_found'),
             ], 404);
         }
 
@@ -89,7 +89,7 @@ class SubjectCoefficientController extends Controller
         if ($coefficient->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No coefficient configured for this level',
+                'message' => __('messages.coefficient_not_found'),
             ], 404);
         }
 
@@ -123,7 +123,7 @@ class SubjectCoefficientController extends Controller
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Coefficient already configured for this subject and level',
+                'message' => __('messages.coefficient_already_exists'),
             ], 422);
         }
 
@@ -131,7 +131,7 @@ class SubjectCoefficientController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Coefficient created successfully',
+            'message' => __('messages.coefficient_created'),
             'data' => $coefficient->load('subject'),
         ], 201);
     }
@@ -151,7 +151,7 @@ class SubjectCoefficientController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Coefficient updated successfully',
+            'message' => __('messages.coefficient_updated'),
             'data' => $coefficient->load('subject'),
         ]);
     }
@@ -166,7 +166,7 @@ class SubjectCoefficientController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Coefficient deleted successfully',
+            'message' => __('messages.coefficient_deleted'),
         ]);
     }
 

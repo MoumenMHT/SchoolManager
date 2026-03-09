@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import StudentService, { type Student, type CreateStudentDTO, type UpdateStudentDTO, type StudentHistory } from '@/service/StudentService';
 import ParentService, { type Parent } from '@/service/ParentService';
 import ClassesService, { type SchoolClass } from '@/service/ClassesService';
 import ScheduleService, { type Schedule } from '@/service/ScheduleService';
+
+const { t } = useI18n();
 
 const toast = useToast();
 const dt = ref();
@@ -38,10 +41,19 @@ const loadingDetails = ref(false);
 const studentHistory = ref<StudentHistory[]>([]);
 
 // Days and hours for schedule grid
-const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Each entry has an English key (used for schedule data lookup) and a translated label (used for display)
+const weekDays = computed(() => [
+  { key: 'monday',    label: t('common.monday') },
+  { key: 'tuesday',   label: t('common.tuesday') },
+  { key: 'wednesday', label: t('common.wednesday') },
+  { key: 'thursday',  label: t('common.thursday') },
+  { key: 'friday',    label: t('common.friday') },
+  { key: 'saturday',  label: t('common.saturday') }
+]);
+
 const schoolHours = [
-  { hour: 8, label: '08:00 - 09:00' },
-  { hour: 9, label: '09:00 - 10:00' },
+  { hour: 8,  label: '08:00 - 09:00' },
+  { hour: 9,  label: '09:00 - 10:00' },
   { hour: 10, label: '10:00 - 11:00' },
   { hour: 11, label: '11:00 - 12:00' },
   { hour: 12, label: '12:00 - 13:00' },
@@ -53,10 +65,10 @@ const schoolHours = [
 ];
 
 // Gender options
-const genderOptions = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' }
-];
+const genderOptions = computed(() => [
+  { label: t('common.male'),   value: 'male' },
+  { label: t('common.female'), value: 'female' }
+]);
 
 // Load students on mount
 onMounted(async () => {
@@ -70,21 +82,21 @@ const loadStudents = async () => {
   try {
     loading.value = true;
     students.value = await StudentService.getStudents();
-    
+
     // Add computed properties for each student
     students.value = students.value.map(s => ({
       ...s,
       full_name: `${s.first_name} ${s.last_name}`,
-      class_name: s.class?.name || 'No Class',
-      parent_name: s.parent ? `${s.parent.first_name} ${s.parent.last_name}` : 'No Parent',
+      class_name: s.class?.name || t('students.no_class'),
+      parent_name: s.parent ? `${s.parent.first_name} ${s.parent.last_name}` : t('students.no_parent'),
       age: s.birth_date ? calculateAge(new Date(s.birth_date)) : null,
-      status_text: s.is_active ? 'Active' : 'Inactive'
+      status_text: s.is_active ? t('common.active') : t('common.inactive')
     } as any));
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load students',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('students.load_error'),
       life: 3000
     });
   } finally {
@@ -110,8 +122,8 @@ const loadClasses = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load classes',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('classes.load_failed'),
       life: 3000
     });
   }
@@ -124,8 +136,8 @@ const loadParents = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load parents',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('parents.load_error'),
       life: 3000
     });
   }
@@ -152,13 +164,13 @@ const saveStudent = async () => {
   submitted.value = true;
 
   // Validate required fields
-  if (!student.value.first_name?.trim() || 
-      !student.value.last_name?.trim() || 
+  if (!student.value.first_name?.trim() ||
+      !student.value.last_name?.trim() ||
       !student.value.code?.trim()) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please fill in all required fields (First Name, Last Name, Code)',
+      summary: t('common.warning'),
+      detail: t('students.required_fields'),
       life: 3000
     });
     return;
@@ -180,29 +192,29 @@ const saveStudent = async () => {
         students.value[index] = {
           ...updated,
           full_name: `${updated.first_name} ${updated.last_name}`,
-          class_name: updated.class?.name || 'No Class',
-          parent_name: updated.parent ? `${updated.parent.first_name} ${updated.parent.last_name}` : 'No Parent',
+          class_name: updated.class?.name || t('students.no_class'),
+          parent_name: updated.parent ? `${updated.parent.first_name} ${updated.parent.last_name}` : t('students.no_parent'),
           age: updated.birth_date ? calculateAge(new Date(updated.birth_date)) : null,
-          status_text: updated.is_active ? 'Active' : 'Inactive'
+          status_text: updated.is_active ? t('common.active') : t('common.inactive')
         } as any;
       }
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Student updated successfully',
+        summary: t('common.success'),
+        detail: t('students.update_success'),
         life: 3000
       });
     } else {
       // Create new student
       const created = await StudentService.createStudent(studentData as CreateStudentDTO);
-      
+
       // Reload students to get updated data with relationships
       await loadStudents();
-      
+
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Student created successfully',
+        summary: t('common.success'),
+        detail: t('students.create_success'),
         life: 3000
       });
     }
@@ -212,8 +224,8 @@ const saveStudent = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to save student',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('students.save_error'),
       life: 3000
     });
   }
@@ -231,7 +243,7 @@ const formatDateForAPI = (date: any): string => {
 
 // Edit student
 const editStudent = (studentToEdit: Student) => {
-  student.value = { 
+  student.value = {
     ...studentToEdit,
     // Convert date strings to Date objects for DatePicker
     birth_date: studentToEdit.birth_date ? new Date(studentToEdit.birth_date) : null,
@@ -255,8 +267,8 @@ const deleteStudent = async () => {
       students.value = students.value.filter(s => s.id !== student.value.id);
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Student deleted successfully',
+        summary: t('common.success'),
+        detail: t('students.delete_success'),
         life: 3000
       });
     }
@@ -265,8 +277,8 @@ const deleteStudent = async () => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete student',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('students.delete_error'),
       life: 3000
     });
   }
@@ -287,15 +299,15 @@ const deleteSelectedStudents = async () => {
     selectedStudents.value = [];
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Students deleted successfully',
+      summary: t('common.success'),
+      detail: t('students.delete_multiple_success'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to delete students',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('students.delete_multiple_error'),
       life: 3000
     });
   }
@@ -313,7 +325,7 @@ const getStatusSeverity = (isActive: boolean) => {
 
 // Get status label
 const getStatusLabel = (isActive: boolean) => {
-  return isActive ? 'Active' : 'Inactive';
+  return isActive ? t('common.active') : t('common.inactive');
 };
 
 // Get gender severity
@@ -323,7 +335,7 @@ const getGenderSeverity = (gender: string) => {
 
 // Get gender label
 const getGenderLabel = (gender: string) => {
-  return gender === 'male' ? 'Male' : 'Female';
+  return gender === 'male' ? t('common.male') : t('common.female');
 };
 
 // Schedule Management Functions
@@ -333,8 +345,8 @@ const viewSchedule = async (studentToView: Student) => {
   if (!studentToView.class_id) {
     toast.add({
       severity: 'warn',
-      summary: 'No Class',
-      detail: 'This student is not assigned to any class',
+      summary: t('students.no_class_warning'),
+      detail: t('students.no_class_assigned'),
       life: 3000
     });
     return;
@@ -344,9 +356,9 @@ const viewSchedule = async (studentToView: Student) => {
     scheduleLoading.value = true;
     selectedStudentForSchedule.value = studentToView;
 
-    
+
     const scheduleData = await ScheduleService.getClassSchedule(studentToView.class_id, studentToView.class?.academic_year);
-    
+
     // If scheduleData is an array, organize it by day
     if (Array.isArray(scheduleData)) {
       const organizedSchedules: { [day: string]: Schedule[] } = {};
@@ -361,13 +373,13 @@ const viewSchedule = async (studentToView: Student) => {
     } else {
       studentSchedules.value = scheduleData;
     }
-    
+
     scheduleDialog.value = true;
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load student schedule',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('students.schedule_error'),
       life: 3000
     });
   } finally {
@@ -375,19 +387,18 @@ const viewSchedule = async (studentToView: Student) => {
   }
 };
 
-// Get schedule for a specific day and hour
-const getScheduleForSlot = (day: string, hour: number): Schedule | null => {
-  const dayKey = day.toLowerCase();
+// Get schedule for a specific day key (English, lowercase) and hour
+const getScheduleForSlot = (dayKey: string, hour: number): Schedule | null => {
   const daySchedules = studentSchedules.value[dayKey] || [];
   const startTime = `${hour.toString().padStart(2, '0')}:00:00`;
   const endTime = `${(hour + 1).toString().padStart(2, '0')}:00:00`;
-  
+
   const found = daySchedules.find(schedule => {
     const scheduleStart = schedule.start_time;
     const scheduleEnd = schedule.end_time;
     return scheduleStart <= startTime && scheduleEnd > startTime;
   }) || null;
-  
+
   return found;
 };
 
@@ -437,8 +448,8 @@ const showStudentDetails = async (studentData: Student) => {
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.message || 'Failed to load student details',
+      summary: t('common.error'),
+      detail: error.response?.data?.message || t('students.load_details_error'),
       life: 3000
     });
     studentDetailsDialog.value = false;
@@ -451,32 +462,32 @@ const showStudentDetails = async (studentData: Student) => {
 <template>
   <div class="card">
     <Toast />
-    
+
     <!-- Toolbar -->
     <Toolbar class="mb-6">
       <template #start>
-        <Button 
-          label="New Student" 
-          icon="pi pi-plus" 
-          severity="secondary" 
-          class="mr-2" 
-          @click="openNew" 
+        <Button
+          :label="t('students.new_student')"
+          icon="pi pi-plus"
+          severity="secondary"
+          class="mr-2"
+          @click="openNew"
         />
-        <Button 
-          label="Delete" 
-          icon="pi pi-trash" 
-          severity="secondary" 
-          :disabled="!selectedStudents || !selectedStudents.length" 
-          @click="confirmDeleteSelected" 
+        <Button
+          :label="t('common.delete')"
+          icon="pi pi-trash"
+          severity="secondary"
+          :disabled="!selectedStudents || !selectedStudents.length"
+          @click="confirmDeleteSelected"
         />
       </template>
 
       <template #end>
-        <Button 
-          label="Export" 
-          icon="pi pi-upload" 
-          severity="secondary" 
-          @click="exportCSV" 
+        <Button
+          :label="t('common.export')"
+          icon="pi pi-upload"
+          severity="secondary"
+          @click="exportCSV"
         />
       </template>
     </Toolbar>
@@ -500,14 +511,14 @@ const showStudentDetails = async (studentData: Student) => {
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
-          <h4 class="m-0 text-xl font-semibold">Manage Students</h4>
+          <h4 class="m-0 text-xl font-semibold">{{ t('students.title') }}</h4>
           <IconField>
             <InputIcon>
               <i class="pi pi-search" />
             </InputIcon>
-            <InputText 
-              v-model="filters['global'].value" 
-              placeholder="Search students..." 
+            <InputText
+              v-model="filters['global'].value"
+              :placeholder="t('students.search_placeholder')"
             />
           </IconField>
         </div>
@@ -516,13 +527,13 @@ const showStudentDetails = async (studentData: Student) => {
       <template #empty>
         <div class="text-center py-8">
           <i class="pi pi-users text-4xl text-muted-color mb-3 block"></i>
-          <p class="text-muted-color">No students found.</p>
+          <p class="text-muted-color">{{ t('students.no_students') }}</p>
         </div>
       </template>
 
       <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-      
-      <Column field="full_name" header="Full Name" sortable style="min-width: 14rem">
+
+      <Column field="full_name" :header="t('common.full_name')" sortable style="min-width: 14rem">
         <template #body="{ data }">
           <div class="flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
@@ -531,76 +542,76 @@ const showStudentDetails = async (studentData: Student) => {
         </template>
       </Column>
 
-      <Column field="code" header="Student Code" sortable style="min-width: 10rem">
+      <Column field="code" :header="t('students.student_code')" sortable style="min-width: 10rem">
         <template #body="{ data }">
-          <span class="text-muted-color">{{ data.code || 'N/A' }}</span>
+          <span class="text-muted-color">{{ data.code || t('common.na') }}</span>
         </template>
       </Column>
 
 
-      <Column field="class_name" header="Class" sortable style="min-width: 10rem">
+      <Column field="class_name" :header="t('common.class')" sortable style="min-width: 10rem">
         <template #body="{ data }">
           <span v-if="data.class">{{ data.class.name }}</span>
-          <span v-else class="text-muted-color">N/A</span>
+          <span v-else class="text-muted-color">{{ t('common.na') }}</span>
         </template>
       </Column>
 
-      <Column field="parent_name" header="Parent" sortable style="min-width: 12rem">
+      <Column field="parent_name" :header="t('common.parents')" sortable style="min-width: 12rem">
         <template #body="{ data }">
           <span v-if="data.parent">{{ data.parent.first_name }} {{ data.parent.last_name }}</span>
-          <span v-else class="text-muted-color">N/A</span>
+          <span v-else class="text-muted-color">{{ t('common.na') }}</span>
         </template>
       </Column>
 
-      
 
-      <Column field="is_active" header="Status" sortable style="min-width: 8rem">
+
+      <Column field="is_active" :header="t('common.status')" sortable style="min-width: 8rem">
         <template #body="{ data }">
-          <Tag 
-            :value="getStatusLabel(data.is_active)" 
-            :severity="getStatusSeverity(data.is_active)" 
+          <Tag
+            :value="getStatusLabel(data.is_active)"
+            :severity="getStatusSeverity(data.is_active)"
           />
         </template>
       </Column>
 
-      <Column :exportable="false" style="min-width: 13rem">
+      <Column :header="t('common.actions')" :exportable="false" style="min-width: 13rem">
         <template #body="{ data }">
-          <Button 
-            icon="pi pi-calendar" 
-            outlined 
-            rounded 
+          <Button
+            icon="pi pi-calendar"
+            outlined
+            rounded
             severity="info"
-            class="mr-2" 
-            @click="viewSchedule(data)" 
-            v-tooltip.top="'View Schedule'"
+            class="mr-2"
+            @click="viewSchedule(data)"
+            v-tooltip.top="t('students.view_schedule')"
             :disabled="!data.class_id"
           />
-          <Button 
-            icon="pi pi-pencil" 
-            outlined 
-            rounded 
-            class="mr-2" 
-            @click="editStudent(data)" 
-            v-tooltip.top="'Edit'"
+          <Button
+            icon="pi pi-pencil"
+            outlined
+            rounded
+            class="mr-2"
+            @click="editStudent(data)"
+            v-tooltip.top="t('common.edit')"
           />
-          <Button 
-            icon="pi pi-trash" 
-            outlined 
-            rounded 
-            severity="danger" 
-            @click="confirmDeleteStudent(data)" 
-            v-tooltip.top="'Delete'"
+          <Button
+            icon="pi pi-trash"
+            outlined
+            rounded
+            severity="danger"
+            @click="confirmDeleteStudent(data)"
+            v-tooltip.top="t('common.delete')"
           />
         </template>
       </Column>
     </DataTable>
 
     <!-- Add/Edit Student Dialog -->
-    <Dialog 
-      v-model:visible="studentDialog" 
-      :style="{ width: '550px' }" 
-      header="Student Details" 
-      :modal="true" 
+    <Dialog
+      v-model:visible="studentDialog"
+      :style="{ width: '550px' }"
+      :header="t('students.student_details')"
+      :modal="true"
       class="p-fluid"
     >
       <div class="flex flex-col gap-6">
@@ -608,34 +619,34 @@ const showStudentDetails = async (studentData: Student) => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="first_name" class="block font-semibold mb-2">
-              First Name <span class="text-red-500">*</span>
+              {{ t('common.first_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="first_name" 
-              v-model.trim="student.first_name" 
-              required 
-              autofocus 
+            <InputText
+              id="first_name"
+              v-model.trim="student.first_name"
+              required
+              autofocus
               :invalid="submitted && !student.first_name"
-              placeholder="Enter first name"
+              :placeholder="t('common.first_name')"
             />
             <small v-if="submitted && !student.first_name" class="text-red-500">
-              First name is required.
+              {{ t('validation.first_name_required') }}
             </small>
           </div>
 
           <div>
             <label for="last_name" class="block font-semibold mb-2">
-              Last Name <span class="text-red-500">*</span>
+              {{ t('common.last_name') }} <span class="text-red-500">*</span>
             </label>
-            <InputText 
-              id="last_name" 
-              v-model.trim="student.last_name" 
-              required 
+            <InputText
+              id="last_name"
+              v-model.trim="student.last_name"
+              required
               :invalid="submitted && !student.last_name"
-              placeholder="Enter last name"
+              :placeholder="t('common.last_name')"
             />
             <small v-if="submitted && !student.last_name" class="text-red-500">
-              Last name is required.
+              {{ t('validation.last_name_required') }}
             </small>
           </div>
         </div>
@@ -643,17 +654,17 @@ const showStudentDetails = async (studentData: Student) => {
         <!-- Student Code -->
         <div>
           <label for="code" class="block font-semibold mb-2">
-            Student Code <span class="text-red-500">*</span>
+            {{ t('students.student_code') }} <span class="text-red-500">*</span>
           </label>
-          <InputText 
-            id="code" 
-            v-model.trim="student.code" 
-            required 
+          <InputText
+            id="code"
+            v-model.trim="student.code"
+            required
             :invalid="submitted && !student.code"
-            placeholder="e.g., STU2026001"
+            :placeholder="t('students.student_code_placeholder')"
           />
           <small v-if="submitted && !student.code" class="text-red-500">
-            Student code is required.
+            {{ t('students.student_code_required') }}
           </small>
         </div>
 
@@ -661,28 +672,28 @@ const showStudentDetails = async (studentData: Student) => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="birth_date" class="block font-semibold mb-2">
-              Birth Date
+              {{ t('students.birth_date') }}
             </label>
-            <DatePicker 
-              id="birth_date" 
-              v-model="student.birth_date" 
+            <DatePicker
+              id="birth_date"
+              v-model="student.birth_date"
               dateFormat="yy-mm-dd"
               showIcon
-              placeholder="Select birth date"
+              :placeholder="t('students.birth_date')"
             />
           </div>
 
           <div>
             <label for="gender" class="block font-semibold mb-2">
-              Gender
+              {{ t('common.gender') }}
             </label>
-            <Select 
-              id="gender" 
-              v-model="student.gender" 
-              :options="genderOptions" 
-              optionLabel="label" 
+            <Select
+              id="gender"
+              v-model="student.gender"
+              :options="genderOptions"
+              optionLabel="label"
               optionValue="value"
-              placeholder="Select gender"
+              :placeholder="t('common.gender')"
             />
           </div>
         </div>
@@ -691,15 +702,15 @@ const showStudentDetails = async (studentData: Student) => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="class" class="block font-semibold mb-2">
-              Class
+              {{ t('common.class') }}
             </label>
-            <Select 
-              id="class" 
-              v-model="student.class_id" 
-              :options="availableClasses" 
-              optionLabel="name" 
+            <Select
+              id="class"
+              v-model="student.class_id"
+              :options="availableClasses"
+              optionLabel="name"
               optionValue="id"
-              placeholder="Select class"
+              :placeholder="t('students.select_class')"
               filter
               showClear
             />
@@ -707,15 +718,15 @@ const showStudentDetails = async (studentData: Student) => {
 
           <div>
             <label for="parent" class="block font-semibold mb-2">
-              Parent
+              {{ t('common.parents') }}
             </label>
-            <Select 
-              id="parent" 
-              v-model="student.parent_id" 
-              :options="availableParents" 
-              optionLabel="first_name" 
+            <Select
+              id="parent"
+              v-model="student.parent_id"
+              :options="availableParents"
+              optionLabel="first_name"
               optionValue="id"
-              placeholder="Select parent"
+              :placeholder="t('students.select_parent')"
               filter
               :filterFields="['first_name', 'last_name']"
               showClear
@@ -725,10 +736,10 @@ const showStudentDetails = async (studentData: Student) => {
               </template>
               <template #value="{ value }">
                 <div v-if="value">
-                  {{ availableParents.find(p => p.id === value)?.first_name }} 
+                  {{ availableParents.find(p => p.id === value)?.first_name }}
                   {{ availableParents.find(p => p.id === value)?.last_name }}
                 </div>
-                <span v-else>Select parent</span>
+                <span v-else>{{ t('students.select_parent') }}</span>
               </template>
             </Select>
           </div>
@@ -737,122 +748,122 @@ const showStudentDetails = async (studentData: Student) => {
         <!-- Enrollment Date -->
         <div>
           <label for="enrollment_date" class="block font-semibold mb-2">
-            Enrollment Date
+            {{ t('common.enrollment_date') }}
           </label>
-          <DatePicker 
-            id="enrollment_date" 
-            v-model="student.enrollment_date" 
+          <DatePicker
+            id="enrollment_date"
+            v-model="student.enrollment_date"
             dateFormat="yy-mm-dd"
             showIcon
-            placeholder="Select enrollment date"
+            :placeholder="t('common.enrollment_date')"
           />
         </div>
 
         <!-- Medical Info -->
         <div>
           <label for="medical_info" class="block font-semibold mb-2">
-            Medical Information
+            {{ t('common.medical_info') }}
           </label>
-          <Textarea 
-            id="medical_info" 
-            v-model="student.medical_info" 
-            rows="3" 
-            placeholder="Any medical conditions or special requirements..."
+          <Textarea
+            id="medical_info"
+            v-model="student.medical_info"
+            rows="3"
+            :placeholder="t('common.medical_info')"
           />
         </div>
 
         <!-- Active Status -->
         <div class="flex items-center gap-2">
-          <Checkbox 
-            inputId="is_active" 
-            v-model="student.is_active" 
-            :binary="true" 
+          <Checkbox
+            inputId="is_active"
+            v-model="student.is_active"
+            :binary="true"
           />
           <label for="is_active" class="font-semibold cursor-pointer">
-            Active Student
+            {{ t('students.active_student') }}
           </label>
         </div>
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancel" 
-          icon="pi pi-times" 
-          text 
-          @click="hideDialog" 
+        <Button
+          :label="t('common.cancel')"
+          icon="pi pi-times"
+          text
+          @click="hideDialog"
         />
-        <Button 
-          label="Save" 
-          icon="pi pi-check" 
-          @click="saveStudent" 
+        <Button
+          :label="t('common.save')"
+          icon="pi pi-check"
+          @click="saveStudent"
         />
       </template>
     </Dialog>
 
     <!-- Student Details Dialog -->
-    <Dialog 
-      v-model:visible="studentDetailsDialog" 
-      :style="{ width: '900px', maxHeight: '90vh' }" 
-      header="Student Details" 
+    <Dialog
+      v-model:visible="studentDetailsDialog"
+      :style="{ width: '900px', maxHeight: '90vh' }"
+      :header="t('students.student_details')"
       :modal="true"
     >
       <div v-if="loadingDetails" class="flex justify-center items-center py-8">
         <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
       </div>
-      
+
       <div v-else-if="selectedStudentDetails" class="flex flex-col gap-6">
         <!-- Student Information Section -->
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
-            Personal Information
+            {{ t('common.personal_information') }}
           </h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="text-sm text-muted-color">Full Name</label>
+              <label class="text-sm text-muted-color">{{ t('common.full_name') }}</label>
               <p class="font-semibold">{{ selectedStudentDetails.first_name }} {{ selectedStudentDetails.last_name }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Student Code</label>
-              <p class="font-semibold">{{ selectedStudentDetails.code || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('students.student_code') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.code || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Date of Birth</label>
-              <p class="font-semibold">{{ selectedStudentDetails.birth_date ? new Date(selectedStudentDetails.birth_date).toLocaleDateString() : 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.date_of_birth') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.birth_date ? new Date(selectedStudentDetails.birth_date).toLocaleDateString() : t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Gender</label>
-              <p class="font-semibold">{{ selectedStudentDetails.gender || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.gender') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.gender || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Class</label>
-              <p class="font-semibold">{{ selectedStudentDetails.class?.name || 'No class assigned' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.class') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.class?.name || t('students.no_subject') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Parent</label>
+              <label class="text-sm text-muted-color">{{ t('common.parents') }}</label>
               <p class="font-semibold">
-                {{ selectedStudentDetails.parent ? `${selectedStudentDetails.parent.first_name} ${selectedStudentDetails.parent.last_name}` : 'N/A' }}
+                {{ selectedStudentDetails.parent ? `${selectedStudentDetails.parent.first_name} ${selectedStudentDetails.parent.last_name}` : t('common.na') }}
               </p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Enrollment Date</label>
-              <p class="font-semibold">{{ selectedStudentDetails.enrollment_date ? new Date(selectedStudentDetails.enrollment_date).toLocaleDateString() : 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.enrollment_date') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.enrollment_date ? new Date(selectedStudentDetails.enrollment_date).toLocaleDateString() : t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Status</label>
+              <label class="text-sm text-muted-color">{{ t('common.status') }}</label>
               <p>
-                <Tag 
-                  :value="getStatusLabel(selectedStudentDetails.is_active)" 
-                  :severity="getStatusSeverity(selectedStudentDetails.is_active)" 
+                <Tag
+                  :value="getStatusLabel(selectedStudentDetails.is_active)"
+                  :severity="getStatusSeverity(selectedStudentDetails.is_active)"
                 />
               </p>
             </div>
             <div class="col-span-2">
-              <label class="text-sm text-muted-color">Medical Information</label>
-              <p class="font-semibold">{{ selectedStudentDetails.medical_info || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.medical_info') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.medical_info || t('common.na') }}</p>
             </div>
           </div>
-          
+
         </div>
 
         <!-- Student Parent Information Section -->
@@ -860,60 +871,60 @@ const showStudentDetails = async (studentData: Student) => {
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
-            Parent Information
+            {{ t('students.parent_information') }}
           </h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="text-sm text-muted-color">Full Name</label>
+              <label class="text-sm text-muted-color">{{ t('common.full_name') }}</label>
               <p class="font-semibold">{{ selectedStudentDetails.parent?.first_name }} {{ selectedStudentDetails.parent?.last_name }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">CIN</label>
-              <p class="font-semibold">{{ selectedStudentDetails.parent?.cin || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.cin') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.parent?.cin || t('common.na') }}</p>
             </div>
-            
+
             <div>
-              <label class="text-sm text-muted-color">Email</label>
-              <p class="font-semibold">{{ selectedStudentDetails.parent?.email || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.email') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.parent?.email || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Phone</label>
-              <p class="font-semibold">{{ selectedStudentDetails.parent?.phone || 'N/A' }}</p>
+              <label class="text-sm text-muted-color">{{ t('common.phone') }}</label>
+              <p class="font-semibold">{{ selectedStudentDetails.parent?.phone || t('common.na') }}</p>
             </div>
-            
-            
+
+
             <div>
-              <label class="text-sm text-muted-color">Account Status</label>
+              <label class="text-sm text-muted-color">{{ t('common.account_status') }}</label>
               <p>
-                <Tag 
-                  :value="getStatusLabel(selectedStudentDetails.is_active)" 
-                  :severity="getStatusSeverity(selectedStudentDetails.is_active)" 
+                <Tag
+                  :value="getStatusLabel(selectedStudentDetails.is_active)"
+                  :severity="getStatusSeverity(selectedStudentDetails.is_active)"
                 />
               </p>
             </div>
-           
+
           </div>
-          
+
         </div>
 
         <!-- Schedule Section -->
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-calendar text-primary"></i>
-            Weekly Schedule
+            {{ t('common.weekly_schedule') }}
           </h3>
-          
+
           <div v-if="studentSchedules && Object.keys(studentSchedules).length > 0" class="overflow-x-auto">
             <table class="schedule-table w-full border-collapse">
               <thead>
                 <tr>
-                  <th class="schedule-header time-column">Time</th>
-                  <th 
-                    v-for="day in weekDays" 
-                    :key="day" 
+                  <th class="schedule-header time-column">{{ t('common.time') }}</th>
+                  <th
+                    v-for="day in weekDays"
+                    :key="day.key"
                     class="schedule-header"
                   >
-                    {{ day }}
+                    {{ day.label }}
                   </th>
                 </tr>
               </thead>
@@ -922,22 +933,22 @@ const showStudentDetails = async (studentData: Student) => {
                   <td class="time-column font-semibold text-sm">
                     {{ timeSlot.label }}
                   </td>
-                  <td 
-                    v-for="day in weekDays" 
-                    :key="day"
+                  <td
+                    v-for="day in weekDays"
+                    :key="day.key"
                     class="schedule-cell"
                   >
-                    <template v-if="getScheduleForSlot(day, timeSlot.hour)">
+                    <template v-if="getScheduleForSlot(day.key, timeSlot.hour)">
                       <div class="schedule-content has-schedule">
                         <div class="font-semibold text-sm">
-                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name || getScheduleForSlot(day, timeSlot.hour)?.subject?.name }}
+                          {{ getScheduleForSlot(day.key, timeSlot.hour)?.assignment?.subject?.name || getScheduleForSlot(day.key, timeSlot.hour)?.subject?.name }}
                         </div>
                         <div class="text-xs mt-1 text-muted-color">
-                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.first_name }} 
-                          {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.last_name }}
+                          {{ getScheduleForSlot(day.key, timeSlot.hour)?.assignment?.teacher?.first_name }}
+                          {{ getScheduleForSlot(day.key, timeSlot.hour)?.assignment?.teacher?.last_name }}
                         </div>
-                        <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
-                          <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day, timeSlot.hour)?.room }}
+                        <div v-if="getScheduleForSlot(day.key, timeSlot.hour)?.room" class="text-xs mt-1">
+                          <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day.key, timeSlot.hour)?.room }}
                         </div>
                       </div>
                     </template>
@@ -949,10 +960,10 @@ const showStudentDetails = async (studentData: Student) => {
               </tbody>
             </table>
           </div>
-          
+
           <div v-else class="text-center py-6">
             <i class="pi pi-calendar-times text-4xl text-muted-color mb-2 block"></i>
-            <p class="text-muted-color">No schedule available</p>
+            <p class="text-muted-color">{{ t('common.no_schedule') }}</p>
           </div>
         </div>
 
@@ -960,18 +971,18 @@ const showStudentDetails = async (studentData: Student) => {
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-history text-primary"></i>
-            Class History
+            {{ t('students.class_history') }}
           </h3>
 
           <div v-if="studentHistory.length > 0">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-surface-200 dark:border-surface-700">
-                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Academic Year</th>
-                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Class</th>
-                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Level</th>
-                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">Enrolled</th>
-                  <th class="text-left py-2 font-semibold text-muted-color">Left</th>
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">{{ t('students.academic_year') }}</th>
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">{{ t('common.class') }}</th>
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">{{ t('students.level') }}</th>
+                  <th class="text-left py-2 pr-4 font-semibold text-muted-color">{{ t('students.enrolled') }}</th>
+                  <th class="text-left py-2 font-semibold text-muted-color">{{ t('students.left') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -981,11 +992,11 @@ const showStudentDetails = async (studentData: Student) => {
                   class="border-b border-surface-100 dark:border-surface-800"
                 >
                   <td class="py-2 pr-4 font-semibold">{{ record.academic_year }}</td>
-                  <td class="py-2 pr-4">{{ record.school_class?.name || 'N/A' }}</td>
-                  <td class="py-2 pr-4">{{ record.school_class?.level || 'N/A' }}</td>
+                  <td class="py-2 pr-4">{{ record.school_class?.name || t('common.na') }}</td>
+                  <td class="py-2 pr-4">{{ record.school_class?.level || t('common.na') }}</td>
                   <td class="py-2 pr-4">{{ new Date(record.enrolled_at).toLocaleDateString() }}</td>
                   <td class="py-2">
-                    <Tag v-if="!record.left_at" value="Current" severity="success" />
+                    <Tag v-if="!record.left_at" :value="t('students.current')" severity="success" />
                     <span v-else>{{ new Date(record.left_at).toLocaleDateString() }}</span>
                   </td>
                 </tr>
@@ -995,97 +1006,97 @@ const showStudentDetails = async (studentData: Student) => {
 
           <div v-else class="text-center py-6">
             <i class="pi pi-inbox text-4xl text-muted-color mb-2 block"></i>
-            <p class="text-muted-color">No class history available</p>
+            <p class="text-muted-color">{{ t('students.no_history') }}</p>
           </div>
         </div>
 
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="studentDetailsDialog = false" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="studentDetailsDialog = false"
         />
       </template>
     </Dialog>
 
     <!-- Delete Student Dialog -->
-    <Dialog 
-      v-model:visible="deleteStudentDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Delete" 
+    <Dialog
+      v-model:visible="deleteStudentDialog"
+      :style="{ width: '450px' }"
+      :header="t('students.confirm_delete')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-4xl text-orange-500"></i>
         <span v-if="student">
-          Are you sure you want to delete <strong>{{ student.first_name }} {{ student.last_name }}</strong>?
+          {{ t('common.are_you_sure_delete') }} <strong>{{ student.first_name }} {{ student.last_name }}</strong>?
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteStudentDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteStudentDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteStudent" 
+          @click="deleteStudent"
         />
       </template>
     </Dialog>
 
     <!-- Delete Multiple Students Dialog -->
-    <Dialog 
-      v-model:visible="deleteStudentsDialog" 
-      :style="{ width: '450px' }" 
-      header="Confirm Delete" 
+    <Dialog
+      v-model:visible="deleteStudentsDialog"
+      :style="{ width: '450px' }"
+      :header="t('students.confirm_delete')"
       :modal="true"
     >
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle text-4xl text-orange-500"></i>
         <span v-if="selectedStudents">
-          Are you sure you want to delete the selected students?
+          {{ t('students.confirm_delete_selected') }}
         </span>
       </div>
       <template #footer>
-        <Button 
-          label="No" 
-          icon="pi pi-times" 
-          text 
-          @click="deleteStudentsDialog = false" 
+        <Button
+          :label="t('common.no')"
+          icon="pi pi-times"
+          text
+          @click="deleteStudentsDialog = false"
         />
-        <Button 
-          label="Yes" 
-          icon="pi pi-check" 
+        <Button
+          :label="t('common.yes')"
+          icon="pi pi-check"
           severity="danger"
-          @click="deleteSelectedStudents" 
+          @click="deleteSelectedStudents"
         />
       </template>
     </Dialog>
 
     <!-- View Student Schedule Dialog (Read-Only) -->
-    <Dialog 
-      v-model:visible="scheduleDialog" 
-      :style="{ width: '95vw', maxWidth: '1200px' }" 
-      :header="selectedStudentForSchedule ? `Schedule - ${selectedStudentForSchedule.first_name} ${selectedStudentForSchedule.last_name}` : 'Schedule'" 
+    <Dialog
+      v-model:visible="scheduleDialog"
+      :style="{ width: '95vw', maxWidth: '1200px' }"
+      :header="selectedStudentForSchedule ? `Schedule - ${selectedStudentForSchedule.first_name} ${selectedStudentForSchedule.last_name}` : 'Schedule'"
       :modal="true"
       maximizable
     >
       <div v-if="scheduleLoading" class="text-center py-8">
         <i class="pi pi-spin pi-spinner text-4xl text-primary mb-3"></i>
-        <p class="text-muted-color">Loading schedule...</p>
+        <p class="text-muted-color">{{ t('students.loading_schedule') }}</p>
       </div>
 
       <div v-else>
         <div v-if="selectedStudentForSchedule?.class" class="mb-4 p-3 bg-surface-50 dark:bg-surface-800 rounded-border">
           <div class="flex items-center gap-2">
             <i class="pi pi-building text-primary"></i>
-            <span class="font-semibold">Class:</span>
+            <span class="font-semibold">{{ t('common.class') }}:</span>
             <span>{{ selectedStudentForSchedule.class.name }}</span>
           </div>
         </div>
@@ -1094,13 +1105,13 @@ const showStudentDetails = async (studentData: Student) => {
           <table class="schedule-table">
             <thead>
               <tr>
-                <th class="schedule-header time-column">Time</th>
-                <th 
-                  v-for="day in weekDays" 
-                  :key="day" 
+                <th class="schedule-header time-column">{{ t('common.time') }}</th>
+                <th
+                  v-for="day in weekDays"
+                  :key="day.key"
                   class="schedule-header"
                 >
-                  {{ day }}
+                  {{ day.label }}
                 </th>
               </tr>
             </thead>
@@ -1109,21 +1120,21 @@ const showStudentDetails = async (studentData: Student) => {
                 <td class="time-column font-semibold text-sm">
                   {{ timeSlot.label }}
                 </td>
-                <td 
-                  v-for="day in weekDays" 
-                  :key="day"
+                <td
+                  v-for="day in weekDays"
+                  :key="day.key"
                   class="schedule-cell"
                 >
-                  <template v-if="getScheduleForSlot(day, timeSlot.hour)">
+                  <template v-if="getScheduleForSlot(day.key, timeSlot.hour)">
                     <div class="schedule-content has-schedule">
                       <div class="font-semibold text-sm">
-                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.subject?.name }}
+                        {{ getScheduleForSlot(day.key, timeSlot.hour)?.assignment?.subject?.name }}
                       </div>
                       <div class="text-xs mt-1">
-                        {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.first_name }} {{ getScheduleForSlot(day, timeSlot.hour)?.assignment?.teacher?.last_name }}
+                        {{ getScheduleForSlot(day.key, timeSlot.hour)?.assignment?.teacher?.first_name }} {{ getScheduleForSlot(day.key, timeSlot.hour)?.assignment?.teacher?.last_name }}
                       </div>
-                      <div v-if="getScheduleForSlot(day, timeSlot.hour)?.room" class="text-xs mt-1">
-                        <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day, timeSlot.hour)?.room }}
+                      <div v-if="getScheduleForSlot(day.key, timeSlot.hour)?.room" class="text-xs mt-1">
+                        <i class="pi pi-map-marker"></i> {{ getScheduleForSlot(day.key, timeSlot.hour)?.room }}
                       </div>
                     </div>
                   </template>
@@ -1138,10 +1149,10 @@ const showStudentDetails = async (studentData: Student) => {
       </div>
 
       <template #footer>
-        <Button 
-          label="Close" 
-          icon="pi pi-times" 
-          @click="hideScheduleDialog" 
+        <Button
+          :label="t('common.close')"
+          icon="pi pi-times"
+          @click="hideScheduleDialog"
         />
       </template>
     </Dialog>

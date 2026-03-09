@@ -28,7 +28,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve attendance records',
+                'message' => __('messages.failed_retrieve_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -61,7 +61,7 @@ class AttendanceController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -84,7 +84,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create attendance record',
+                'message' => __('messages.failed_create_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -105,7 +105,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve attendance record',
+                'message' => __('messages.failed_retrieve_attendance_record'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -135,7 +135,7 @@ class AttendanceController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -152,7 +152,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update attendance record',
+                'message' => __('messages.failed_update_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -169,12 +169,12 @@ class AttendanceController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Attendance record deleted successfully'
+                'message' => __('messages.attendance_deleted')
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete attendance record',
+                'message' => __('messages.failed_delete_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -242,7 +242,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve attendance records for student',
+                'message' => __('messages.failed_retrieve_student_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -257,7 +257,7 @@ class AttendanceController extends Controller
         $records = $request->input('records', []);
 
         if (empty($records)) {
-            return response()->json(['success' => false, 'message' => 'No records provided'], 422);
+            return response()->json(['success' => false, 'message' => __('messages.no_records_provided')], 422);
         }
 
         try {
@@ -295,7 +295,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to save attendance records',
+                'message' => __('messages.failed_save_attendance'),
                 'error'   => $e->getMessage(),
             ], 500);
         }
@@ -372,7 +372,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve attendance records for class',
+                'message' => __('messages.failed_retrieve_class_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -457,7 +457,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve attendance records for teacher',
+                'message' => __('messages.failed_retrieve_teacher_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -540,7 +540,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve attendance records for subject',
+                'message' => __('messages.failed_retrieve_subject_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -583,7 +583,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve attendance records for schedule',
+                'message' => __('messages.failed_retrieve_schedule_attendance'),
                 'error' => $e->getMessage()
             ], 500);
         }

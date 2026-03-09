@@ -6,6 +6,7 @@ import Aura from '@primeuix/themes/aura';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
+import i18n from './i18n/index.js';
 
 import '@/assets/tailwind.css';
 import '@/assets/styles.scss';
@@ -13,6 +14,7 @@ import '@/assets/styles.scss';
 const app = createApp(App);
 
 app.use(router);
+app.use(i18n);
 app.use(PrimeVue, {
     theme: {
         preset: Aura,

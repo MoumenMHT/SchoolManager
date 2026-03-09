@@ -51,7 +51,7 @@ class SubjectController extends Controller
             if ($existingSubject) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A subject with the same name already exists.'
+                    'message' => __('messages.subject_name_exists')
                 ], 409);
             }
         }
@@ -110,7 +110,7 @@ class SubjectController extends Controller
             if ($existingSubject) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'A subject with the same name already exists.'
+                    'message' => __('messages.subject_name_exists')
                 ], 409);
             }
         }
@@ -135,7 +135,7 @@ class SubjectController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Subject deleted successfully'
+            'message' => __('messages.subject_deleted')
         ]);
     }
 }

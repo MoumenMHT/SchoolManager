@@ -35,7 +35,7 @@ class ContractController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Validation failed',
+                    'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
             }
@@ -106,7 +106,7 @@ class ContractController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Contract created successfully',
+                'message' => __('messages.contract_created'),
                 'data' => $contract
             ], 201);
 
@@ -114,7 +114,7 @@ class ContractController extends Controller
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create contract',
+                'message' => __('messages.failed_create_contract'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -136,7 +136,7 @@ class ContractController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Contract not found',
+                'message' => __('messages.contract_not_found'),
                 'error' => $e->getMessage()
             ], 404);
         }
@@ -171,7 +171,7 @@ class ContractController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve contracts',
+                'message' => __('messages.failed_retrieve_contracts'),
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -67,14 +67,14 @@ class StudentController extends Controller
         if ($student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student with the same first and last name already exists.'
+                'message' => __('messages.student_name_exists')
             ], 409);
         }
         $student = Student::where($request->only('code'))->first();
         if ($student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student with the same code already exists.'
+                'message' => __('messages.student_code_exists')
             ], 409);
         }
 
@@ -126,7 +126,7 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found.'
+                'message' => __('messages.student_not_found')
             ], 404);
         }
         return response()->json([
@@ -152,7 +152,7 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found.'
+                'message' => __('messages.student_not_found')
             ], 404);
         }
 
@@ -217,7 +217,7 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found.'
+                'message' => __('messages.student_not_found')
             ], 404);
         }
 
@@ -225,7 +225,7 @@ class StudentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Student deleted successfully.'
+            'message' => __('messages.student_deleted')
         ]); 
     }
     
@@ -243,7 +243,7 @@ class StudentController extends Controller
             if (!$parent) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Parent profile not found'
+                    'message' => __('messages.parent_profile_not_found')
                 ], 404);
             }
             
@@ -259,7 +259,7 @@ class StudentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve children',
+                'message' => __('messages.failed_retrieve_children'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -273,7 +273,7 @@ class StudentController extends Controller
             if (!$student) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Student not found'
+                    'message' => __('messages.student_not_found')
                 ], 404);
             }
 
@@ -290,7 +290,7 @@ class StudentController extends Controller
             if (!$class) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Class not found'
+                    'message' => __('messages.class_not_found')
                 ], 404);
             }
 
@@ -305,7 +305,7 @@ class StudentController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to affect student to class',
+                'message' => __('messages.failed_affect_student'),
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -334,7 +334,7 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Student not found.'
+                'message' => __('messages.student_not_found')
             ], 404);
         }
 

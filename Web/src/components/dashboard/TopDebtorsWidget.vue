@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { ContractSummary } from '@/types';
 
 interface Props {
@@ -7,6 +8,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { t } = useI18n();
 
 const topDebtors = computed(() =>
   [...props.contracts]
@@ -29,8 +31,8 @@ const debtSeverity = (pct: number) => {
   <div class="card">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h5 class="text-xl font-semibold">Top Debtors</h5>
-        <p class="text-sm text-muted-color mt-1">Contracts with the highest outstanding balance</p>
+        <h5 class="text-xl font-semibold">{{ t('dashboard.top_debtors') }}</h5>
+        <p class="text-sm text-muted-color mt-1">{{ t('dashboard.top_debtors_subtitle') }}</p>
       </div>
       <i class="pi pi-sort-amount-down text-2xl text-primary"></i>
     </div>
@@ -80,7 +82,7 @@ const debtSeverity = (pct: number) => {
 
     <div v-else class="text-center py-10">
       <i class="pi pi-check-circle text-4xl text-green-500 mb-3"></i>
-      <p class="font-semibold text-green-700 dark:text-green-400">All contracts fully paid!</p>
+      <p class="font-semibold text-green-700 dark:text-green-400">{{ t('dashboard.all_paid') }}</p>
     </div>
   </div>
 </template>
