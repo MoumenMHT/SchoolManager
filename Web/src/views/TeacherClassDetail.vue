@@ -36,7 +36,7 @@ const attSubjectId = ref<number | null>(null);
 const attLoading = ref(false);
 const attSaving = ref(false);
 const existingAttMap = ref<Map<number, AttendanceRecord>>(new Map());
-const attStatuses = ref<Record<number, 'present' | 'absent' | 'late'>>({});
+const attStatuses = ref<Record<number, 'present' | 'absent' | 'late' | 'excused'>>({});
 
 const attDateStr = computed(() => {
   const d = attDateObj.value;
@@ -57,6 +57,7 @@ const ATTENDANCE_OPTIONS = [
   { label: 'Present', value: 'present', severity: 'success', icon: 'pi pi-check' },
   { label: 'Absent', value: 'absent', severity: 'danger', icon: 'pi pi-times' },
   { label: 'Late', value: 'late', severity: 'warn', icon: 'pi pi-clock' },
+  { label: 'Excused', value: 'excused', severity: 'info', icon: 'pi pi-info-circle' },
 ];
 
 // ─── Grades state ─────────────────────────────────────────
@@ -119,9 +120,7 @@ async function loadClass() {
 }
 
 function initAttStatuses() {
-  const map: Record<number, 'present' | 'absent' | 'late'> = {};
-  for (const s of students.value) map[s.id] = 'present';
-  attStatuses.value = map;
+  attStatuses.value = {};
 }
 
 // ─── Attendance ───────────────────────────────────────────
@@ -129,30 +128,50 @@ async function loadAttendance() {
   if (!attSubjectId.value) return;
   attLoading.value = true;
   try {
-    let records: AttendanceRecord[];
+    // One call: fetch all records for this class from the start of time up to
+    // today. The broad start_date guarantees the backend returns historical data.
+    const allRecords = await AttendanceService.getClassAttendances(classId.value, {
+      start_date: '2000-01-01',
+      end_date: attDateStr.value,
+    });
 
-    if (sessionScheduleId.value) {
-      // Session mode: load by schedule_id for this date
-      records = await AttendanceService.getScheduleAttendances(sessionScheduleId.value, {
-        date: attDateStr.value,
-        class_id: classId.value,
-      });
-    } else {
-      // Manual mode: load by class + date + subject
-      records = await AttendanceService.getClassAttendances(classId.value, {
-        date: attDateStr.value,
-        subject_id: attSubjectId.value,
-      });
-    }
+    // ── 1. Isolate records that belong to this exact session ──────────────
+    const sessionRecords = sessionScheduleId.value
+      ? allRecords.filter(r => r.date === attDateStr.value && r.schedule_id === sessionScheduleId.value)
+      : allRecords.filter(r => r.date === attDateStr.value && r.subject_id === attSubjectId.value);
 
     const map = new Map<number, AttendanceRecord>();
-    for (const r of records) map.set(r.student_id, r);
+    for (const r of sessionRecords) map.set(r.student_id, r);
     existingAttMap.value = map;
 
     initAttStatuses();
     for (const [sid, rec] of map) {
-      const st = rec.status === 'excused' ? 'absent' : rec.status;
-      attStatuses.value[sid] = st as 'present' | 'absent' | 'late';
+      attStatuses.value[sid] = rec.status;
+    }
+
+    // ── 2. For students with no record yet, pre-fill from last known status ─
+    const studentsWithoutRecord = students.value.filter((s: any) => !map.has(s.id));
+
+    if (studentsWithoutRecord.length > 0) {
+      // Build the most-recent-status map, excluding only the current session's
+      // records. Other sessions from today are valid "last known" sources.
+      const lastMap = new Map<number, { date: string; id: number; status: 'present' | 'absent' | 'late' | 'excused' }>();
+      for (const rec of allRecords) {
+        const isCurrentSession = sessionScheduleId.value
+          ? rec.date === attDateStr.value && rec.schedule_id === sessionScheduleId.value
+          : rec.date === attDateStr.value && rec.subject_id === attSubjectId.value;
+        if (isCurrentSession) continue;
+
+        const existing = lastMap.get(rec.student_id);
+        // Keep most recent by date; use id as tiebreaker for same-day records
+        if (!existing || rec.date > existing.date || (rec.date === existing.date && rec.id > existing.id)) {
+          lastMap.set(rec.student_id, { date: rec.date, id: rec.id, status: rec.status });
+        }
+      }
+      for (const s of studentsWithoutRecord) {
+        const last = lastMap.get(s.id);
+        attStatuses.value[s.id] = last ? last.status : 'present';
+      }
     }
   } catch {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load attendance', life: 3000 });
@@ -415,6 +434,7 @@ onMounted(async () => {
                         :class="{
                           'bg-red-50/50 dark:bg-red-900/10':   attStatuses[student.id] === 'absent',
                           'bg-amber-50/50 dark:bg-amber-900/10': attStatuses[student.id] === 'late',
+                          'bg-blue-50/50 dark:bg-blue-900/10': attStatuses[student.id] === 'excused',
                           'hover:bg-green-50/30 dark:hover:bg-green-900/5': attStatuses[student.id] === 'present',
                         }"
                       >
@@ -422,20 +442,27 @@ onMounted(async () => {
                         <td class="p-3 font-medium text-surface-900 dark:text-surface-100">{{ student.first_name }} {{ student.last_name }}</td>
                         <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
                         <td class="p-3">
-                          <div class="flex justify-center gap-1.5 flex-wrap">
-                            <button
-                              v-for="opt in ATTENDANCE_OPTIONS" :key="opt.value"
-                              class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
-                              :class="attStatuses[student.id] === opt.value
-                                ? opt.value === 'present' ? 'bg-green-500 border-green-500 text-white'
-                                  : opt.value === 'absent' ? 'bg-red-500 border-red-500 text-white'
-                                  : 'bg-amber-500 border-amber-500 text-white'
-                                : 'bg-transparent border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:border-surface-400'"
-                              @click="attStatuses[student.id] = opt.value as any"
-                            >
-                              <i :class="opt.icon" class="text-[10px]"></i> {{ opt.label }}
-                            </button>
-                          </div>
+                          
+                        <div class="flex justify-center gap-1.5 flex-wrap">
+                          <button
+                            v-for="opt in ATTENDANCE_OPTIONS"
+                            :key="opt.value"
+                            v-show="opt.value !== 'excused' || attStatuses[student.id] === 'excused'"
+                            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
+                            :class="attStatuses[student.id] === opt.value
+                              ? opt.value === 'present'  ? 'bg-green-500 border-green-500 text-white'
+                              : opt.value === 'absent'   ? 'bg-red-500 border-red-500 text-white'
+                              : opt.value === 'late'     ? 'bg-amber-500 border-amber-500 text-white'
+                              : opt.value === 'excused'  ? 'bg-blue-500 border-blue-500 text-white'
+                              : ''
+                              : 'bg-transparent border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:border-surface-400'"
+                            @click="attStatuses[student.id] = opt.value as any"
+                          >
+                            <i :class="opt.icon" class="text-[10px]"></i>
+                            {{ opt.label }}
+                          </button>
+                        </div>
+                          
                         </td>
                       </tr>
                     </tbody>

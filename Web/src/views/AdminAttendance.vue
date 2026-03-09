@@ -36,11 +36,18 @@ const attendanceLoading = ref(false);
 // Students in the selected class
 const classStudents = ref<any[]>([]);
 
+// Today's overview (shown when no class is selected)
+const todayRecords = ref<Array<{ classId: number; records: AttendanceRecord[] }>>([]);
+const todayLoading = ref(false);
+
 // Student attendance dialog
 const studentDialog = ref(false);
 const selectedStudent = ref<any>(null);
 const studentAttendances = ref<AttendanceRecord[]>([]);
 const studentAttLoading = ref(false);
+
+// Excuse in-flight tracking
+const excusing = ref<number[]>([]);
 
 // ─── Helpers ──────────────────────────────────────────────
 function formatDateStr(d: Date) {
@@ -228,6 +235,24 @@ const weekAttendanceGrid = computed(() => {
   });
 });
 
+// ─── Today overview computeds ─────────────────────────────
+
+const todaySummaries = computed(() =>
+  classes.value
+    .filter((cls: any) => (cls.students ?? []).length > 0)
+    .map((cls: any) => {
+      const entry = todayRecords.value.find(r => r.classId === cls.id);
+      const records = entry?.records ?? [];
+      const present = records.filter(r => r.status === 'present').length;
+      const absent  = records.filter(r => r.status === 'absent').length;
+      const late    = records.filter(r => r.status === 'late').length;
+      const excused = records.filter(r => r.status === 'excused').length;
+      const total   = (cls.students ?? []).length;
+      const rate    = records.length > 0 ? Math.round((present / records.length) * 100) : null;
+      return { cls, present, absent, late, excused, total, marked: records.length, rate };
+    })
+);
+
 // ─── Load ─────────────────────────────────────────────────
 async function loadClasses() {
   classesLoading.value = true;
@@ -239,6 +264,24 @@ async function loadClasses() {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load classes', life: 3000 });
   } finally {
     classesLoading.value = false;
+  }
+}
+
+async function loadTodayOverview() {
+  if (classes.value.length === 0) return;
+  todayLoading.value = true;
+  try {
+    const today = formatDateStr(new Date());
+    const results = await Promise.all(
+      classes.value.map(cls =>
+        AttendanceService.getClassAttendances(cls.id, { date: today })
+          .then(records => ({ classId: cls.id, records }))
+          .catch(() => ({ classId: cls.id, records: [] as AttendanceRecord[] }))
+      )
+    );
+    todayRecords.value = results;
+  } finally {
+    todayLoading.value = false;
   }
 }
 
@@ -303,8 +346,23 @@ async function openStudentTimeline(student: any) {
   }
 }
 
+async function excuseAttendance(record: AttendanceRecord) {
+  excusing.value.push(record.id);
+  try {
+    await AttendanceService.updateAttendance(record.id, { status: 'excused' });
+    const idx = attendanceRecords.value.findIndex(r => r.id === record.id);
+    if (idx !== -1) attendanceRecords.value[idx] = { ...attendanceRecords.value[idx], status: 'excused' };
+    const sidx = studentAttendances.value.findIndex(r => r.id === record.id);
+    if (sidx !== -1) studentAttendances.value[sidx] = { ...studentAttendances.value[sidx], status: 'excused' };
+    toast.add({ severity: 'success', summary: 'Excused', detail: 'Student marked as excused', life: 2000 });
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to excuse student', life: 3000 });
+  } finally {
+    excusing.value = excusing.value.filter(id => id !== record.id);
+  }
+}
+
 const studentDialogHeader = computed(() => {
-  const name = `${selectedStudent.value?.first_name ?? ''} ${selectedStudent.value?.last_name ?? ''}`.trim();
   return viewMode.value === 'week'
     ? `${name} – ${weekLabel.value}`
     : `${name} – ${selectedDateStr.value}`;
@@ -364,7 +422,10 @@ watch(selectedClassId, () => {
 
 watch(selectedDate, () => { if (selectedClassId.value) loadClassData(); });
 
-onMounted(loadClasses);
+onMounted(async () => {
+  await loadClasses();
+  await loadTodayOverview();
+});
 </script>
 
 <template>
@@ -385,8 +446,9 @@ onMounted(loadClasses);
           :options="classes"
           option-label="name"
           option-value="id"
-          placeholder="Select class"
+          placeholder="All classes"
           :loading="classesLoading"
+          show-clear
           class="w-full sm:w-64"
         />
       </div>
@@ -457,10 +519,78 @@ onMounted(loadClasses);
       </div>
     </div>
 
-    <!-- No class selected -->
-    <div v-if="!selectedClassId" class="flex flex-col items-center py-20 text-surface-400">
-      <i class="pi pi-building text-5xl mb-3"></i>
-      <p class="text-lg">Select a class to view attendance</p>
+    <!-- No class selected → Today's Attendance Overview -->
+    <div v-if="!selectedClassId">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-0">Today's Attendance</h2>
+          <p class="text-sm text-surface-500 dark:text-surface-400">{{ formatDateStr(new Date()) }} — all classes</p>
+        </div>
+        <Button icon="pi pi-refresh" text rounded :loading="todayLoading" @click="loadTodayOverview" />
+      </div>
+
+      <div v-if="todayLoading && todaySummaries.length === 0" class="flex justify-center py-16">
+        <ProgressSpinner style="width: 40px; height: 40px" />
+      </div>
+
+      <div v-else-if="todaySummaries.length === 0" class="flex flex-col items-center py-20 text-surface-400">
+        <i class="pi pi-building text-5xl mb-3"></i>
+        <p class="text-lg">No classes found.</p>
+      </div>
+
+      <div v-else class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-surface-50 dark:bg-surface-800/80">
+              <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Class</th>
+              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
+                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Present</span>
+              </th>
+              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
+                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Absent</span>
+              </th>
+              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">
+                <span class="flex items-center justify-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Late</span>
+              </th>
+              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">Students</th>
+              <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Rate</th>
+              <th class="p-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in todaySummaries"
+              :key="row.cls.id"
+              class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
+            >
+              <td class="p-3">
+                <div class="font-medium text-surface-900 dark:text-surface-100">{{ row.cls.name }}</div>
+                <div v-if="row.cls.level" class="text-xs text-surface-400 dark:text-surface-500">{{ row.cls.level }}</div>
+              </td>
+              <td class="p-3 text-center font-semibold text-green-700 dark:text-green-300">{{ row.present }}</td>
+              <td class="p-3 text-center font-semibold text-red-700 dark:text-red-300">{{ row.absent }}</td>
+              <td class="p-3 text-center font-semibold text-amber-700 dark:text-amber-300 hidden sm:table-cell">{{ row.late }}</td>
+              <td class="p-3 text-center text-surface-500 dark:text-surface-400 hidden md:table-cell">
+                <span class="text-xs">{{ row.marked }} / {{ row.total }}</span>
+              </td>
+              <td class="p-3 text-center">
+                <span v-if="row.rate !== null" class="font-semibold text-sm" :class="rateColor(row.rate)">{{ row.rate }}%</span>
+                <span v-else class="text-xs text-surface-400 dark:text-surface-500 italic">Not marked</span>
+              </td>
+              <td class="p-3 text-right">
+                <Button
+                  label="View"
+                  icon="pi pi-arrow-right"
+                  size="small"
+                  text
+                  severity="secondary"
+                  @click="selectedClassId = row.cls.id"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Main content -->
@@ -665,13 +795,16 @@ onMounted(loadClasses);
                         </td>
                         <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
                         <td class="p-3">
-                          <div class="flex justify-center gap-1 flex-wrap">
+                          <div class="flex justify-center gap-2 flex-wrap">
                             <template v-for="slot in filteredScheduleSlots" :key="slot.id">
-                              <div
-                                class="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                                :class="statusColor((attBySchedule[slot.id] ?? []).find(r => r.student_id === student.id)?.status ?? null)"
-                              >
-                                {{ formatTime(slot.start_time) }}
+                              <div class="flex items-center gap-1">
+                                <div
+                                  class="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                                  :class="statusColor((attBySchedule[slot.id] ?? []).find(r => r.student_id === student.id)?.status ?? null)"
+                                >
+                                  {{ formatTime(slot.start_time) }}
+                                </div>
+                                
                               </div>
                             </template>
                             <span v-if="filteredScheduleSlots.length === 0" class="text-surface-300 dark:text-surface-600 text-xs">—</span>
@@ -962,14 +1095,24 @@ onMounted(loadClasses);
             </div>
           </div>
 
-          <!-- Status badge -->
-          <span
-            class="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full"
-            :class="statusColor(rec.status)"
-          >
-            <i :class="statusIcon(rec.status)" class="mr-1 text-[10px]"></i>
-            {{ statusLabel(rec.status) }}
-          </span>
+          <!-- Status badge + Excuse action -->
+          <div class="shrink-0 flex items-center gap-2">
+            <span
+              class="text-xs font-semibold px-2.5 py-1 rounded-full"
+              :class="statusColor(rec.status)"
+            >
+              <i :class="statusIcon(rec.status)" class="mr-1 text-[10px]"></i>
+              {{ statusLabel(rec.status) }}
+            </span>
+            <button
+              v-if="rec.status === 'absent'"
+              class="text-[10px] px-2 py-1 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60 font-semibold border border-blue-200 dark:border-blue-700 transition-colors disabled:opacity-50"
+              :disabled="excusing.includes(rec.id)"
+              @click="excuseAttendance(rec)"
+            >
+              <i class="pi pi-info-circle mr-1 text-[9px]"></i>Excuse
+            </button>
+          </div>
         </div>
       </div>
     </Dialog>

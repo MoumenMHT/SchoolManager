@@ -99,8 +99,9 @@ class AttendanceService {
   ): Promise<void> {
     const records = entries.map((entry) => {
       const existing = existingMap.get(entry.student_id);
-      if (existing) {
-        return { id: existing.id, status: entry.status, reason: entry.reason ?? null };
+      // Only update an existing record when excusing an absent student; always create otherwise
+      if (existing && entry.status === 'excused' && existing.status === 'absent') {
+        return { id: existing.id, status: 'excused', reason: entry.reason ?? null };
       }
       return {
         student_id:  entry.student_id,
