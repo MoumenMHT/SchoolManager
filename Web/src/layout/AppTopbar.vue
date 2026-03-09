@@ -84,7 +84,7 @@ const currentLocale = computed(() => SUPPORTED_LOCALES.find(l => l.code === loca
                         class="layout-topbar-action"
                         :title="t('topbar.language')"
                     >
-                        <span class="text-base">{{ currentLocale.flag }}</span>
+                        <i class="pi pi-globe"></i>
                     </button>
                     <div class="hidden absolute end-0 top-full mt-1 z-50 bg-surface-0 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl shadow-lg min-w-36 p-1">
                         <button
@@ -94,7 +94,7 @@ const currentLocale = computed(() => SUPPORTED_LOCALES.find(l => l.code === loca
                             :class="{ 'font-semibold text-primary-600 dark:text-primary-400': locale === loc.code }"
                             @click="changeLocale(loc.code)"
                         >
-                            <span>{{ loc.flag }}</span>
+                            <span class="text-xs font-mono uppercase opacity-60">{{ loc.code }}</span>
                             <span>{{ loc.label }}</span>
                         </button>
                     </div>
