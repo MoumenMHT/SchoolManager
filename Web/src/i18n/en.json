@@ -363,7 +363,7 @@
     "enter_last_name": "Enter last name",
     "enter_cin": "Enter national ID number",
     "phone_placeholder": "+212 xxx xxx xxx",
-    "email_placeholder": "email@example.com",
+    "email_placeholder": "email{'@'}example.com",
     "enter_profession": "Enter profession",
     "enter_student_code": "Enter student code",
     "select_birth_date": "Select date of birth",
