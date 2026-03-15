@@ -90,6 +90,28 @@ const genderOptions = computed(() => [
   { label: t('common.female'), value: 'female' }
 ]);
 
+const birthDateModel = computed<Date | null>({
+  get() {
+    const value = teacher.value.birth_date;
+    if (!value) return null;
+    return value instanceof Date ? value : new Date(value);
+  },
+  set(value) {
+    teacher.value.birth_date = value;
+  }
+});
+
+const hireDateModel = computed<Date | null>({
+  get() {
+    const value = teacher.value.hire_date;
+    if (!value) return null;
+    return value instanceof Date ? value : new Date(value);
+  },
+  set(value) {
+    teacher.value.hire_date = value;
+  }
+});
+
 const schoolHours = [
   { hour: 8, label: '08:00 - 09:00' },
   { hour: 9, label: '09:00 - 10:00' },
@@ -1068,13 +1090,13 @@ const removeAvailabilityRow = (index: number) => {
             </label>
             <DatePicker
               id="birth_date"
-              v-model="teacher.birth_date"
+              v-model="birthDateModel"
               dateFormat="yy-mm-dd"
               showIcon
-              :invalid="submitted && !teacher.birth_date"
+              :invalid="submitted && !birthDateModel"
               :placeholder="t('teachers.select_birth_date')"
             />
-            <small v-if="submitted && !teacher.birth_date" class="text-red-500">
+            <small v-if="submitted && !birthDateModel" class="text-red-500">
               {{ t('validation.birth_date_required') }}
             </small>
           </div>
@@ -1085,13 +1107,13 @@ const removeAvailabilityRow = (index: number) => {
             </label>
             <DatePicker
               id="hire_date"
-              v-model="teacher.hire_date"
+              v-model="hireDateModel"
               dateFormat="yy-mm-dd"
               showIcon
-              :invalid="submitted && !teacher.hire_date"
+              :invalid="submitted && !hireDateModel"
               :placeholder="t('teachers.select_hire_date')"
             />
-            <small v-if="submitted && !teacher.hire_date" class="text-red-500">
+            <small v-if="submitted && !hireDateModel" class="text-red-500">
               {{ t('validation.hire_date_required') }}
             </small>
           </div>
