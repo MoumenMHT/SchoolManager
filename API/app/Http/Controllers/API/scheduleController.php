@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Schedule;
 use App\Models\ClassSubjectTeacher;
+use App\Models\LevelSubject;
+use App\Models\Teacher;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +15,16 @@ use Carbon\Carbon;
 
 class scheduleController extends Controller
 {
+    private array $generationDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    private array $sessionSlots = [
+        ['start' => '08:00', 'end' => '09:00', 'index' => 1],
+        ['start' => '09:00', 'end' => '10:00', 'index' => 2],
+        ['start' => '10:00', 'end' => '11:00', 'index' => 3],
+        ['start' => '11:00', 'end' => '12:00', 'index' => 4],
+        ['start' => '13:00', 'end' => '14:00', 'index' => 5],
+        ['start' => '14:00', 'end' => '15:00', 'index' => 6],
+        ['start' => '15:00', 'end' => '16:00', 'index' => 7],
+    ];
     /**
      * Display a listing of schedules with advanced filtering and pagination.
      * 
@@ -170,7 +182,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_schedules'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -276,7 +288,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_create_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -299,7 +311,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.schedule_not_found'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 404);
         }
     }
@@ -411,7 +423,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_update_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -434,7 +446,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_delete_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -486,7 +498,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_class_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -521,7 +533,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_teacher_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -550,7 +562,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_subject_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -601,7 +613,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_day_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -632,7 +644,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_room_schedule'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -748,7 +760,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_create_schedules'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -843,7 +855,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_check_conflicts'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -915,7 +927,7 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_get_available_slots'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -970,12 +982,515 @@ class scheduleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_get_weekly_overview'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate schedules for all classes based on existing class-teacher-subject assignments.
+     */
+    public function generateAll(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'academic_year' => 'required|string',
+                'clear_existing' => 'nullable|boolean',
+                'save' => 'nullable|boolean',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.validation_failed'),
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $academicYear = $request->academic_year;
+            $clearExisting = $request->get('clear_existing', true);
+            $shouldSave = $request->get('save', true);
+
+            $assignments = ClassSubjectTeacher::with([
+                'class.levelProfile',
+                'subject',
+                'teacher.availabilities'
+            ])->where('academic_year', $academicYear)->get();
+
+            if ($assignments->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No class assignments found for this academic year.'
+                ], 422);
+            }
+
+            $teacherSessionMap = [];
+            $classSessionMap = [];
+            $classImportantPerDay = [];
+            $generatedRows = [];
+            $unfilled = [];
+
+            $assignmentDemands = [];
+            foreach ($assignments as $assignment) {
+                $levelId = $assignment->class?->level_id;
+                $levelSubject = LevelSubject::where('level_id', $levelId)
+                    ->where('subject_id', $assignment->subject_id)
+                    ->first();
+
+                if (!$levelSubject) {
+                    $unfilled[] = [
+                        'assignment_id' => $assignment->id,
+                        'reason' => 'Missing level_subjects configuration (coefficient/weekly sessions).'
+                    ];
+                    continue;
+                }
+
+                $assignmentDemands[] = [
+                    'assignment' => $assignment,
+                    'weekly_sessions_required' => (int) $levelSubject->weekly_sessions_required,
+                    'coefficient' => (int) $levelSubject->coefficient,
+                    'is_important' => (int) $levelSubject->coefficient >= 3,
+                ];
+            }
+
+            if (empty($assignmentDemands)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No schedulable assignments found. Check level subject configuration.'
+                ], 422);
+            }
+
+            usort($assignmentDemands, function ($a, $b) {
+                $teacherA = $a['assignment']->teacher;
+                $teacherB = $b['assignment']->teacher;
+                $rankA = ($teacherA && $teacherA->contract_type === 'permanent') ? 0 : 1;
+                $rankB = ($teacherB && $teacherB->contract_type === 'permanent') ? 0 : 1;
+
+                if ($rankA !== $rankB) {
+                    return $rankA <=> $rankB;
+                }
+
+                if ($a['coefficient'] !== $b['coefficient']) {
+                    return $b['coefficient'] <=> $a['coefficient'];
+                }
+
+                return $a['assignment']->teacher_id <=> $b['assignment']->teacher_id;
+            });
+
+            foreach ($assignmentDemands as $demand) {
+                $assignment = $demand['assignment'];
+                $required = $demand['weekly_sessions_required'];
+                $placed = 0;
+
+                for ($i = 0; $i < $required; $i++) {
+                    $candidate = $this->findBestSlotForDemand(
+                        $demand,
+                        $teacherSessionMap,
+                        $classSessionMap,
+                        $classImportantPerDay
+                    );
+
+                    if (!$candidate) {
+                        break;
+                    }
+
+                    $teacherId = $assignment->teacher_id;
+                    $classId = $assignment->class_id;
+                    $day = $candidate['day'];
+                    $start = $candidate['start'];
+                    $end = $candidate['end'];
+
+                    $teacherSessionMap[$teacherId][$day][$start] = true;
+                    $classSessionMap[$classId][$day][$start] = true;
+
+                    if ($demand['is_important']) {
+                        $classImportantPerDay[$classId][$day] = ($classImportantPerDay[$classId][$day] ?? 0) + 1;
+                    }
+
+                    $generatedRows[] = [
+                        'class_subject_teacher_id' => $assignment->id,
+                        'day' => $day,
+                        'start_time' => $start,
+                        'end_time' => $end,
+                        'room' => null,
+                    ];
+
+                    $placed++;
+                }
+
+                if ($placed < $required) {
+                    $diagnosis = $this->diagnoseUnfilledReason(
+                        $demand,
+                        $teacherSessionMap,
+                        $classSessionMap,
+                        $classImportantPerDay
+                    );
+
+                    $unfilled[] = [
+                        'assignment_id' => $assignment->id,
+                        'class_id' => $assignment->class_id,
+                        'teacher_id' => $assignment->teacher_id,
+                        'subject_id' => $assignment->subject_id,
+                        'class_name' => $assignment->class?->name,
+                        'teacher_name' => trim(($assignment->teacher?->first_name ?? '') . ' ' . ($assignment->teacher?->last_name ?? '')),
+                        'subject_name' => $assignment->subject?->name,
+                        'required' => $required,
+                        'placed' => $placed,
+                        'reason' => $diagnosis['message'],
+                        'diagnostics' => $diagnosis['counts'],
+                    ];
+                }
+            }
+
+            $savedCount = 0;
+            if ($shouldSave) {
+                DB::transaction(function () use ($academicYear, $clearExisting, $generatedRows, &$savedCount) {
+                    if ($clearExisting) {
+                        Schedule::whereHas('assignment', function ($q) use ($academicYear) {
+                            $q->where('academic_year', $academicYear);
+                        })->delete();
+                    }
+
+                    foreach ($generatedRows as $row) {
+                        Schedule::create($row);
+                        $savedCount++;
+                    }
+                });
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $shouldSave ? 'Schedules generated successfully.' : 'Schedule preview generated.',
+                'summary' => [
+                    'academic_year' => $academicYear,
+                    'generated_sessions' => count($generatedRows),
+                    'saved_sessions' => $savedCount,
+                    'unfilled_items' => count($unfilled),
+                    'clear_existing' => $clearExisting,
+                    'saved' => $shouldSave,
+                ],
+                'unfilled' => $unfilled,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate schedules.',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Export schedules to an Excel-compatible file (.xls HTML table).
+     */
+    public function exportExcel(Request $request)
+    {
+        try {
+            $academicYear = $request->get('academic_year');
+
+            $query = Schedule::with(['assignment.class', 'assignment.subject', 'assignment.teacher']);
+            if ($academicYear) {
+                $query->whereHas('assignment', function ($q) use ($academicYear) {
+                    $q->where('academic_year', $academicYear);
+                });
+            }
+
+            $schedules = $query->get();
+
+            $classRows = $schedules->map(function ($s) {
+                return [
+                    'Class' => $s->assignment?->class?->name,
+                    'Day' => $s->day,
+                    'Start' => substr((string) $s->start_time, 0, 5),
+                    'End' => substr((string) $s->end_time, 0, 5),
+                    'Subject' => $s->assignment?->subject?->name,
+                    'Teacher' => trim(($s->assignment?->teacher?->first_name ?? '') . ' ' . ($s->assignment?->teacher?->last_name ?? '')),
+                    'Room' => $s->room,
+                ];
+            })->sortBy(['Class', 'Day', 'Start'])->values();
+
+            $teacherRows = $schedules->map(function ($s) {
+                return [
+                    'Teacher' => trim(($s->assignment?->teacher?->first_name ?? '') . ' ' . ($s->assignment?->teacher?->last_name ?? '')),
+                    'Day' => $s->day,
+                    'Start' => substr((string) $s->start_time, 0, 5),
+                    'End' => substr((string) $s->end_time, 0, 5),
+                    'Class' => $s->assignment?->class?->name,
+                    'Subject' => $s->assignment?->subject?->name,
+                    'Room' => $s->room,
+                ];
+            })->sortBy(['Teacher', 'Day', 'Start'])->values();
+
+            $html = '<html><head><meta charset="UTF-8"></head><body>';
+            $html .= '<h2>Schedules by Class</h2>';
+            $html .= $this->buildHtmlTable($classRows->all());
+            $html .= '<br/><h2>Schedules by Teacher</h2>';
+            $html .= $this->buildHtmlTable($teacherRows->all());
+            $html .= '</body></html>';
+
+            $fileName = 'schedules_' . ($academicYear ?: 'all') . '.xls';
+
+            return response($html, 200, [
+                'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to export schedules.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
 
     // Helper methods for conflict checking
+
+    private function findBestSlotForDemand(array $demand, array $teacherSessionMap, array $classSessionMap, array $classImportantPerDay): ?array
+    {
+        $assignment = $demand['assignment'];
+        $teacher = $assignment->teacher;
+        $teacherId = $assignment->teacher_id;
+        $classId = $assignment->class_id;
+
+        $best = null;
+        $bestScore = -999999;
+
+        foreach ($this->generationDays as $day) {
+            foreach ($this->sessionSlots as $slot) {
+                $start = $slot['start'];
+                $end = $slot['end'];
+
+                if (!$this->isTeacherAvailableForSlot($teacher, $day, $start, $end)) {
+                    continue;
+                }
+
+                if (!empty($teacherSessionMap[$teacherId][$day][$start])) {
+                    continue;
+                }
+
+                if (!empty($classSessionMap[$classId][$day][$start])) {
+                    continue;
+                }
+
+                if ($demand['is_important'] && (($classImportantPerDay[$classId][$day] ?? 0) >= 2)) {
+                    continue;
+                }
+
+                $score = 0;
+                if ($demand['is_important']) {
+                    $score += $slot['index'] <= 4 ? 50 : -20;
+                }
+
+                $teacherDailyCount = count($teacherSessionMap[$teacherId][$day] ?? []);
+                if ($teacher?->contract_type === 'permanent') {
+                    if ($teacherDailyCount < 4) {
+                        $score += 10;
+                    }
+                    if ($teacherDailyCount >= 6) {
+                        $score -= 40;
+                    }
+                } else {
+                    if ($teacherDailyCount >= 6) {
+                        $score -= 30;
+                    }
+                }
+
+                $classDailyCount = count($classSessionMap[$classId][$day] ?? []);
+                if ($classDailyCount >= 7) {
+                    continue;
+                }
+                $score -= ($classDailyCount * 2);
+
+                $score -= $this->gapPenalty($teacherSessionMap[$teacherId][$day] ?? [], $start);
+                $score -= $this->gapPenalty($classSessionMap[$classId][$day] ?? [], $start);
+
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $best = [
+                        'day' => $day,
+                        'start' => $start,
+                        'end' => $end,
+                    ];
+                }
+            }
+        }
+
+        return $best;
+    }
+
+    private function isTeacherAvailableForSlot($teacher, string $day, string $start, string $end): bool
+    {
+        if (!$teacher) {
+            return false;
+        }
+
+        $availabilities = $teacher->availabilities ?? collect();
+        if ($availabilities->isEmpty()) {
+            // If no availability defined, assume Monday-Friday 08:00-16:00.
+            return in_array($day, $this->generationDays) && $start >= '08:00' && $end <= '16:00';
+        }
+
+        foreach ($availabilities as $availability) {
+            if ($availability->day !== $day) {
+                continue;
+            }
+
+            $aStart = substr((string) $availability->start_time, 0, 5);
+            $aEnd = substr((string) $availability->end_time, 0, 5);
+
+            if ($start >= $aStart && $end <= $aEnd) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function gapPenalty(array $existingSlotsByStart, string $candidateStart): int
+    {
+        if (empty($existingSlotsByStart)) {
+            return 0;
+        }
+
+        $candidateIndex = $this->slotIndex($candidateStart);
+        if ($candidateIndex === null) {
+            return 0;
+        }
+
+        $indices = [];
+        foreach (array_keys($existingSlotsByStart) as $start) {
+            $index = $this->slotIndex($start);
+            if ($index !== null) {
+                $indices[] = $index;
+            }
+        }
+
+        if (empty($indices)) {
+            return 0;
+        }
+
+        sort($indices);
+        $closestDistance = min(array_map(fn ($idx) => abs($idx - $candidateIndex), $indices));
+        return max(0, ($closestDistance - 1) * 3);
+    }
+
+    private function slotIndex(string $start): ?int
+    {
+        foreach ($this->sessionSlots as $slot) {
+            if ($slot['start'] === $start) {
+                return $slot['index'];
+            }
+        }
+
+        return null;
+    }
+
+    private function buildHtmlTable(array $rows): string
+    {
+        if (empty($rows)) {
+            return '<p>No data available.</p>';
+        }
+
+        $headers = array_keys($rows[0]);
+        $html = '<table border="1" cellspacing="0" cellpadding="4"><thead><tr>';
+        foreach ($headers as $header) {
+            $html .= '<th>' . e($header) . '</th>';
+        }
+        $html .= '</tr></thead><tbody>';
+
+        foreach ($rows as $row) {
+            $html .= '<tr>';
+            foreach ($headers as $header) {
+                $html .= '<td>' . e((string) ($row[$header] ?? '')) . '</td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody></table>';
+        return $html;
+    }
+
+    private function diagnoseUnfilledReason(array $demand, array $teacherSessionMap, array $classSessionMap, array $classImportantPerDay): array
+    {
+        $assignment = $demand['assignment'];
+        $teacher = $assignment->teacher;
+        $teacherId = $assignment->teacher_id;
+        $classId = $assignment->class_id;
+
+        $counts = [
+            'outside_teacher_availability' => 0,
+            'teacher_slot_conflict' => 0,
+            'class_slot_conflict' => 0,
+            'important_subject_daily_limit' => 0,
+            'class_day_capacity_reached' => 0,
+            'candidate_slots' => 0,
+        ];
+
+        foreach ($this->generationDays as $day) {
+            foreach ($this->sessionSlots as $slot) {
+                $start = $slot['start'];
+                $end = $slot['end'];
+
+                if (!$this->isTeacherAvailableForSlot($teacher, $day, $start, $end)) {
+                    $counts['outside_teacher_availability']++;
+                    continue;
+                }
+
+                if (!empty($teacherSessionMap[$teacherId][$day][$start])) {
+                    $counts['teacher_slot_conflict']++;
+                    continue;
+                }
+
+                if (!empty($classSessionMap[$classId][$day][$start])) {
+                    $counts['class_slot_conflict']++;
+                    continue;
+                }
+
+                if ($demand['is_important'] && (($classImportantPerDay[$classId][$day] ?? 0) >= 2)) {
+                    $counts['important_subject_daily_limit']++;
+                    continue;
+                }
+
+                $classDailyCount = count($classSessionMap[$classId][$day] ?? []);
+                if ($classDailyCount >= 7) {
+                    $counts['class_day_capacity_reached']++;
+                    continue;
+                }
+
+                $counts['candidate_slots']++;
+            }
+        }
+
+        if ($counts['candidate_slots'] > 0) {
+            return [
+                'message' => 'No optimal slot could be selected after prioritization; consider manual adjustment for this assignment.',
+                'counts' => $counts,
+            ];
+        }
+
+        $map = [
+            'outside_teacher_availability' => 'Teacher availability windows are too restrictive for remaining sessions.',
+            'teacher_slot_conflict' => 'Teacher already occupied in all remaining available slots.',
+            'class_slot_conflict' => 'Class timetable already occupied in all feasible slots.',
+            'important_subject_daily_limit' => 'Daily important-subject limit reached for this class.',
+            'class_day_capacity_reached' => 'Class reached daily session capacity (7 sessions).',
+        ];
+
+        $topKey = 'outside_teacher_availability';
+        $topValue = -1;
+        foreach ($map as $key => $message) {
+            if (($counts[$key] ?? 0) > $topValue) {
+                $topValue = $counts[$key];
+                $topKey = $key;
+            }
+        }
+
+        return [
+            'message' => $map[$topKey] ?? 'Not enough available slots under current constraints.',
+            'counts' => $counts,
+        ];
+    }
 
     private function checkTeacherConflict($teacherId, $day, $startTime, $endTime, $excludeId = null)
     {

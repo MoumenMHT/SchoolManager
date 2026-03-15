@@ -5,18 +5,14 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Parent as ParentModel;
-use App\Models\Student;
-use App\Models\Teacher;
-use App\Models\Subject;
-use App\Models\ClassModel;
+use App\Models\Level;
+use App\Models\LevelSubject;
 use App\Models\Fee;
 use App\Models\Contract;
 use App\Models\Bill;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\ParentFee;
-use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
@@ -29,6 +25,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('🌱 Starting database seeding...');
+
+        if (User::where('email', 'admin@schoolmanager.com')->exists()) {
+            $this->command->info('Seed baseline already exists, skipping duplicate seeding.');
+            return;
+        }
 
         // Create admin user
         $this->command->info('Creating admin user...');
@@ -62,15 +63,38 @@ class DatabaseSeeder extends Seeder
             $createdSubjects[] = \App\Models\Subject::create($subject);
         }
 
-        // Create subject coefficients for different levels
-        $this->command->info('Creating subject coefficients...');
-        $levels = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+        // Create levels
+        $this->command->info('Creating levels...');
+        $levels = [
+            ['name' => '1er', 'cycle' => 'cem', 'year_number' => 1, 'track' => null, 'sort_order' => 6],
+            ['name' => '2em', 'cycle' => 'cem', 'year_number' => 2, 'track' => null, 'sort_order' => 7],
+            ['name' => '3em', 'cycle' => 'cem', 'year_number' => 3, 'track' => null, 'sort_order' => 8],
+            ['name' => '4em', 'cycle' => 'cem', 'year_number' => 4, 'track' => null, 'sort_order' => 9],
+            
+        ];
+
+        $createdLevelsByName = [];
+        foreach ($levels as $levelData) {
+            $level = Level::create([
+                'name' => $levelData['name'],
+                'cycle' => $levelData['cycle'],
+                'year_number' => $levelData['year_number'],
+                'track' => $levelData['track'],
+                'sort_order' => $levelData['sort_order'],
+                'is_active' => true,
+            ]);
+            $createdLevelsByName[$level->name] = $level;
+        }
+
+        // Create level-subject configuration (replacement for subject_coefficients)
+        $this->command->info('Creating level subjects configuration...');
         foreach ($createdSubjects as $subject) {
-            foreach ($levels as $level) {
-                \App\Models\SubjectCoefficient::create([
+            foreach ($createdLevelsByName as $level) {
+                LevelSubject::create([
+                    'level_id' => $level->id,
                     'subject_id' => $subject->id,
-                    'class_level' => $level,
                     'coefficient' => rand(1, 4),
+                    'weekly_sessions_required' => $this->getWeeklySessionsForSubject($subject->code),
                 ]);
             }
         }
@@ -86,7 +110,7 @@ class DatabaseSeeder extends Seeder
                 'email' => 'teacher' . ($i + 1) . '@schoolmanager.com',
                 'password' => \Illuminate\Support\Facades\Hash::make('password123'),
                 'role' => 'teacher',
-                'phone' => '+212' . fake()->numerify('6########'),
+                'phone' => '+213' . fake()->numerify('6########'),
                 'address' => fake()->address(),
                 'is_active' => true,
             ]);
@@ -100,9 +124,26 @@ class DatabaseSeeder extends Seeder
                 'specialization' => $specializations[array_rand($specializations)],
                 'hire_date' => fake()->date('Y-m-d', '-5 years'),
                 'salary' => fake()->randomFloat(2, 3000, 8000),
+                'contract_type' => fake()->boolean(30) ? 'part_time' : 'permanent',
+                'weekly_hours' => fake()->boolean(30) ? rand(10, 18) : 20,
             ]);
 
             $teachers[] = $teacher;
+
+            // Seed availability windows
+            $availableDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            if ($teacher->contract_type === 'part_time') {
+                $availableDays = fake()->randomElements($availableDays, rand(3, 4));
+            }
+
+            foreach ($availableDays as $day) {
+                \App\Models\TeacherAvailability::create([
+                    'teacher_id' => $teacher->id,
+                    'day' => $day,
+                    'start_time' => $teacher->contract_type === 'part_time' ? '09:00' : '08:00',
+                    'end_time' => $teacher->contract_type === 'part_time' ? '13:00' : '16:00',
+                ]);
+            }
 
             // Assign subjects to teachers
             $randomSubjects = fake()->randomElements($createdSubjects, rand(1, 3));
@@ -113,6 +154,35 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
+
+        //create supervisors (5 supervisors)
+        $this->command->info('Creating 5 supervisors...');
+        $supervisors = [];
+        for ($i = 0; $i < 5; $i++) {
+            $supervisorUser = \App\Models\User::create([
+                'username' => fake()->name(),
+                'email' => 'supervisor' . ($i + 1) . '@schoolmanager.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                'role' => 'supervisor',
+                'phone' => '+213' . fake()->numerify('6########'),
+                'address' => fake()->address(),
+                'is_active' => true,
+            ]);
+
+            $supervisor = \App\Models\Supervisor::create([
+                'user_id' => $supervisorUser->id,
+                'first_name' => fake()->firstName(),
+                'last_name' => fake()->lastName(),
+                'phone' => fake()->boolean(50) ? '+212' . fake()->numerify('6########') : null,
+                'hire_date' => fake()->date('Y-m-d', '-10 years'),
+                'status' => fake()->boolean(80) ? 'active' : 'inactive',
+            ]);
+
+            $supervisors[] = $supervisor;
+            
+        }
+
+
 
         // Create parents (50 parents, half with accounts)
         $this->command->info('Creating 50 parents...');
@@ -152,11 +222,12 @@ class DatabaseSeeder extends Seeder
         $classes = [];
         $classNames = ['A', 'B', 'C', 'D'];
         
-        foreach ($levels as $level) {
+        foreach (array_keys($createdLevelsByName) as $levelName) {
             foreach (array_slice($classNames, 0, 2) as $name) {
                 $class = \App\Models\SchoolClass::create([
-                    'name' => $level . ' ' . $name,
-                    'level' => $level,
+                    'name' => $levelName . ' ' . $name,
+                    'level' => $levelName,
+                    'level_id' => $createdLevelsByName[$levelName]->id,
                     'academic_year' => '2025-2026',
                     'capacity' => 30,
                     'main_teacher_id' => $teachers[array_rand($teachers)]->id,
@@ -185,6 +256,12 @@ class DatabaseSeeder extends Seeder
             ]);
             $students[] = $student;
         }
+        //assign supervisors to classes (each supervisor gets 1-2 classes)
+        $supervisors = \App\Models\Supervisor::all();
+        foreach ($supervisors as $supervisor) {
+            $classIds = $classes->shuffle()->take(rand(1, 2))->pluck('id');
+            $supervisor->classes()->attach($classIds);
+        }
 
         // Create class-subject-teacher assignments
         $this->command->info('Creating class assignments...');
@@ -211,49 +288,8 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        // Create schedules for assignments
-        $this->command->info('Creating schedules...');
-        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        $rooms = ['Room 101', 'Room 102', 'Room 103', 'Room 201', 'Room 202', 'Room 203', 'Lab 1', 'Lab 2'];
-        $schedulesByAssignment = [];
+     
 
-        foreach ($assignments as $assignment) {
-            // Create 2 schedule slots per assignment
-            for ($i = 0; $i < 2; $i++) {
-                $startHour = rand(8, 14);
-                $schedule = \App\Models\Schedule::create([
-                    'class_subject_teacher_id' => $assignment->id,
-                    'day' => $days[array_rand($days)],
-                    'start_time' => sprintf('%02d:00', $startHour),
-                    'end_time' => sprintf('%02d:00', $startHour + 1),
-                    'room' => $rooms[array_rand($rooms)],
-                ]);
-                $schedulesByAssignment[$assignment->id][] = $schedule;
-            }
-        }
-
-        // Create attendance records (300 records) — linked to schedule slots
-        $this->command->info('Creating 300 attendance records...');
-        foreach ($students as $student) {
-            for ($i = 0; $i < 2; $i++) {
-                $classAssignment = $assignments[array_rand($assignments)];
-                $slots = $schedulesByAssignment[$classAssignment->id] ?? [];
-                $slot  = !empty($slots) ? $slots[array_rand($slots)] : null;
-
-                \App\Models\Attendance::create([
-                    'student_id'  => $student->id,
-                    'subject_id'  => $classAssignment->subject_id,
-                    'teacher_id'  => $classAssignment->teacher_id,
-                    'schedule_id' => $slot?->id,
-                    'date'        => $slot
-                        ? $this->recentDateForDay($slot->day)
-                        : fake()->dateTimeBetween('-3 months', 'now')->format('Y-m-d'),
-                    'status'      => fake()->randomElement(['present', 'present', 'present', 'absent', 'late', 'excused']),
-                    'time'        => $slot ? $slot->start_time->format('H:i') : fake()->time('H:i'),
-                    'reason'      => fake()->optional(0.2)->sentence(),
-                ]);
-            }
-        }
 
         // Create grades (450 grades)
         $this->command->info('Creating 450 grade records...');
@@ -292,6 +328,12 @@ class DatabaseSeeder extends Seeder
         $feeLunch    = Fee::create(['name' => 'Lunch Program',   'description' => 'Daily cafeteria meals program',     'base_amount' => 600.00,  'academic_year' => '2025-2026', 'is_active' => true]);
         $feeActivity = Fee::create(['name' => 'Activity Fee',   'description' => 'Sports and extracurricular',        'base_amount' => 400.00,  'academic_year' => '2025-2026', 'is_active' => true]);
         $feeLibrary  = Fee::create(['name' => 'Library Fee',    'description' => 'Library access and materials',      'base_amount' => 250.00,  'academic_year' => '2025-2026', 'is_active' => true]);
+
+        // Attach fees to levels
+        $allLevelIds = array_values(array_map(fn ($level) => $level->id, $createdLevelsByName));
+        foreach ([$feeTuition, $feeTransport, $feeLunch, $feeActivity, $feeLibrary] as $fee) {
+            $fee->levels()->syncWithoutDetaching($allLevelIds);
+        }
 
         // Previous year (archived / inactive)
         foreach ([
@@ -583,7 +625,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('   • 20 Teachers');
         $this->command->info('   • 50 Parents (25 with portal accounts)');
         $this->command->info('   • 150 Students across 8 classes');
-        $this->command->info('   • 10 Subjects with coefficients');
+        $this->command->info('   • 10 Subjects with level configuration (coefficient + weekly sessions)');
         $this->command->info('   • 300 Attendance records');
         $this->command->info('   • 450 Grade records');
         $this->command->info('   • 5 Fees (2025-2026) + 5 archived (2024-2025)');
@@ -627,5 +669,15 @@ class DatabaseSeeder extends Seeder
         $diff       = $targetDow - $currentDow;
 
         return $base->addDays($diff)->format('Y-m-d');
+    }
+
+    private function getWeeklySessionsForSubject(string $subjectCode): int
+    {
+        return match ($subjectCode) {
+            'MATH' => 6,
+            'AR', 'FR' => 5,
+            'EN', 'PHYS', 'CHEM', 'BIO' => 3,
+            default => 2,
+        };
     }
 }

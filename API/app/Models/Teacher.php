@@ -20,12 +20,20 @@ class Teacher extends Model
         'specialization',
         'hire_date',
         'salary',
+        'contract_type',
+        'weekly_hours',
+    ];
+
+    protected $hidden = [
+        'salary',
+        'cin',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
         'hire_date' => 'date',
         'salary' => 'decimal:2',
+        'weekly_hours' => 'integer',
     ];
 
     // Relationships
@@ -78,6 +86,11 @@ class Teacher extends Model
     public function mainClasses(): HasMany
     {
         return $this->hasMany(SchoolClass::class, 'main_teacher_id');
+    }
+
+    public function availabilities(): HasMany
+    {
+        return $this->hasMany(TeacherAvailability::class);
     }
 
     // Helper methods

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Teacher;
 use App\Models\ClassSubjectTeacher;
 use App\Models\Student;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 
@@ -20,6 +21,7 @@ class TeacherController extends Controller
         $teachers = Teacher::all();
         $teachers->load('user:id,email,phone'); // Load email and phone fields from the related user
         $teachers->load('teachableSubjects'); // Load subjects relationship
+        $teachers->load('availabilities');
         $teachers->loadCount('classes'); // Load count of related classes
         $teachers->load('classes'); // Load count of related students
 
@@ -57,6 +59,12 @@ class TeacherController extends Controller
             'hire_date' => 'required|date',
             'specialization' => 'required|string|max:255',
             'salary' => 'required|numeric|min:0',
+            'contract_type' => 'sometimes|in:permanent,part_time',
+            'weekly_hours' => 'sometimes|integer|min:1|max:60',
+            'availabilities' => 'sometimes|array',
+            'availabilities.*.day' => 'required_with:availabilities|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
+            'availabilities.*.start_time' => 'required_with:availabilities|date_format:H:i',
+            'availabilities.*.end_time' => 'required_with:availabilities|date_format:H:i|after:availabilities.*.start_time',
         ]);
         
         if ($validator->fails()) {
@@ -71,14 +79,26 @@ class TeacherController extends Controller
             ], 409);
         }
 
-        $teacher = Teacher::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'birth_date' => $request->birth_date,
-            'hire_date' => $request->hire_date,
-            'specialization' => $request->specialization,
-            'salary' => $request->salary,
-        ]);
+        $teacher = DB::transaction(function () use ($request) {
+            $teacher = Teacher::create([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'birth_date' => $request->birth_date,
+                'hire_date' => $request->hire_date,
+                'specialization' => $request->specialization,
+                'salary' => $request->salary,
+                'contract_type' => $request->contract_type ?? 'permanent',
+                'weekly_hours' => $request->weekly_hours ?? 20,
+            ]);
+
+            if ($request->has('availabilities')) {
+                $this->syncAvailabilities($teacher, $request->input('availabilities', []));
+            }
+
+            return $teacher;
+        });
+
+        $teacher->load('availabilities');
 
         return response()->json([
             'success' => true,
@@ -96,6 +116,7 @@ class TeacherController extends Controller
         $teacher = Teacher::find($id);
         $teacher->load('user:id,email,phone'); // Load email and phone fields from the related user
         $teacher->load('teachableSubjects'); // Load subjects relationship
+        $teacher->load('availabilities');
         if (!$teacher) {
             return response()->json([
                 'success' => false,
@@ -128,6 +149,12 @@ class TeacherController extends Controller
             'hire_date' => 'sometimes|required|date',
             'specialization' => 'sometimes|required|string|max:255',
             'salary' => 'sometimes|required|numeric|min:0',
+            'contract_type' => 'sometimes|in:permanent,part_time',
+            'weekly_hours' => 'sometimes|integer|min:1|max:60',
+            'availabilities' => 'sometimes|array',
+            'availabilities.*.day' => 'required_with:availabilities|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
+            'availabilities.*.start_time' => 'required_with:availabilities|date_format:H:i',
+            'availabilities.*.end_time' => 'required_with:availabilities|date_format:H:i|after:availabilities.*.start_time',
         ]);
 
         if ($validator->fails()) {
@@ -143,14 +170,24 @@ class TeacherController extends Controller
             ], 404);
         }
 
-        $teacher->update($request->only([
-            'first_name', 
-            'last_name', 
-            'birth_date', 
-            'hire_date', 
-            'specialization', 
-            'salary'
-        ]));
+        DB::transaction(function () use ($request, $teacher) {
+            $teacher->update($request->only([
+                'first_name',
+                'last_name',
+                'birth_date',
+                'hire_date',
+                'specialization',
+                'salary',
+                'contract_type',
+                'weekly_hours'
+            ]));
+
+            if ($request->has('availabilities')) {
+                $this->syncAvailabilities($teacher, $request->input('availabilities', []));
+            }
+        });
+
+        $teacher->load('availabilities');
 
         return response()->json([
             'success' => true,
@@ -245,5 +282,31 @@ class TeacherController extends Controller
             'success' => true,
             'data' => $students
         ]);
+    }
+
+    private function syncAvailabilities(Teacher $teacher, array $availabilities): void
+    {
+        $teacher->availabilities()->delete();
+
+        if (empty($availabilities)) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($availabilities as $availability) {
+            if (empty($availability['day']) || empty($availability['start_time']) || empty($availability['end_time'])) {
+                continue;
+            }
+
+            $rows[] = [
+                'day' => $availability['day'],
+                'start_time' => $availability['start_time'],
+                'end_time' => $availability['end_time'],
+            ];
+        }
+
+        if (!empty($rows)) {
+            $teacher->availabilities()->createMany($rows);
+        }
     }
 }

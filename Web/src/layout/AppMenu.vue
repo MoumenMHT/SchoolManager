@@ -60,6 +60,11 @@ const model = computed(() => {
                 label: t('nav.attendance'),
                 icon: 'pi pi-fw pi-check-circle',
                 to: '/attendance'
+            },
+            {
+                label: 'Schedule Generator',
+                icon: 'pi pi-fw pi-calendar-plus',
+                to: '/schedules/generate'
             }
         ]
     };

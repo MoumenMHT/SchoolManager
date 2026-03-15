@@ -1005,24 +1005,7 @@ const hideScheduleEditDialog = () => {
           </small>
         </div>
 
-        <!-- Level -->
-        <div>
-          <label for="level" class="block font-semibold mb-2">
-            {{ t('classes.level') }} <span class="text-red-500">*</span>
-          </label>
-          <Select
-            id="level"
-            v-model="schoolClass.level"
-            :options="levels"
-            optionLabel="label"
-            optionValue="value"
-            :placeholder="t('classes.select_level')"
-            :invalid="submitted && !schoolClass.level"
-          />
-          <small v-if="submitted && !schoolClass.level" class="text-red-500">
-            {{ t('classes.level_required') }}
-          </small>
-        </div>
+        
 
         <!-- Academic Year -->
         <div>

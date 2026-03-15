@@ -62,14 +62,20 @@ class Subject extends Model
         return $this->hasMany(TeacherSubject::class);
     }
 
-    public function coefficients(): HasMany
+    public function levels(): BelongsToMany
     {
-        return $this->hasMany(SubjectCoefficient::class);
+        return $this->belongsToMany(Level::class, 'level_subjects')
+            ->withPivot(['coefficient', 'weekly_sessions_required'])
+            ->withTimestamps();
     }
 
-    // Helper method to get coefficient for a specific class level
-    public function getCoefficientForLevel($classLevel)
+    public function coefficients(): HasMany
     {
-        return SubjectCoefficient::getCoefficient($this->id, $classLevel);
+        return $this->hasMany(LevelSubject::class);
+    }
+
+    public function getCoefficientForLevel(?int $levelId)
+    {
+        return LevelSubject::getCoefficient($this->id, $levelId);
     }
 }

@@ -185,7 +185,10 @@ class GradeController extends Controller
             }
         }
 
-        $grade->update($request->all());
+        $grade->update($request->only([
+            'student_id', 'subject_id', 'teacher_id', 'exam_type',
+            'grade', 'max_grade', 'semester', 'academic_year', 'comment'
+        ]));
         $grade->load(['student', 'subject', 'teacher']);
 
         return response()->json([
@@ -223,12 +226,23 @@ class GradeController extends Controller
     public function getStudentGrades(string $studentId, Request $request)
     {
         $student = Student::find($studentId);
-        
+
         if (!$student) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.student_not_found')
             ], 404);
+        }
+
+        // Parents can only access grades for their own children
+        if ($request->user()->role === 'parent') {
+            $parent = $request->user()->parent;
+            if (!$parent || $student->parent_id !== $parent->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.unauthorized')
+                ], 403);
+            }
         }
 
         $query = Grade::with(['subject', 'teacher'])
@@ -267,12 +281,23 @@ class GradeController extends Controller
     public function getStudentReportCard(string $studentId, Request $request)
     {
         $student = Student::with('class')->find($studentId);
-        
+
         if (!$student) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.student_not_found')
             ], 404);
+        }
+
+        // Parents can only access report cards for their own children
+        if ($request->user()->role === 'parent') {
+            $parent = $request->user()->parent;
+            if (!$parent || $student->parent_id !== $parent->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.unauthorized')
+                ], 403);
+            }
         }
 
         $validator = Validator::make($request->all(), [
@@ -481,7 +506,7 @@ class GradeController extends Controller
             } catch (\Exception $e) {
                 $errors[] = [
                     'index' => $index,
-                    'message' => __('messages.failed_create_grade') . ': ' . $e->getMessage()
+                    'message' => config('app.debug') ? __('messages.failed_create_grade') . ': ' . $e->getMessage() : __('messages.failed_create_grade')
                 ];
             }
         }

@@ -17,8 +17,22 @@ class BillController extends Controller
         try {
             $query = Bill::with(['contract', 'paymentAllocations.payment']);
 
-            if ($request->has('contract_id')) {
-                $query->where('contract_id', $request->contract_id);
+            // Parents can only see bills for their own contracts
+            if ($request->user()->role === 'parent') {
+                $parent = $request->user()->parent;
+                if (!$parent) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.parent_profile_not_found')
+                    ], 404);
+                }
+                $query->whereHas('contract', function ($q) use ($parent) {
+                    $q->where('parent_id', $parent->id);
+                });
+            } else {
+                if ($request->has('contract_id')) {
+                    $query->where('contract_id', $request->contract_id);
+                }
             }
 
             if ($request->has('status')) {
@@ -35,7 +49,7 @@ class BillController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_bills'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -57,7 +71,7 @@ class BillController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.bill_not_found'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 404);
         }
     }
@@ -81,7 +95,7 @@ class BillController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_bills'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

@@ -16,6 +16,7 @@ class SchoolClass extends Model
     protected $fillable = [
         'name',
         'level',
+        'level_id',
         'academic_year',
         'capacity',
         'main_teacher_id',
@@ -38,6 +39,11 @@ class SchoolClass extends Model
         return $this->belongsTo(Teacher::class, 'main_teacher_id');
     }
 
+    public function levelProfile(): BelongsTo
+    {
+        return $this->belongsTo(Level::class, 'level_id');
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class, 'class_id');
@@ -55,6 +61,11 @@ class SchoolClass extends Model
         return $this->belongsToMany(Subject::class, 'class_subject_teacher', 'class_id', 'subject_id')
             ->withPivot('teacher_id', 'academic_year')
             ->withTimestamps();
+    }
+
+    public function supervisors(): BelongsToMany
+    {
+        return $this->belongsToMany(Supervisor::class, 'supervisor_classes')->withTimestamps();
     }
 
     // Helper methods

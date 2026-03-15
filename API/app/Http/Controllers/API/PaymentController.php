@@ -21,17 +21,31 @@ class PaymentController extends Controller
     {
         try {
             $query = Payment::with(['contract.parent', 'allocations.bill']);
-            
-            if ($request->has('contract_id')) {
-                $query->where('contract_id', $request->contract_id);
+
+            // Parents can only see payments for their own contracts
+            if ($request->user()->role === 'parent') {
+                $parent = $request->user()->parent;
+                if (!$parent) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.parent_profile_not_found')
+                    ], 404);
+                }
+                $query->whereHas('contract', function ($q) use ($parent) {
+                    $q->where('parent_id', $parent->id);
+                });
+            } else {
+                if ($request->has('contract_id')) {
+                    $query->where('contract_id', $request->contract_id);
+                }
             }
-            
+
             if ($request->has('status')) {
                 $query->where('status', $request->status);
             }
-            
+
             $payments = $query->get();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $payments
@@ -40,7 +54,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_payments'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -54,7 +68,7 @@ class PaymentController extends Controller
             $validator = Validator::make($request->all(), [
                 'contract_id' => 'required|exists:contracts,id',
                 'amount' => 'required|numeric|min:0',
-                'payment_type' => 'required|string',
+                'payment_type' => 'required|string|in:cash,bank_transfer,cheque,online',
                 'paid_date' => 'required|date',
                 'note' => 'nullable|string'
             ]);
@@ -135,7 +149,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_process_payment'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -156,7 +170,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.payment_not_found'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 404);
         }
     }
@@ -180,7 +194,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_contract_payments'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -194,7 +208,7 @@ class PaymentController extends Controller
             $payment = Payment::findOrFail($id);
             
             $validator = Validator::make($request->all(), [
-                'payment_type' => 'sometimes|string',
+                'payment_type' => 'sometimes|string|in:cash,bank_transfer,cheque,online',
                 'status' => 'sometimes|in:completed,pending,cancelled,refunded',
                 'note' => 'nullable|string'
             ]);
@@ -207,7 +221,7 @@ class PaymentController extends Controller
                 ], 422);
             }
             
-            $payment->update($request->all());
+            $payment->update($request->only(['payment_type', 'status', 'note']));
             $payment->load(['contract', 'allocations.bill']);
             
             return response()->json([
@@ -218,7 +232,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_update_payment'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -267,7 +281,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_delete_payment'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -311,7 +325,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_generate_receipt'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 404);
         }
     }
@@ -411,7 +425,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_process_refund'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -457,7 +471,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_statistics'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -508,7 +522,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_payment_history'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -516,9 +530,21 @@ class PaymentController extends Controller
     /**
      * Get parent dashboard with payment overview
      */
-    public function parentDashboard($parentId)
+    public function parentDashboard(Request $request, $parentId = null)
     {
         try {
+            // Parents must always use their own parent_id
+            if ($request->user()->role === 'parent') {
+                $parent = $request->user()->parent;
+                if (!$parent) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.parent_profile_not_found')
+                    ], 404);
+                }
+                $parentId = $parent->id;
+            }
+
             $contracts = Contract::with(['bills', 'payments'])
                 ->where('parent_id', $parentId)
                 ->where('status', 'active')
@@ -552,7 +578,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_parent_dashboard'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -617,7 +643,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_generate_report'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -690,7 +716,7 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_calculate_payment'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

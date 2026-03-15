@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
-import TeacherService, { type Teacher, type CreateTeacherDTO, type UpdateTeacherDTO } from '@/service/TeacherService';
+import TeacherService, { type Teacher, type CreateTeacherDTO, type UpdateTeacherDTO, type TeacherAvailability } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
 import ScheduleService, { type Schedule } from '@/service/ScheduleService';
 import { Column } from 'primevue';
@@ -56,6 +56,21 @@ const teacherSchedules = ref<{ [day: string]: Schedule[] }>({});
 const scheduleLoading = ref(false);
 const selectedAcademicYear = ref<string>('');
 const availableAcademicYears = ref<string[]>([]);
+
+const availabilityDayOptions = computed(() => [
+  { label: t('common.monday'), value: 'Monday' },
+  { label: t('common.tuesday'), value: 'Tuesday' },
+  { label: t('common.wednesday'), value: 'Wednesday' },
+  { label: t('common.thursday'), value: 'Thursday' },
+  { label: t('common.friday'), value: 'Friday' },
+  { label: t('common.saturday'), value: 'Saturday' },
+  { label: t('common.sunday'), value: 'Sunday' }
+]);
+
+const contractTypeOptions = [
+  { label: 'Permanent', value: 'permanent' },
+  { label: 'Part-time', value: 'part_time' }
+];
 
 // Days and hours for schedule grid
 // English keys used internally for schedule data lookup (API returns English day names)
@@ -125,7 +140,11 @@ const loadTeachers = async () => {
 
 // Open new teacher dialog
 const openNew = async () => {
-  teacher.value = {};
+  teacher.value = {
+    contract_type: 'permanent',
+    weekly_hours: 20,
+    availabilities: []
+  };
   newTeacherSubjects.value = [];
   submitted.value = false;
   teacherDialog.value = true;
@@ -174,10 +193,45 @@ const saveTeacher = async () => {
     return;
   }
 
+  if (teacher.value.weekly_hours === undefined || teacher.value.weekly_hours === null || teacher.value.weekly_hours < 1) {
+    toast.add({
+      severity: 'error',
+      summary: t('common.validation_error'),
+      detail: 'Weekly hours must be at least 1.',
+      life: 3000
+    });
+    return;
+  }
+
+  const availabilities = normalizeAvailabilities(teacher.value.availabilities || []);
+  const hasInvalidAvailability = availabilities.some(slot => !slot.day || !slot.start_time || !slot.end_time || slot.start_time >= slot.end_time);
+  if (hasInvalidAvailability) {
+    toast.add({
+      severity: 'error',
+      summary: t('common.validation_error'),
+      detail: 'Each availability row must include day, start time, and end time (end must be after start).',
+      life: 4000
+    });
+    return;
+  }
+
+  const payload: CreateTeacherDTO | UpdateTeacherDTO = {
+    first_name: teacher.value.first_name!,
+    last_name: teacher.value.last_name!,
+    cin: teacher.value.cin || undefined,
+    birth_date: formatDateForApi(teacher.value.birth_date),
+    hire_date: formatDateForApi(teacher.value.hire_date),
+    specialization: teacher.value.specialization || undefined,
+    salary: teacher.value.salary ?? undefined,
+    contract_type: (teacher.value.contract_type as 'permanent' | 'part_time') || 'permanent',
+    weekly_hours: teacher.value.weekly_hours ?? 20,
+    availabilities
+  };
+
   try {
     if (teacher.value.id) {
       // Update existing teacher
-      const updated = await TeacherService.updateTeacher(teacher.value.id, teacher.value as UpdateTeacherDTO);
+      const updated = await TeacherService.updateTeacher(teacher.value.id, payload as UpdateTeacherDTO);
       const index = teachers.value.findIndex(t => t.id === teacher.value.id);
       if (index !== -1) {
         teachers.value[index] = {
@@ -194,7 +248,7 @@ const saveTeacher = async () => {
       });
     } else {
       // Create new teacher
-      const created = await TeacherService.createTeacher(teacher.value as CreateTeacherDTO);
+      const created = await TeacherService.createTeacher(payload as CreateTeacherDTO);
 
       // Assign selected subjects if any
       if (newTeacherSubjects.value.length > 0) {
@@ -225,7 +279,11 @@ const saveTeacher = async () => {
     }
 
     teacherDialog.value = false;
-    teacher.value = {};
+    teacher.value = {
+      contract_type: 'permanent',
+      weekly_hours: 20,
+      availabilities: []
+    };
   } catch (error: any) {
     toast.add({
       severity: 'error',
@@ -243,6 +301,9 @@ const editTeacher = async (teacherToEdit: Teacher) => {
     // Convert date strings to Date objects for DatePicker
     birth_date: teacherToEdit.birth_date ? new Date(teacherToEdit.birth_date) : null,
     hire_date: teacherToEdit.hire_date ? new Date(teacherToEdit.hire_date) : null,
+    contract_type: teacherToEdit.contract_type || 'permanent',
+    weekly_hours: teacherToEdit.weekly_hours ?? 20,
+    availabilities: normalizeAvailabilities(teacherToEdit.availabilities || []),
   };
   newTeacherSubjects.value = [];
   teacherDialog.value = true;
@@ -729,6 +790,48 @@ const hideScheduleDialog = () => {
   selectedAcademicYear.value = '';
   availableAcademicYears.value = [];
 };
+
+const formatDateForApi = (value: Date | string | null | undefined): string | undefined => {
+  if (!value) return undefined;
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const normalizeTimeForApi = (value: string | undefined): string => {
+  if (!value) return '';
+  return value.slice(0, 5);
+};
+
+const normalizeAvailabilities = (items: TeacherAvailability[]): TeacherAvailability[] => {
+  return items.map((item) => ({
+    day: item.day,
+    start_time: normalizeTimeForApi(item.start_time),
+    end_time: normalizeTimeForApi(item.end_time)
+  }));
+};
+
+const addAvailabilityRow = () => {
+  if (!teacher.value.availabilities) {
+    teacher.value.availabilities = [];
+  }
+
+  teacher.value.availabilities.push({
+    day: 'Monday',
+    start_time: '08:00',
+    end_time: '16:00'
+  });
+};
+
+const removeAvailabilityRow = (index: number) => {
+  if (!teacher.value.availabilities) return;
+  teacher.value.availabilities.splice(index, 1);
+};
 </script>
 
 <template>
@@ -1027,6 +1130,95 @@ const hideScheduleDialog = () => {
           <small v-if="submitted && (teacher.salary === undefined || teacher.salary === null)" class="text-red-500">
             {{ t('validation.salary_required') }}
           </small>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="contract_type" class="block font-semibold mb-2">
+              Contract Type <span class="text-red-500">*</span>
+            </label>
+            <Select
+              id="contract_type"
+              v-model="teacher.contract_type"
+              :options="contractTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select contract type"
+              class="w-full"
+            />
+          </div>
+
+          <div>
+            <label for="weekly_hours" class="block font-semibold mb-2">
+              Weekly Hours <span class="text-red-500">*</span>
+            </label>
+            <InputNumber
+              id="weekly_hours"
+              v-model="teacher.weekly_hours"
+              :min="1"
+              :max="60"
+              class="w-full"
+              :invalid="submitted && (teacher.weekly_hours === undefined || teacher.weekly_hours === null || teacher.weekly_hours < 1)"
+              placeholder="20"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block font-semibold">Teacher Availability</label>
+            <Button
+              label="Add Slot"
+              icon="pi pi-plus"
+              size="small"
+              text
+              @click="addAvailabilityRow"
+            />
+          </div>
+
+          <div
+            v-if="teacher.availabilities && teacher.availabilities.length"
+            class="flex flex-col gap-2 border border-surface-200 dark:border-surface-700 rounded p-3"
+          >
+            <div
+              v-for="(slot, index) in teacher.availabilities"
+              :key="index"
+              class="grid grid-cols-12 gap-2 items-end"
+            >
+              <div class="col-span-12 md:col-span-4">
+                <label class="block text-xs mb-1">Day</label>
+                <Select
+                  v-model="slot.day"
+                  :options="availabilityDayOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  class="w-full"
+                />
+              </div>
+
+              <div class="col-span-6 md:col-span-3">
+                <label class="block text-xs mb-1">Start</label>
+                <InputText v-model="slot.start_time" type="time" class="w-full" />
+              </div>
+
+              <div class="col-span-6 md:col-span-3">
+                <label class="block text-xs mb-1">End</label>
+                <InputText v-model="slot.end_time" type="time" class="w-full" />
+              </div>
+
+              <div class="col-span-12 md:col-span-2">
+                <Button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  text
+                  class="w-full"
+                  @click="removeAvailabilityRow(index)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <small v-else class="text-muted-color">No availability slots added. Scheduler will use default availability.</small>
         </div>
 
         <!-- Subjects (only for new teachers) -->

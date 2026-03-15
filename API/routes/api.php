@@ -23,7 +23,7 @@ use App\Http\Controllers\API\BillController;
 
 
 // Public routes
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -118,6 +118,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('class-assignments', ClassSubjectTeacherController::class);
         
         // Schedule Management
+        Route::post('/schedules/generate', [ScheduleController::class, 'generateAll']);
+        Route::get('/schedules/export', [ScheduleController::class, 'exportExcel']);
         Route::post('/schedules/bulk', [ScheduleController::class, 'bulkStore']);
         Route::post('/schedules/check-conflicts', [ScheduleController::class, 'checkConflicts']);
         Route::get('/schedules/available-slots', [ScheduleController::class, 'getAvailableSlots']);

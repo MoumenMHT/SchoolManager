@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use App\Models\SubjectCoefficient;
+use App\Models\Level;
+use App\Models\LevelSubject;
 use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -12,12 +13,25 @@ use Illuminate\Support\Facades\Validator;
 
 class SubjectCoefficientController extends Controller
 {
+    private function resolveLevelId(array $validated): ?int
+    {
+        if (!empty($validated['level_id'])) {
+            return (int) $validated['level_id'];
+        }
+
+        if (!empty($validated['class_level'])) {
+            return Level::where('name', $validated['class_level'])->value('id');
+        }
+
+        return null;
+    }
+
     /**
      * Get all subject coefficients
      */
     public function index(): JsonResponse
     {
-        $coefficients = SubjectCoefficient::with('subject')->get();
+        $coefficients = LevelSubject::with(['subject', 'level'])->get();
 
         return response()->json([
             'success' => true,
@@ -31,7 +45,7 @@ class SubjectCoefficientController extends Controller
     public function getSubjectCoefficients($subjectId): JsonResponse
     {
         $subject = Subject::findOrFail($subjectId);
-        $coefficients = $subject->coefficients;
+        $coefficients = $subject->coefficients()->with('level')->get();
 
         return response()->json([
             'success' => true,
@@ -46,7 +60,8 @@ class SubjectCoefficientController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'subject_id' => 'required|exists:subjects,id',
-            'class_level' => 'required|string',
+            'level_id' => 'nullable|exists:levels,id',
+            'class_level' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -54,9 +69,21 @@ class SubjectCoefficientController extends Controller
         }
 
         $validated = $validator->validated();
+        $levelId = $this->resolveLevelId($validated);
 
-        $coefficient = SubjectCoefficient::where('subject_id', $validated['subject_id'])
-            ->where('class_level', $validated['class_level'])
+        if (!$levelId) {
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.validation_failed'),
+                'errors' => [
+                    'level' => ['Either level_id or class_level is required and must exist.']
+                ]
+            ], 422);
+        }
+
+        $coefficient = LevelSubject::with(['subject', 'level'])
+            ->where('subject_id', $validated['subject_id'])
+            ->where('level_id', $levelId)
             ->first();
 
         if (!$coefficient) {
@@ -74,7 +101,8 @@ class SubjectCoefficientController extends Controller
     public function getCoefficientByclassLevel(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'class_level' => 'required|string',
+            'level_id' => 'nullable|exists:levels,id',
+            'class_level' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -82,8 +110,20 @@ class SubjectCoefficientController extends Controller
         }
 
         $validated = $validator->validated();
+        $levelId = $this->resolveLevelId($validated);
 
-        $coefficient = SubjectCoefficient::where('class_level', $validated['class_level'])  
+        if (!$levelId) {
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.validation_failed'),
+                'errors' => [
+                    'level' => ['Either level_id or class_level is required and must exist.']
+                ]
+            ], 422);
+        }
+
+        $coefficient = LevelSubject::with(['subject', 'level'])
+            ->where('level_id', $levelId)
             ->get();
 
         if ($coefficient->isEmpty()) {
@@ -106,18 +146,31 @@ class SubjectCoefficientController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'subject_id' => 'required|exists:subjects,id',
-            'class_level' => 'required|string|max:100',
+            'level_id' => 'nullable|exists:levels,id',
+            'class_level' => 'nullable|string|max:100',
             'coefficient' => 'required|integer|min:1|max:10',
+            'weekly_sessions_required' => 'required|integer|min:1|max:20',
         ]);
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
         $validated = $validator->validated();
+        $levelId = $this->resolveLevelId($validated);
+
+        if (!$levelId) {
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.validation_failed'),
+                'errors' => [
+                    'level' => ['Either level_id or class_level is required and must exist.']
+                ]
+            ], 422);
+        }
 
         // Check if coefficient already exists for this subject and level
-        $exists = SubjectCoefficient::where('subject_id', $validated['subject_id'])
-            ->where('class_level', $validated['class_level'])
+        $exists = LevelSubject::where('subject_id', $validated['subject_id'])
+            ->where('level_id', $levelId)
             ->exists();
 
         if ($exists) {
@@ -127,12 +180,17 @@ class SubjectCoefficientController extends Controller
             ], 422);
         }
 
-        $coefficient = SubjectCoefficient::create($validated);
+        $coefficient = LevelSubject::create([
+            'subject_id' => $validated['subject_id'],
+            'level_id' => $levelId,
+            'coefficient' => $validated['coefficient'],
+            'weekly_sessions_required' => $validated['weekly_sessions_required'],
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => __('messages.coefficient_created'),
-            'data' => $coefficient->load('subject'),
+            'data' => $coefficient->load(['subject', 'level']),
         ], 201);
     }
 
@@ -141,10 +199,11 @@ class SubjectCoefficientController extends Controller
      */
     public function update(Request $request, $id): JsonResponse
     {
-        $coefficient = SubjectCoefficient::findOrFail($id);
+        $coefficient = LevelSubject::findOrFail($id);
 
         $validated = $request->validate([
-            'coefficient' => 'required|integer|min:1|max:10',
+            'coefficient' => 'sometimes|required|integer|min:1|max:10',
+            'weekly_sessions_required' => 'sometimes|required|integer|min:1|max:20',
         ]);
 
         $coefficient->update($validated);
@@ -152,7 +211,7 @@ class SubjectCoefficientController extends Controller
         return response()->json([
             'success' => true,
             'message' => __('messages.coefficient_updated'),
-            'data' => $coefficient->load('subject'),
+            'data' => $coefficient->load(['subject', 'level']),
         ]);
     }
 
@@ -161,7 +220,7 @@ class SubjectCoefficientController extends Controller
      */
     public function destroy($id): JsonResponse
     {
-        $coefficient = SubjectCoefficient::findOrFail($id);
+        $coefficient = LevelSubject::findOrFail($id);
         $coefficient->delete();
 
         return response()->json([
@@ -178,8 +237,10 @@ class SubjectCoefficientController extends Controller
         $validator = Validator::make($request->all(), [
             'subject_id' => 'required|exists:subjects,id',
             'levels' => 'required|array',
-            'levels.*.class_level' => 'required|string|max:100',
+            'levels.*.level_id' => 'nullable|exists:levels,id',
+            'levels.*.class_level' => 'nullable|string|max:100',
             'levels.*.coefficient' => 'required|integer|min:1|max:10',
+            'levels.*.weekly_sessions_required' => 'required|integer|min:1|max:20',
         ]);
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -190,18 +251,26 @@ class SubjectCoefficientController extends Controller
         $errors = [];
 
         foreach ($validated['levels'] as $level) {
-            $exists = SubjectCoefficient::where('subject_id', $validated['subject_id'])
-                ->where('class_level', $level['class_level'])
+            $levelId = $this->resolveLevelId($level);
+
+            if (!$levelId) {
+                $errors[] = 'Invalid level entry in bulk payload.';
+                continue;
+            }
+
+            $exists = LevelSubject::where('subject_id', $validated['subject_id'])
+                ->where('level_id', $levelId)
                 ->exists();
 
             if (!$exists) {
-                $created[] = SubjectCoefficient::create([
+                $created[] = LevelSubject::create([
                     'subject_id' => $validated['subject_id'],
-                    'class_level' => $level['class_level'],
+                    'level_id' => $levelId,
                     'coefficient' => $level['coefficient'],
+                    'weekly_sessions_required' => $level['weekly_sessions_required'],
                 ]);
             } else {
-                $errors[] = "Coefficient already exists for level: {$level['class_level']}";
+                $errors[] = 'Coefficient already exists for one of the provided levels.';
             }
         }
 

@@ -115,7 +115,7 @@ class ContractController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_create_contract'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -123,11 +123,22 @@ class ContractController extends Controller
     /**
      * Get contract details
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         try {
             $contract = Contract::with(['parent', 'bills', 'payments.allocations'])
                 ->findOrFail($id);
+
+            // Parents can only view their own contracts
+            if ($request->user()->role === 'parent') {
+                $parent = $request->user()->parent;
+                if (!$parent || $contract->parent_id !== $parent->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.unauthorized')
+                    ], 403);
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -137,7 +148,7 @@ class ContractController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.contract_not_found'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 404);
         }
     }
@@ -150,8 +161,20 @@ class ContractController extends Controller
         try {
             $query = Contract::with(['parent', 'bills']);
 
-            if ($request->has('parent_id')) {
-                $query->where('parent_id', $request->parent_id);
+            // Parents can only see their own contracts
+            if ($request->user()->role === 'parent') {
+                $parent = $request->user()->parent;
+                if (!$parent) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.parent_profile_not_found')
+                    ], 404);
+                }
+                $query->where('parent_id', $parent->id);
+            } else {
+                if ($request->has('parent_id')) {
+                    $query->where('parent_id', $request->parent_id);
+                }
             }
 
             if ($request->has('academic_year')) {
@@ -172,7 +195,7 @@ class ContractController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_contracts'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

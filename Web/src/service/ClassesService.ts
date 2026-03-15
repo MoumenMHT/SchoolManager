@@ -104,6 +104,11 @@ class SchoolClassService {
     return response.data!;
   }
 
+  async getAllAssignments(academic_year?: string): Promise<any[]> {
+    const response = await apiService.get<any>('/class-assignments', academic_year ? { academic_year } : undefined);
+    return (response.data as any[]) || [];
+  }
+
 
 }
 

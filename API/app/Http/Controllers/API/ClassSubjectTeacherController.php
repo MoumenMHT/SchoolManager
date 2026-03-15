@@ -7,7 +7,7 @@ use App\Models\ClassSubjectTeacher;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\Teacher;
-use App\Models\SubjectCoefficient;
+use App\Models\LevelSubject;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -102,7 +102,8 @@ class ClassSubjectTeacherController extends Controller
             ->toArray();
 
         // Get coefficient for this subject and class level
-        $coefficient = SubjectCoefficient::getCoefficient($validated['subject_id'], $class->level);
+        $coefficient = LevelSubject::getCoefficient($validated['subject_id'], $class->level_id);
+        $weeklySessionsRequired = LevelSubject::getWeeklySessionsRequired($validated['subject_id'], $class->level_id);
 
         return response()->json([
             'success' => true,
@@ -110,7 +111,9 @@ class ClassSubjectTeacherController extends Controller
                 'available_teachers' => $qualifiedTeachers,
                 'assigned_teacher_ids' => $assignedTeacherIds,
                 'coefficient' => $coefficient,
+                'weekly_sessions_required' => $weeklySessionsRequired,
                 'class_level' => $class->level,
+                'level_id' => $class->level_id,
             ],
         ]);
     }
@@ -183,7 +186,7 @@ class ClassSubjectTeacherController extends Controller
 
         // Get coefficient from configuration
         $class = SchoolClass::findOrFail($validated['class_id']);
-        $coefficient = SubjectCoefficient::getCoefficient($validated['subject_id'], $class->level);
+        $coefficient = LevelSubject::getCoefficient($validated['subject_id'], $class->level_id);
 
         if (!$coefficient) {
             return response()->json([
@@ -262,13 +265,15 @@ class ClassSubjectTeacherController extends Controller
 
         $validated = $validator->validated();
         $class = SchoolClass::findOrFail($validated['class_id']);
-        $coefficient = SubjectCoefficient::getCoefficient($validated['subject_id'], $class->level);
+        $coefficient = LevelSubject::getCoefficient($validated['subject_id'], $class->level_id);
+        $weeklySessionsRequired = LevelSubject::getWeeklySessionsRequired($validated['subject_id'], $class->level_id);
 
         return response()->json([
             'success' => true,
             'data' => [
                 'class_level' => $class->level,
                 'coefficient' => $coefficient,
+                'weekly_sessions_required' => $weeklySessionsRequired,
                 'configured' => $coefficient !== null,
             ],
         ]);

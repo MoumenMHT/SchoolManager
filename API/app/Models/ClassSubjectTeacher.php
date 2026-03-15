@@ -75,7 +75,7 @@ class ClassSubjectTeacher extends Model
             return null;
         }
 
-        return SubjectCoefficient::getCoefficient($subjectId, $class->level);
+        return LevelSubject::getCoefficient($subjectId, $class->level_id);
     }
 
     // Validation: Check if teacher can teach the subject

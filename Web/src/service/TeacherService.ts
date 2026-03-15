@@ -8,11 +8,14 @@ export interface Teacher {
   first_name: string;
   last_name: string;
   cin: string | null;
-  birth_date: Date | null;
+  birth_date: Date | string | null;
   created_at: string;
-  hire_date: Date | null;
+  hire_date: Date | string | null;
   specialization: string | null;
   salary: number | null;
+  contract_type?: 'permanent' | 'part_time';
+  weekly_hours?: number | null;
+  availabilities?: TeacherAvailability[];
   updated_at: string;
   subjects?: {
     id: number;
@@ -33,6 +36,13 @@ export interface Teacher {
   students_count?: number;
 }
 
+export interface TeacherAvailability {
+  id?: number;
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  start_time: string;
+  end_time: string;
+}
+
 export interface CreateTeacherDTO {
   first_name: string;
   last_name: string;
@@ -41,6 +51,9 @@ export interface CreateTeacherDTO {
   hire_date?: string;
   specialization?: string;
   salary?: number;
+  contract_type?: 'permanent' | 'part_time';
+  weekly_hours?: number;
+  availabilities?: TeacherAvailability[];
 }
 
 export interface UpdateTeacherDTO {
@@ -51,6 +64,9 @@ export interface UpdateTeacherDTO {
   hire_date?: string;
   specialization?: string;
   salary?: number;
+  contract_type?: 'permanent' | 'part_time';
+  weekly_hours?: number;
+  availabilities?: TeacherAvailability[];
 }
 
 class TeacherService {

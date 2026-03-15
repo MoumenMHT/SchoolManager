@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SchoolClass;
+use App\Models\Level;
 use App\Models\Student;
 use App\Models\StudentHistory;
 use Illuminate\Support\Facades\Validator;
@@ -17,7 +18,7 @@ class ClassController extends Controller
     public function index()
     {
         try {
-            $classes = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects'])
+            $classes = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects', 'levelProfile'])
                 ->get()
                 ->map(function ($class) {
                     $studentsData = [];
@@ -56,7 +57,8 @@ class ClassController extends Controller
                     return [
                         'id' => $class->id,
                         'name' => $class->name,
-                        'level' => $class->level,
+                        'level' => $class->levelProfile->name ?? $class->level,
+                        'level_id' => $class->level_id,
                         'academic_year' => $class->academic_year,
                         'capacity' => $class->capacity,
                         'main_teacher_id' => $class->main_teacher_id,
@@ -79,7 +81,7 @@ class ClassController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_classes'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -100,11 +102,24 @@ class ClassController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255|unique:classes,name',
-                'level' => 'required|string|max:255',
+                'level' => 'nullable|string|max:255',
+                'level_id' => 'nullable|exists:levels,id',
                 'academic_year' => 'nullable|string|max:255',
                 'capacity' => 'nullable|integer|min:1',
                 'main_teacher_id' => 'nullable|exists:teachers,id',
             ]);
+
+            if (!$request->filled('level') && !$request->filled('level_id')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.validation_failed'),
+                    'errors' => [
+                        'level' => ['The level or level_id field is required.']
+                    ]
+                ], 422);
+            }
+
+            $resolvedLevelId = $this->resolveLevelId($request);
             
             if ($validator->fails()) {
                 return response()->json([
@@ -117,13 +132,14 @@ class ClassController extends Controller
             $class = SchoolClass::create([
                 'name' => $request->name,
                 'level' => $request->level,
+                'level_id' => $resolvedLevelId,
                 'academic_year' => $request->academic_year,
                 'capacity' => $request->capacity,
                 'is_active' => true,
                 'main_teacher_id' => $request->main_teacher_id,
             ]);
 
-            $class->load('mainTeacher');
+            $class->load(['mainTeacher', 'levelProfile']);
 
             return response()->json([
                 'success' => true,
@@ -134,7 +150,7 @@ class ClassController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_create_class'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -145,7 +161,7 @@ class ClassController extends Controller
     public function show(string $id)
     {
         try {
-            $class = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects'])->find($id);
+            $class = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects', 'levelProfile'])->find($id);
             
             if (!$class) {
                 return response()->json([
@@ -190,7 +206,8 @@ class ClassController extends Controller
             $data = [
                 'id' => $class->id,
                 'name' => $class->name,
-                'level' => $class->level,
+                'level' => $class->levelProfile->name ?? $class->level,
+                'level_id' => $class->level_id,
                 'academic_year' => $class->academic_year,
                 'capacity' => $class->capacity,
                 'main_teacher_id' => $class->main_teacher_id,
@@ -212,7 +229,7 @@ class ClassController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_class'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -242,7 +259,8 @@ class ClassController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255|unique:classes,name,' . $id,
-                'level' => 'sometimes|required|string|max:255',
+                'level' => 'sometimes|nullable|string|max:255',
+                'level_id' => 'sometimes|nullable|exists:levels,id',
                 'academic_year' => 'sometimes|nullable|string|max:255',
                 'capacity' => 'sometimes|nullable|integer|min:1',
                 'main_teacher_id' => 'nullable|exists:teachers,id',
@@ -256,6 +274,11 @@ class ClassController extends Controller
                 ], 422);
             }
 
+            $resolvedLevelId = $class->level_id;
+            if ($request->has('level') || $request->has('level_id')) {
+                $resolvedLevelId = $this->resolveLevelId($request);
+            }
+
             $class->update($request->only([
                 'name',
                 'level',
@@ -264,7 +287,10 @@ class ClassController extends Controller
                 'main_teacher_id'
             ]));
 
-            $class->load('mainTeacher');
+            $class->level_id = $resolvedLevelId;
+            $class->save();
+
+            $class->load(['mainTeacher', 'levelProfile']);
             
             return response()->json([
                 'success' => true,
@@ -275,7 +301,7 @@ class ClassController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_update_class'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -313,7 +339,7 @@ class ClassController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_delete_class'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -339,5 +365,36 @@ class ClassController extends Controller
             'data' => $student
         ]);
 
+    }
+
+    private function resolveLevelId(Request $request): ?int
+    {
+        if ($request->filled('level_id')) {
+            return (int) $request->level_id;
+        }
+
+        if (!$request->filled('level')) {
+            return null;
+        }
+
+        $levelName = trim((string) $request->level);
+        $existing = Level::where('name', $levelName)->first();
+
+        if ($existing) {
+            return $existing->id;
+        }
+
+        $nextSortOrder = (int) Level::max('sort_order') + 1;
+
+        $level = Level::create([
+            'cycle' => 'primary',
+            'year_number' => $nextSortOrder,
+            'track' => null,
+            'name' => $levelName,
+            'sort_order' => $nextSortOrder,
+            'is_active' => true,
+        ]);
+
+        return $level->id;
     }
 }

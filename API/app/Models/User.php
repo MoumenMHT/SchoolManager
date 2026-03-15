@@ -63,6 +63,11 @@ class User extends Authenticatable
         return $this->hasOne(ParentModel::class);
     }
 
+    public function supervisor()
+    {
+        return $this->hasOne(Supervisor::class);
+    }
+
     // Helper methods
     public function isAdmin()
     {
@@ -77,5 +82,10 @@ class User extends Authenticatable
     public function isParent()
     {
         return $this->role === 'parent';
+    }
+
+    public function isSupervisor()
+    {
+        return $this->role === 'supervisor';
     }
 }

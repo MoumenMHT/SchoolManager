@@ -54,7 +54,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_fees'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -99,7 +99,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_create_fee'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -132,7 +132,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.fee_not_found'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 404);
         }
     }
@@ -189,7 +189,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_update_fee'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -231,7 +231,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_delete_fee'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -255,7 +255,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_toggle_fee_status'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -293,7 +293,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_fees'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -347,7 +347,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_create_fee'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -404,13 +404,13 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_copy_fees'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_copy_fees'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -462,7 +462,7 @@ class FeeController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_fee_statistics'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

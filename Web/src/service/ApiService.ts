@@ -115,6 +115,15 @@ class ApiService {
     return response.data;
   }
 
+  async download(url: string, params?: any): Promise<Blob> {
+    const response = await this.api.get(url, {
+      params,
+      responseType: 'blob'
+    });
+
+    return response.data as Blob;
+  }
+
   // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!this.getToken();

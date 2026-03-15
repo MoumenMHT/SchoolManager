@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Fee extends Model
 {
@@ -25,5 +26,10 @@ class Fee extends Model
     public function parentFees()
     {
         return $this->hasMany(ParentFee::class);
+    }
+
+    public function levels(): BelongsToMany
+    {
+        return $this->belongsToMany(Level::class, 'fee_levels')->withTimestamps();
     }
 }

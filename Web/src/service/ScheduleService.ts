@@ -66,6 +66,51 @@ export interface ClassScheduleResponse {
   };
 }
 
+export interface GenerateScheduleDTO {
+  academic_year: string;
+  clear_existing?: boolean;
+  save?: boolean;
+}
+
+export interface GenerateScheduleSummary {
+  academic_year: string;
+  generated_sessions: number;
+  saved_sessions: number;
+  unfilled_items: number;
+  clear_existing: boolean;
+  saved: boolean;
+}
+
+export interface GenerateScheduleResponse {
+  success: boolean;
+  message: string;
+  summary: GenerateScheduleSummary;
+  unfilled: GenerateUnfilledItem[];
+}
+
+export interface UnfilledDiagnostics {
+  outside_teacher_availability: number;
+  teacher_slot_conflict: number;
+  class_slot_conflict: number;
+  important_subject_daily_limit: number;
+  class_day_capacity_reached: number;
+  candidate_slots: number;
+}
+
+export interface GenerateUnfilledItem {
+  assignment_id: number;
+  class_id: number;
+  teacher_id: number;
+  subject_id: number;
+  class_name?: string;
+  teacher_name?: string;
+  subject_name?: string;
+  required: number;
+  placed: number;
+  reason: string;
+  diagnostics?: UnfilledDiagnostics;
+}
+
 class ScheduleService {
   private api = ApiService;
 
@@ -164,6 +209,23 @@ class ScheduleService {
     const response = await this.api.get(`/classes/${classId}/schedule`, { academic_year });
     console.log(`Fetched schedule for class ID ${classId} and academic year ${academic_year}:`, response.data);
     return (response.data as any).data || response.data;
+  }
+
+  async generateSchedules(payload: GenerateScheduleDTO): Promise<GenerateScheduleResponse> {
+    const response = await this.api.post('/schedules/generate', payload);
+    return response as unknown as GenerateScheduleResponse;
+  }
+
+  async exportSchedulesExcel(academic_year?: string): Promise<void> {
+    const blob = await this.api.download('/schedules/export', academic_year ? { academic_year } : undefined);
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `schedules_${academic_year || 'all'}.xls`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(url);
   }
 }
 

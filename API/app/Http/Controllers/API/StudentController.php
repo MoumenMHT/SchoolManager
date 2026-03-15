@@ -175,7 +175,10 @@ class StudentController extends Controller
 
         $oldClassId = $student->class_id;
 
-        $student->update($request->all());
+        $student->update($request->only([
+            'first_name', 'last_name', 'code', 'birth_date', 'gender',
+            'class_id', 'parent_id', 'enrollment_date', 'medical_info', 'is_active'
+        ]));
 
         if ($request->has('class_id') && $request->class_id != $oldClassId) {
             // Close the current open history record
@@ -260,7 +263,7 @@ class StudentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_children'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -306,7 +309,7 @@ class StudentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_affect_student'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

@@ -29,7 +29,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -85,7 +85,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_create_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -106,7 +106,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_attendance_record'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -153,7 +153,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_update_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -175,7 +175,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_delete_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -184,6 +184,24 @@ class AttendanceController extends Controller
     public function getAttendanceByStudent($studentId, Request $request)
     {
         try {
+            // Parents can only access attendance for their own children
+            if ($request->user()->role === 'parent') {
+                $student = Student::find($studentId);
+                if (!$student) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.student_not_found')
+                    ], 404);
+                }
+                $parent = $request->user()->parent;
+                if (!$parent || $student->parent_id !== $parent->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.unauthorized')
+                    ], 403);
+                }
+            }
+
             $query = Attendance::with(['subject', 'teacher'])
                 ->where('student_id', $studentId);
 
@@ -243,7 +261,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_student_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -296,7 +314,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_save_attendance'),
-                'error'   => $e->getMessage(),
+                'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
@@ -373,7 +391,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_class_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -458,7 +476,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_teacher_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -541,7 +559,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_subject_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -584,7 +602,7 @@ class AttendanceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('messages.failed_retrieve_schedule_attendance'),
-                'error' => $e->getMessage()
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

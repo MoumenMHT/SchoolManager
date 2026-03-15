@@ -363,7 +363,7 @@
     "enter_last_name": "أدخل اسم العائلة",
     "enter_cin": "أدخل رقم بطاقة الهوية",
     "phone_placeholder": "+212 xxx xxx xxx",
-    "email_placeholder": "email@example.com",
+    "email_placeholder": "email{'@'}example.com",
     "enter_profession": "أدخل المهنة",
     "enter_student_code": "أدخل رمز الطالب",
     "select_birth_date": "اختر تاريخ الميلاد",
@@ -444,6 +444,8 @@
   },
   "classes": {
     "manage_classes": "إدارة الفصول",
+    "add_student": "إضافة طالب",
+    "assign_teacher": "إضافة أستاذ",
     "new_class": "فصل جديد",
     "class_details": "تفاصيل الفصل",
     "class_name": "اسم الفصل",
