@@ -259,7 +259,7 @@ class DatabaseSeeder extends Seeder
         //assign supervisors to classes (each supervisor gets 1-2 classes)
         $supervisors = \App\Models\Supervisor::all();
         foreach ($supervisors as $supervisor) {
-            $classIds = $classes->shuffle()->take(rand(1, 2))->pluck('id');
+            $classIds = $classes->shuffle()->take(rand(1, 2))->pluck('id')->toArray();
             $supervisor->classes()->attach($classIds);
         }
 
