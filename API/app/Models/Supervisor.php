@@ -29,10 +29,7 @@ class Supervisor extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function classes(): BelongsToMany
-    {
-        return $this->belongsToMany(SchoolClass::class, 'supervisor_classes')->withTimestamps();
-    }
+  
 
     public function getFullNameAttribute(): string
     {

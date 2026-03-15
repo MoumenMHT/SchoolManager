@@ -256,11 +256,18 @@ class DatabaseSeeder extends Seeder
             ]);
             $students[] = $student;
         }
-        //assign supervisors to classes (each supervisor gets 1-2 classes)
+        // Assign supervisors to classes (one class per supervisor)
+        $availableClassIds = collect($classes)->pluck('id')->shuffle()->values();
         $supervisors = \App\Models\Supervisor::all();
-        foreach ($supervisors as $supervisor) {
-            $classIds = $classes->shuffle()->take(rand(1, 2))->pluck('id')->toArray();
-            $supervisor->classes()->attach($classIds);
+
+        foreach ($supervisors as $index => $supervisor) {
+            if ($index >= $availableClassIds->count()) {
+                break;
+            }
+
+            $supervisor->update([
+                'class_id' => $availableClassIds->get($index),
+            ]);
         }
 
         // Create class-subject-teacher assignments
