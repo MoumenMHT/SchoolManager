@@ -58,13 +58,13 @@ const selectedAcademicYear = ref<string>('');
 const availableAcademicYears = ref<string[]>([]);
 
 const availabilityDayOptions = computed(() => [
+  { label: t('common.sunday'), value: 'Sunday' },
   { label: t('common.monday'), value: 'Monday' },
   { label: t('common.tuesday'), value: 'Tuesday' },
   { label: t('common.wednesday'), value: 'Wednesday' },
   { label: t('common.thursday'), value: 'Thursday' },
   { label: t('common.friday'), value: 'Friday' },
-  { label: t('common.saturday'), value: 'Saturday' },
-  { label: t('common.sunday'), value: 'Sunday' }
+  { label: t('common.saturday'), value: 'Saturday' }
 ]);
 
 const contractTypeOptions = [
@@ -74,15 +74,14 @@ const contractTypeOptions = [
 
 // Days and hours for schedule grid
 // English keys used internally for schedule data lookup (API returns English day names)
-const weekDayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const weekDayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
 
 const weekDays = computed(() => [
+  t('common.sunday'),
   t('common.monday'),
   t('common.tuesday'),
   t('common.wednesday'),
-  t('common.thursday'),
-  t('common.friday'),
-  t('common.saturday')
+  t('common.thursday')
 ]);
 
 const genderOptions = computed(() => [
@@ -838,13 +837,69 @@ const normalizeAvailabilities = (items: TeacherAvailability[]): TeacherAvailabil
   }));
 };
 
+const formatDisplayDate = (value: Date | string | null | undefined): string => {
+  if (!value) return t('common.na');
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return t('common.na');
+  }
+
+  return date.toLocaleDateString();
+};
+
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return t('common.na');
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'MAD',
+    maximumFractionDigits: 0
+  }).format(value);
+};
+
+const getContractTypeLabel = (contractType: string | null | undefined): string => {
+  if (contractType === 'permanent') return 'Permanent';
+  if (contractType === 'part_time') return 'Part-time';
+  return t('common.na');
+};
+
+const getTeacherDetailSubjects = () => {
+  if (!selectedTeacherData.value) return [];
+
+  if (Array.isArray(selectedTeacherData.value.teachable_subjects)) {
+    return selectedTeacherData.value.teachable_subjects;
+  }
+
+  if (Array.isArray(selectedTeacherData.value.subjects)) {
+    return selectedTeacherData.value.subjects;
+  }
+
+  return [];
+};
+
+const getTeacherDetailClasses = () => {
+  if (!selectedTeacherData.value || !Array.isArray(selectedTeacherData.value.classes)) {
+    return [];
+  }
+
+  return selectedTeacherData.value.classes;
+};
+
+const getTeacherDetailAvailabilities = () => {
+  if (!selectedTeacherData.value || !Array.isArray(selectedTeacherData.value.availabilities)) {
+    return [];
+  }
+
+  return selectedTeacherData.value.availabilities;
+};
+
 const addAvailabilityRow = () => {
   if (!teacher.value.availabilities) {
     teacher.value.availabilities = [];
   }
 
   teacher.value.availabilities.push({
-    day: 'Monday',
+    day: 'Sunday',
     start_time: '08:00',
     end_time: '16:00'
   });
@@ -930,7 +985,6 @@ const removeAvailabilityRow = (index: number) => {
       </template>
 
       <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-
       <Column field="full_name" :header="t('common.full_name')" sortable style="min-width: 14rem">
         <template #body="{ data }">
           <div class="flex items-center gap-2">
@@ -1638,7 +1692,7 @@ const removeAvailabilityRow = (index: number) => {
     <!-- Teacher Details Dialog -->
     <Dialog
       v-model:visible="parentDetailsDialog"
-      :style="{ width: '700px' }"
+      :style="{ width: '920px', maxWidth: '95vw' }"
       :header="t('teachers.teacher_details')"
       :modal="true"
     >
@@ -1647,13 +1701,12 @@ const removeAvailabilityRow = (index: number) => {
       </div>
 
       <div v-else-if="selectedTeacherData" class="flex flex-col gap-6">
-        <!-- Teacher Information Section -->
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-user text-primary"></i>
             {{ t('common.personal_information') }}
           </h3>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="text-sm text-muted-color">{{ t('common.full_name') }}</label>
               <p class="font-semibold">{{ selectedTeacherData.first_name }} {{ selectedTeacherData.last_name }}</p>
@@ -1663,20 +1716,27 @@ const removeAvailabilityRow = (index: number) => {
               <p class="font-semibold">{{ selectedTeacherData.cin || t('common.na') }}</p>
             </div>
             <div>
+              <label class="text-sm text-muted-color">{{ t('common.birth_date') }}</label>
+              <p class="font-semibold">{{ formatDisplayDate(selectedTeacherData.birth_date) }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">{{ t('common.hire_date') }}</label>
+              <p class="font-semibold">{{ formatDisplayDate(selectedTeacherData.hire_date) }}</p>
+            </div>
+            <div>
               <label class="text-sm text-muted-color">{{ t('common.phone') }}</label>
               <p class="font-semibold">
                 <i class="pi pi-phone text-sm mr-2"></i>
-                {{ selectedTeacherData.user?.phone || t('common.na') }}
+                {{ selectedTeacherData.user?.phone || selectedTeacherData.phone || t('common.na') }}
               </p>
             </div>
             <div>
               <label class="text-sm text-muted-color">{{ t('common.email') }}</label>
               <p class="font-semibold">
                 <i class="pi pi-envelope text-sm mr-2"></i>
-                {{ selectedTeacherData.user?.email || t('common.na') }}
+                {{ selectedTeacherData.user?.email || selectedTeacherData.email || t('common.na') }}
               </p>
             </div>
-
             <div>
               <label class="text-sm text-muted-color">{{ t('common.account_status') }}</label>
               <p>
@@ -1686,34 +1746,112 @@ const removeAvailabilityRow = (index: number) => {
                 />
               </p>
             </div>
-
-
-          </div>
-          <Divider />
-          <!-- Subjects Section -->
-          <div class="mt-6">
-            <h6 class="text-sm font-semibold text-muted-color mb-3 ">
-              <i class="pi pi-book mr-2"></i>{{ t('teachers.subjects') }}
-            </h6>
-            <div v-if="Array.isArray(selectedTeacherData.teachable_subjects) && selectedTeacherData.teachable_subjects.length > 0">
-              <div class="grid grid-cols-2 gap-2">
-                <Tag
-                  v-for="(subject, index) in selectedTeacherData.teachable_subjects"
-                  :key="subject.id || index"
-                  :value="subject.name"
-                  severity="info"
-                />
-              </div>
+            <div>
+              <label class="text-sm text-muted-color">Employee ID</label>
+              <p class="font-semibold">{{ selectedTeacherData.id || t('common.na') }}</p>
             </div>
-            <p v-else class="text-muted-color">{{ t('teachers.no_subjects') }}</p>
           </div>
-          <Divider />
-
-
         </div>
 
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-briefcase text-primary"></i>
+            Employment Information
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-muted-color">{{ t('teachers.specialization') }}</label>
+              <p class="font-semibold">{{ selectedTeacherData.specialization || t('common.na') }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Contract Type</label>
+              <p class="font-semibold">{{ getContractTypeLabel(selectedTeacherData.contract_type) }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">{{ t('teachers.salary') }}</label>
+              <p class="font-semibold">{{ formatCurrency(selectedTeacherData.salary) }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">{{ t('common.teacher_weekly_hours') }}</label>
+              <p class="font-semibold">{{ selectedTeacherData.weekly_hours ?? t('common.na') }}</p>
+            </div>
+          </div>
+        </div>
 
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-book text-primary"></i>
+            {{ t('teachers.subjects') }}
+          </h3>
+          <div v-if="getTeacherDetailSubjects().length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <Tag
+              v-for="(subject, index) in getTeacherDetailSubjects()"
+              :key="subject.id || index"
+              :value="subject.name"
+              severity="info"
+            />
+          </div>
+          <p v-else class="text-muted-color">{{ t('teachers.no_subjects') }}</p>
+        </div>
 
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-calendar text-primary"></i>
+            Weekly Availability
+          </h3>
+          <div v-if="getTeacherDetailAvailabilities().length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div
+              v-for="(slot, index) in getTeacherDetailAvailabilities()"
+              :key="slot.id || `${slot.day}-${slot.start_time}-${index}`"
+              class="rounded-md border border-surface-200 dark:border-surface-700 px-3 py-2"
+            >
+              <p class="font-semibold">{{ slot.day }}</p>
+              <p class="text-sm text-muted-color">{{ slot.start_time }} - {{ slot.end_time }}</p>
+            </div>
+          </div>
+          <p v-else class="text-muted-color">No availability defined.</p>
+        </div>
+
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-users text-primary"></i>
+            Class Assignment
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="text-sm text-muted-color">Total Classes</label>
+              <p class="font-semibold">{{ selectedTeacherData.classes_count ?? getTeacherDetailClasses().length }}</p>
+            </div>
+              
+          </div>
+
+          <div v-if="getTeacherDetailClasses().length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <Tag
+              v-for="(classItem, index) in getTeacherDetailClasses()"
+              :key="`${classItem.name}-${index}`"
+              :value="classItem.name"
+              severity="success"
+            />
+          </div>
+          <p v-else class="text-muted-color">No classes assigned.</p>
+        </div>
+
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+            <i class="pi pi-clock text-primary"></i>
+            Record Information
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-muted-color">Created At</label>
+              <p class="font-semibold">{{ formatDisplayDate(selectedTeacherData.created_at) }}</p>
+            </div>
+            <div>
+              <label class="text-sm text-muted-color">Last Updated</label>
+              <p class="font-semibold">{{ formatDisplayDate(selectedTeacherData.updated_at) }}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <template #footer>

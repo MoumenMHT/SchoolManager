@@ -20,7 +20,7 @@ const scheduleDialog = ref(false);
 const scheduleLoading = ref(false);
 const teacherSchedules = ref<Record<string, any[]>>({});
 
-const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 const schoolHours = [
   { hour: 8, label: '08:00 - 09:00' },
   { hour: 9, label: '09:00 - 10:00' },

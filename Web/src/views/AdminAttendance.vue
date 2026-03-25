@@ -57,23 +57,22 @@ function formatDateStr(d: Date) {
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const DAY_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 // ─── Date computeds ───────────────────────────────────────
 const selectedDateStr = computed(() => formatDateStr(selectedDate.value));
 
 const selectedDayName = computed(() => DAY_NAMES[selectedDate.value.getDay()]);
 
-// Week: Mon–Sun containing selectedDate
+// Week: Sun-Sat containing selectedDate
 const weekDates = computed(() => {
   const d = new Date(selectedDate.value);
   const dayOfWeek = d.getDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diff);
+  const sunday = new Date(d);
+  sunday.setDate(d.getDate() - dayOfWeek);
   return Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
+    const date = new Date(sunday);
+    date.setDate(sunday.getDate() + i);
     return date;
   });
 });

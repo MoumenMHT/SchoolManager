@@ -12,7 +12,7 @@ class ScheduleFactory extends Factory
 
     public function definition(): array
     {
-        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         $startHour = fake()->numberBetween(8, 15);
         
         return [

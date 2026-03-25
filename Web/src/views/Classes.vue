@@ -60,7 +60,7 @@ const scheduleToEdit = ref<Partial<Schedule> | null>(null);
 const scheduleSubmitted = ref(false);
 
 // Days (English values kept for API/logic use — display via t() in template)
-const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const weekDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const schoolHours = [
   { hour: 8, label: '8:00 - 9:00' },
   { hour: 9, label: '9:00 - 10:00' },

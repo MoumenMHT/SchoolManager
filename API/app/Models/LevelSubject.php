@@ -15,11 +15,13 @@ class LevelSubject extends Model
         'subject_id',
         'coefficient',
         'weekly_sessions_required',
+        'weekly_hours', // Personalized weekly hours
     ];
 
     protected $casts = [
         'coefficient' => 'integer',
         'weekly_sessions_required' => 'integer',
+        'weekly_hours' => 'integer',
     ];
 
     public function level(): BelongsTo

@@ -93,7 +93,7 @@ return [
     'failed_retrieve_class_schedule'    => 'Failed to retrieve class schedule',
     'failed_retrieve_teacher_schedule'  => 'Failed to retrieve teacher schedule',
     'failed_retrieve_subject_schedule'  => 'Failed to retrieve subject schedule',
-    'invalid_day'               => 'Invalid day. Must be one of: monday, tuesday, wednesday, thursday, friday, saturday',
+    'invalid_day'               => 'Invalid day. Must be one of: sunday, monday, tuesday, wednesday, thursday, friday, saturday',
     'failed_retrieve_day_schedule'  => 'Failed to retrieve day schedule',
     'failed_retrieve_room_schedule' => 'Failed to retrieve room schedule',
     'teacher_conflict'          => 'Teacher has another class at this time',

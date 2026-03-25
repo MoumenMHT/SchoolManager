@@ -62,7 +62,7 @@ class TeacherController extends Controller
             'contract_type' => 'sometimes|in:permanent,part_time',
             'weekly_hours' => 'sometimes|integer|min:1|max:60',
             'availabilities' => 'sometimes|array',
-            'availabilities.*.day' => 'required_with:availabilities|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
+            'availabilities.*.day' => 'required_with:availabilities|in:Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
             'availabilities.*.start_time' => 'required_with:availabilities|date_format:H:i',
             'availabilities.*.end_time' => 'required_with:availabilities|date_format:H:i|after:availabilities.*.start_time',
         ]);
@@ -117,6 +117,9 @@ class TeacherController extends Controller
         $teacher->load('user:id,email,phone'); // Load email and phone fields from the related user
         $teacher->load('teachableSubjects'); // Load subjects relationship
         $teacher->load('availabilities');
+        $teacher->loadCount('classes'); // Load count of related classes
+        $teacher->load('classes'); // Load count of related students
+        
         if (!$teacher) {
             return response()->json([
                 'success' => false,
@@ -152,7 +155,7 @@ class TeacherController extends Controller
             'contract_type' => 'sometimes|in:permanent,part_time',
             'weekly_hours' => 'sometimes|integer|min:1|max:60',
             'availabilities' => 'sometimes|array',
-            'availabilities.*.day' => 'required_with:availabilities|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
+            'availabilities.*.day' => 'required_with:availabilities|in:Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
             'availabilities.*.start_time' => 'required_with:availabilities|date_format:H:i',
             'availabilities.*.end_time' => 'required_with:availabilities|date_format:H:i|after:availabilities.*.start_time',
         ]);

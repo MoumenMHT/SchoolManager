@@ -43,12 +43,11 @@ const studentHistory = ref<StudentHistory[]>([]);
 // Days and hours for schedule grid
 // Each entry has an English key (used for schedule data lookup) and a translated label (used for display)
 const weekDays = computed(() => [
+  { key: 'sunday',    label: t('common.sunday') },
   { key: 'monday',    label: t('common.monday') },
   { key: 'tuesday',   label: t('common.tuesday') },
   { key: 'wednesday', label: t('common.wednesday') },
-  { key: 'thursday',  label: t('common.thursday') },
-  { key: 'friday',    label: t('common.friday') },
-  { key: 'saturday',  label: t('common.saturday') }
+  { key: 'thursday',  label: t('common.thursday') }
 ]);
 
 const schoolHours = [

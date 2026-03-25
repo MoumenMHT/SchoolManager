@@ -41,7 +41,7 @@ class ScheduleModelTest extends TestCase
      */
     public function test_schedule_day_values(): void
     {
-        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        $days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         
         foreach ($days as $day) {
             $schedule = Schedule::factory()->create(['day' => $day]);

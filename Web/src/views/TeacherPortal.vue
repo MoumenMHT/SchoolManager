@@ -19,16 +19,15 @@ const sessionsLoading = ref(false);
 const sessionAttMap = ref<Record<number, { present: number; absent: number; late: number; total: number }>>({});
 const sessionAttLoading = ref(false);
 
-const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const translatedWeekDays = computed(() => [
+  t('common.sunday'),
   t('common.monday'),
   t('common.tuesday'),
   t('common.wednesday'),
   t('common.thursday'),
-  t('common.friday'),
-  t('common.saturday'),
 ]);
 
 const currentUser = computed(() => apiService.getUser());

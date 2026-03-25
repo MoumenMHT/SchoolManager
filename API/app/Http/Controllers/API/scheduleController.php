@@ -15,7 +15,8 @@ use Carbon\Carbon;
 
 class scheduleController extends Controller
 {
-    private array $generationDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    private array $generationDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+    private int $teacherWeeklyTargetSessions = 20;
     private array $sessionSlots = [
         ['start' => '08:00', 'end' => '09:00', 'index' => 1],
         ['start' => '09:00', 'end' => '10:00', 'index' => 2],
@@ -24,6 +25,7 @@ class scheduleController extends Controller
         ['start' => '13:00', 'end' => '14:00', 'index' => 5],
         ['start' => '14:00', 'end' => '15:00', 'index' => 6],
         ['start' => '15:00', 'end' => '16:00', 'index' => 7],
+        ['start' => '16:00', 'end' => '17:00', 'index' => 8],
     ];
     /**
      * Display a listing of schedules with advanced filtering and pagination.
@@ -201,7 +203,7 @@ class scheduleController extends Controller
                 'day' => [
                     'required',
                     'string',
-                    Rule::in(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+                    Rule::in(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'])
                 ],
                 'start_time' => 'required|date_format:H:i',
                 'end_time' => 'required|date_format:H:i|after:start_time',
@@ -334,7 +336,7 @@ class scheduleController extends Controller
                 'day' => [
                     'sometimes',
                     'string',
-                    Rule::in(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+                    Rule::in(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'])
                 ],
                 'start_time' => 'sometimes|date_format:H:i',
                 'end_time' => 'sometimes|date_format:H:i|after:start_time',
@@ -575,7 +577,7 @@ class scheduleController extends Controller
         try {
             // Normalize day to capitalize first letter (database expects "Monday" not "monday")
             $day = ucfirst(strtolower($day));
-            $validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            $validDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
             if (!in_array($day, $validDays)) {
                 return response()->json([
@@ -662,7 +664,7 @@ class scheduleController extends Controller
                     'required',
                     'string',
                     function ($attribute, $value, $fail) {
-                        $validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        $validDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
                         if (!in_array(strtolower($value), $validDays)) {
                             $fail('The selected ' . $attribute . ' is invalid.');
                         }
@@ -777,7 +779,7 @@ class scheduleController extends Controller
                     'required',
                     'string',
                     function ($attribute, $value, $fail) {
-                        $validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        $validDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
                         if (!in_array(strtolower($value), $validDays)) {
                             $fail('The selected ' . $attribute . ' is invalid.');
                         }
@@ -870,7 +872,7 @@ class scheduleController extends Controller
                 'teacher_id' => 'nullable|exists:teachers,id',
                 'class_id' => 'nullable|exists:classes,id',
                 'room' => 'nullable|string',
-                'day' => 'required|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
+                'day' => 'required|in:sunday,monday,tuesday,wednesday,thursday,friday,saturday',
                 'start_hour' => 'nullable|integer|min:0|max:23',
                 'end_hour' => 'nullable|integer|min:0|max:23',
             ]);
@@ -1025,6 +1027,7 @@ class scheduleController extends Controller
             }
 
             $teacherSessionMap = [];
+            $teacherWeeklyLoad = [];
             $classSessionMap = [];
             $classImportantPerDay = [];
             $generatedRows = [];
@@ -1078,50 +1081,133 @@ class scheduleController extends Controller
             });
 
             foreach ($assignmentDemands as $demand) {
+
                 $assignment = $demand['assignment'];
                 $required = $demand['weekly_sessions_required'];
                 $placed = 0;
 
-                for ($i = 0; $i < $required; $i++) {
-                    $candidate = $this->findBestSlotForDemand(
-                        $demand,
-                        $teacherSessionMap,
-                        $classSessionMap,
-                        $classImportantPerDay
-                    );
+                // Special handling for Sports (SP) - always schedule as two consecutive hours
+                $subject = $assignment->subject;
+                if ($subject && (strtoupper($subject->code ?? '') === 'SP') && $required === 2) {
+                    $found = false;
+                    foreach ($this->generationDays as $day) {
+                        foreach ($this->sessionSlots as $i => $slot) {
+                            // Check if next slot exists and is consecutive
+                            if (!isset($this->sessionSlots[$i + 1])) continue;
+                            $slot2 = $this->sessionSlots[$i + 1];
+                            // Ensure slots are consecutive
+                            if ($slot['end'] !== $slot2['start']) continue;
 
-                    if (!$candidate) {
-                        break;
+                            $start1 = $slot['start'];
+                            $end1 = $slot['end'];
+                            $start2 = $slot2['start'];
+                            $end2 = $slot2['end'];
+
+                            $teacherId = $assignment->teacher_id;
+                            $classId = $assignment->class_id;
+
+                            // Check teacher and class availability for both slots
+                            if (
+                                $this->isTeacherAvailableForSlot($assignment->teacher, $day, $start1, $end1) &&
+                                $this->isTeacherAvailableForSlot($assignment->teacher, $day, $start2, $end2) &&
+                                empty($teacherSessionMap[$teacherId][$day][$start1]) &&
+                                empty($teacherSessionMap[$teacherId][$day][$start2]) &&
+                                empty($classSessionMap[$classId][$day][$start1]) &&
+                                empty($classSessionMap[$classId][$day][$start2]) &&
+                                !$this->wouldCreateClassInternalGap($classSessionMap[$classId][$day] ?? [], $start1) &&
+                                !$this->wouldCreateClassInternalGap(array_merge($classSessionMap[$classId][$day] ?? [], [$start1 => true]), $start2)
+                            ) {
+                                // Place both sessions
+                                $teacherSessionMap[$teacherId][$day][$start1] = true;
+                                $teacherSessionMap[$teacherId][$day][$start2] = true;
+                                $teacherWeeklyLoad[$teacherId] = ($teacherWeeklyLoad[$teacherId] ?? 0) + 2;
+                                $classSessionMap[$classId][$day][$start1] = true;
+                                $classSessionMap[$classId][$day][$start2] = true;
+
+                                if ($demand['is_important']) {
+                                    $classImportantPerDay[$classId][$day] = ($classImportantPerDay[$classId][$day] ?? 0) + 2;
+                                }
+
+                                $generatedRows[] = [
+                                    'class_subject_teacher_id' => $assignment->id,
+                                    'day' => $day,
+                                    'start_time' => $start1,
+                                    'end_time' => $end1,
+                                    'room' => null,
+                                ];
+                                $generatedRows[] = [
+                                    'class_subject_teacher_id' => $assignment->id,
+                                    'day' => $day,
+                                    'start_time' => $start2,
+                                    'end_time' => $end2,
+                                    'room' => null,
+                                ];
+                                $placed = 2;
+                                $found = true;
+                                break 2;
+                            }
+                        }
                     }
+                    // If not found, skip to diagnostics
+                } else {
+                    // Default: schedule each session individually
+                    for ($i = 0; $i < $required; $i++) {
+                        $candidate = $this->findBestSlotForDemand(
+                            $demand,
+                            $teacherSessionMap,
+                            $teacherWeeklyLoad,
+                            $classSessionMap,
+                            $classImportantPerDay
+                        );
 
-                    $teacherId = $assignment->teacher_id;
-                    $classId = $assignment->class_id;
-                    $day = $candidate['day'];
-                    $start = $candidate['start'];
-                    $end = $candidate['end'];
+                        // Last-resort fallback: allow exceeding important-subject daily limit
+                        // only when no feasible slot exists under the strict limit.
+                        if (!$candidate) {
+                            $candidate = $this->findBestSlotForDemand(
+                                $demand,
+                                $teacherSessionMap,
+                                $teacherWeeklyLoad,
+                                $classSessionMap,
+                                $classImportantPerDay,
+                                true
+                            );
+                        }
 
-                    $teacherSessionMap[$teacherId][$day][$start] = true;
-                    $classSessionMap[$classId][$day][$start] = true;
+                        if (!$candidate) {
+                            break;
+                        }
 
-                    if ($demand['is_important']) {
-                        $classImportantPerDay[$classId][$day] = ($classImportantPerDay[$classId][$day] ?? 0) + 1;
+                        $teacherId = $assignment->teacher_id;
+                        $classId = $assignment->class_id;
+                        $day = $candidate['day'];
+                        $start = $candidate['start'];
+                        $end = $candidate['end'];
+
+                        $teacherSessionMap[$teacherId][$day][$start] = true;
+                        $teacherWeeklyLoad[$teacherId] = ($teacherWeeklyLoad[$teacherId] ?? 0) + 1;
+                        $classSessionMap[$classId][$day][$start] = true;
+
+                        if ($demand['is_important']) {
+                            $classImportantPerDay[$classId][$day] = ($classImportantPerDay[$classId][$day] ?? 0) + 1;
+                        }
+
+                        $generatedRows[] = [
+                            'class_subject_teacher_id' => $assignment->id,
+                            'day' => $day,
+                            'start_time' => $start,
+                            'end_time' => $end,
+                            'room' => null,
+                        ];
+
+                        $placed++;
                     }
-
-                    $generatedRows[] = [
-                        'class_subject_teacher_id' => $assignment->id,
-                        'day' => $day,
-                        'start_time' => $start,
-                        'end_time' => $end,
-                        'room' => null,
-                    ];
-
-                    $placed++;
                 }
 
                 if ($placed < $required) {
                     $diagnosis = $this->diagnoseUnfilledReason(
                         $demand,
                         $teacherSessionMap,
+                        $teacherWeeklyLoad,
                         $classSessionMap,
                         $classImportantPerDay
                     );
@@ -1158,6 +1244,23 @@ class scheduleController extends Controller
                 });
             }
 
+            $teacherWeeklySummary = collect($assignments)
+                ->groupBy('teacher_id')
+                ->map(function ($teacherAssignments, $teacherId) use ($teacherWeeklyLoad) {
+                    $teacher = $teacherAssignments->first()?->teacher;
+                    $name = trim(($teacher?->first_name ?? '') . ' ' . ($teacher?->last_name ?? ''));
+                    $load = $teacherWeeklyLoad[$teacherId] ?? 0;
+
+                    return [
+                        'teacher_id' => (int) $teacherId,
+                        'teacher_name' => $name,
+                        'weekly_sessions' => $load,
+                        'target_sessions' => $this->teacherWeeklyTargetSessions,
+                        'target_reached' => $load >= $this->teacherWeeklyTargetSessions,
+                    ];
+                })
+                ->values();
+
             return response()->json([
                 'success' => true,
                 'message' => $shouldSave ? 'Schedules generated successfully.' : 'Schedule preview generated.',
@@ -1168,7 +1271,9 @@ class scheduleController extends Controller
                     'unfilled_items' => count($unfilled),
                     'clear_existing' => $clearExisting,
                     'saved' => $shouldSave,
+                    'teacher_target_sessions' => $this->teacherWeeklyTargetSessions,
                 ],
+                'teacher_weekly_load' => $teacherWeeklySummary,
                 'unfilled' => $unfilled,
             ]);
 
@@ -1198,35 +1303,58 @@ class scheduleController extends Controller
 
             $schedules = $query->get();
 
-            $classRows = $schedules->map(function ($s) {
-                return [
-                    'Class' => $s->assignment?->class?->name,
-                    'Day' => $s->day,
-                    'Start' => substr((string) $s->start_time, 0, 5),
-                    'End' => substr((string) $s->end_time, 0, 5),
-                    'Subject' => $s->assignment?->subject?->name,
-                    'Teacher' => trim(($s->assignment?->teacher?->first_name ?? '') . ' ' . ($s->assignment?->teacher?->last_name ?? '')),
-                    'Room' => $s->room,
-                ];
-            })->sortBy(['Class', 'Day', 'Start'])->values();
+            $classGroups = $schedules
+                ->sortBy([
+                    fn ($a, $b) => strcmp((string) ($a->assignment?->class?->name ?? ''), (string) ($b->assignment?->class?->name ?? '')),
+                    fn ($a, $b) => strcmp((string) ($a->day ?? ''), (string) ($b->day ?? '')),
+                    fn ($a, $b) => strcmp((string) ($a->start_time ?? ''), (string) ($b->start_time ?? '')),
+                ])
+                ->groupBy(function ($s) {
+                    return $s->assignment?->class?->name ?? 'Unassigned Class';
+                });
 
-            $teacherRows = $schedules->map(function ($s) {
-                return [
-                    'Teacher' => trim(($s->assignment?->teacher?->first_name ?? '') . ' ' . ($s->assignment?->teacher?->last_name ?? '')),
-                    'Day' => $s->day,
-                    'Start' => substr((string) $s->start_time, 0, 5),
-                    'End' => substr((string) $s->end_time, 0, 5),
-                    'Class' => $s->assignment?->class?->name,
-                    'Subject' => $s->assignment?->subject?->name,
-                    'Room' => $s->room,
-                ];
-            })->sortBy(['Teacher', 'Day', 'Start'])->values();
+            $teacherGroups = $schedules
+                ->sortBy([
+                    fn ($a, $b) => strcmp(
+                        trim((string) (($a->assignment?->teacher?->first_name ?? '') . ' ' . ($a->assignment?->teacher?->last_name ?? ''))),
+                        trim((string) (($b->assignment?->teacher?->first_name ?? '') . ' ' . ($b->assignment?->teacher?->last_name ?? '')))
+                    ),
+                    fn ($a, $b) => strcmp((string) ($a->day ?? ''), (string) ($b->day ?? '')),
+                    fn ($a, $b) => strcmp((string) ($a->start_time ?? ''), (string) ($b->start_time ?? '')),
+                ])
+                ->groupBy(function ($s) {
+                    $name = trim((string) (($s->assignment?->teacher?->first_name ?? '') . ' ' . ($s->assignment?->teacher?->last_name ?? '')));
+                    return $name !== '' ? $name : 'Unassigned Teacher';
+                });
 
-            $html = '<html><head><meta charset="UTF-8"></head><body>';
+            $html = '<html><head><meta charset="UTF-8">';
+            $html .= '<style>
+                body { font-family: Arial, sans-serif; color: #1f2937; }
+                h2 { margin: 18px 0 10px; color: #111827; }
+                h3 { margin: 14px 0 8px; color: #1f2937; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 18px; table-layout: fixed; }
+                th, td { border: 1px solid #cbd5e1; padding: 6px; vertical-align: top; font-size: 12px; }
+                th { background: #f1f5f9; text-align: center; font-weight: 700; }
+                td.time-col { background: #f8fafc; width: 110px; font-weight: 600; text-align: center; }
+                .entry { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #cbd5e1; }
+                .entry:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+                .muted { color: #6b7280; font-size: 11px; }
+                .page-break { page-break-before: always; }
+            </style>';
+            $html .= '</head><body>';
+
             $html .= '<h2>Schedules by Class</h2>';
-            $html .= $this->buildHtmlTable($classRows->all());
-            $html .= '<br/><h2>Schedules by Teacher</h2>';
-            $html .= $this->buildHtmlTable($teacherRows->all());
+            foreach ($classGroups as $className => $group) {
+                $html .= '<h3>' . e((string) $className) . '</h3>';
+                $html .= $this->buildScheduleGrid($group->values()->all(), 'class');
+            }
+
+            $html .= '<div class="page-break"></div><h2>Schedules by Teacher</h2>';
+            foreach ($teacherGroups as $teacherName => $group) {
+                $html .= '<h3>' . e((string) $teacherName) . '</h3>';
+                $html .= $this->buildScheduleGrid($group->values()->all(), 'teacher');
+            }
+
             $html .= '</body></html>';
 
             $fileName = 'schedules_' . ($academicYear ?: 'all') . '.xls';
@@ -1244,14 +1372,197 @@ class scheduleController extends Controller
         }
     }
 
+    private function buildScheduleGrid(array $schedules, string $mode = 'class'): string
+    {
+        if (empty($schedules)) {
+            return '<p>No data available.</p>';
+        }
+
+        $days = $this->resolveExportDays($schedules);
+
+        $grid = [];
+        foreach ($this->sessionSlots as $slot) {
+            $start = $slot['start'];
+            foreach ($days as $day) {
+                $grid[$start][$day] = [];
+            }
+        }
+
+        foreach ($schedules as $schedule) {
+            $rawDay = (string) ($schedule->day ?? '');
+            $day = $this->normalizeExportDay($rawDay);
+            $start = $this->normalizeExportTime($schedule->start_time ?? null);
+
+            if ($start === null || !isset($grid[$start])) {
+                continue;
+            }
+
+            if (!isset($grid[$start][$day])) {
+                $matchedDay = $this->findMatchingDayKey(array_keys($grid[$start]), $rawDay);
+                if ($matchedDay === null) {
+                    continue;
+                }
+                $day = $matchedDay;
+            }
+
+            $grid[$start][$day][] = $schedule;
+        }
+
+        $html = '<table><thead><tr><th>Time</th>';
+        foreach ($days as $day) {
+            $html .= '<th>' . e($day) . '</th>';
+        }
+        $html .= '</tr></thead><tbody>';
+
+        foreach ($this->sessionSlots as $slot) {
+            $start = $slot['start'];
+            $end = $slot['end'];
+
+            $html .= '<tr>';
+            $html .= '<td class="time-col">' . e($start . ' - ' . $end) . '</td>';
+
+            foreach ($days as $day) {
+                $entries = $grid[$start][$day] ?? [];
+                if (empty($entries)) {
+                    $html .= '<td></td>';
+                    continue;
+                }
+
+                $html .= '<td>';
+                foreach ($entries as $entry) {
+                    $html .= $this->renderScheduleGridEntry($entry, $mode);
+                }
+                $html .= '</td>';
+            }
+
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody></table>';
+        return $html;
+    }
+
+    private function resolveExportDays(array $schedules): array
+    {
+        $orderedDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        $daysInSchedules = collect($schedules)
+            ->map(function ($s) {
+                return $this->normalizeExportDay((string) ($s->day ?? ''));
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $selected = array_filter($orderedDays, function ($day) use ($daysInSchedules) {
+            return in_array($day, $this->generationDays, true) || in_array($day, $daysInSchedules, true);
+        });
+
+        return !empty($selected) ? array_values($selected) : $this->generationDays;
+    }
+
+    private function normalizeExportDay(string $day): string
+    {
+        $normalized = ucfirst(strtolower(trim($day)));
+
+        $validDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return in_array($normalized, $validDays, true) ? $normalized : $normalized;
+    }
+
+    private function normalizeExportTime($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('H:i');
+        }
+
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        // Handles plain time strings like 08:00 or 08:00:00.
+        if (preg_match('/^(\d{2}:\d{2})/', $raw, $m)) {
+            return $m[1];
+        }
+
+        // Handles ISO date-time strings like 2026-03-24T08:00:00.000000Z.
+        if (preg_match('/T(\d{2}:\d{2})/', $raw, $m)) {
+            return $m[1];
+        }
+
+        try {
+            return Carbon::parse($raw)->format('H:i');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    private function findMatchingDayKey(array $availableDays, string $rawDay): ?string
+    {
+        $needle = strtolower(trim($rawDay));
+        if ($needle === '') {
+            return null;
+        }
+
+        foreach ($availableDays as $day) {
+            if (strtolower((string) $day) === $needle) {
+                return (string) $day;
+            }
+        }
+
+        return null;
+    }
+
+    private function renderScheduleGridEntry($schedule, string $mode): string
+    {
+        $subject = (string) ($schedule->assignment?->subject?->name ?? '');
+        $className = (string) ($schedule->assignment?->class?->name ?? '');
+        $teacherName = trim((string) (($schedule->assignment?->teacher?->first_name ?? '') . ' ' . ($schedule->assignment?->teacher?->last_name ?? '')));
+        $room = (string) ($schedule->room ?? '');
+
+        if ($mode === 'teacher') {
+            $lineOne = $className !== '' ? $className : 'Unknown Class';
+            $lineTwo = $subject !== '' ? $subject : 'Unknown Subject';
+        } else {
+            $lineOne = $subject !== '' ? $subject : 'Unknown Subject';
+            $lineTwo = $teacherName !== '' ? $teacherName : 'Unknown Teacher';
+        }
+
+        $html = '<div class="entry">';
+        $html .= '<div><strong>' . e($lineOne) . '</strong></div>';
+        $html .= '<div>' . e($lineTwo) . '</div>';
+        if ($room !== '') {
+            $html .= '<div class="muted">Room: ' . e($room) . '</div>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
+
     // Helper methods for conflict checking
 
-    private function findBestSlotForDemand(array $demand, array $teacherSessionMap, array $classSessionMap, array $classImportantPerDay): ?array
+    private function findBestSlotForDemand(
+        array $demand,
+        array $teacherSessionMap,
+        array $teacherWeeklyLoad,
+        array $classSessionMap,
+        array $classImportantPerDay,
+        bool $allowImportantOverflow = false
+    ): ?array
     {
         $assignment = $demand['assignment'];
         $teacher = $assignment->teacher;
         $teacherId = $assignment->teacher_id;
         $classId = $assignment->class_id;
+
+        if (($teacherWeeklyLoad[$teacherId] ?? 0) >= $this->teacherWeeklyTargetSessions) {
+            return null;
+        }
 
         $best = null;
         $bestScore = -999999;
@@ -1273,13 +1584,29 @@ class scheduleController extends Controller
                     continue;
                 }
 
-                if ($demand['is_important'] && (($classImportantPerDay[$classId][$day] ?? 0) >= 2)) {
+                if ($this->wouldCreateClassInternalGap($classSessionMap[$classId][$day] ?? [], $start)) {
+                    continue;
+                }
+
+                $importantLimitReached = $demand['is_important'] && (($classImportantPerDay[$classId][$day] ?? 0) >= 2);
+                if ($importantLimitReached && !$allowImportantOverflow) {
                     continue;
                 }
 
                 $score = 0;
                 if ($demand['is_important']) {
                     $score += $slot['index'] <= 4 ? 50 : -20;
+                }
+
+                // Heavy penalty when overflowing important-subject daily limit.
+                // It keeps overflow as a true last-choice when fallback mode is active.
+                if ($importantLimitReached) {
+                    $score -= 120;
+                }
+
+                $teacherWeeklyCount = $teacherWeeklyLoad[$teacherId] ?? 0;
+                if ($teacherWeeklyCount < $this->teacherWeeklyTargetSessions) {
+                    $score += ($this->teacherWeeklyTargetSessions - $teacherWeeklyCount);
                 }
 
                 $teacherDailyCount = count($teacherSessionMap[$teacherId][$day] ?? []);
@@ -1319,6 +1646,55 @@ class scheduleController extends Controller
         return $best;
     }
 
+    private function wouldCreateClassInternalGap(array $existingSlotsByStart, string $candidateStart): bool
+    {
+        $indices = [];
+        foreach (array_keys($existingSlotsByStart) as $start) {
+            $index = $this->slotIndex($start);
+            if ($index !== null) {
+                $indices[] = $index;
+            }
+        }
+
+        $candidateIndex = $this->slotIndex($candidateStart);
+        if ($candidateIndex !== null) {
+            $indices[] = $candidateIndex;
+        }
+
+        if (count($indices) <= 1) {
+            return false;
+        }
+
+        // Separate into morning (1-4) and afternoon (5-8) blocks
+        $morning   = array_values(array_filter($indices, fn($i) => $i >= 1 && $i <= 4));
+        $afternoon = array_values(array_filter($indices, fn($i) => $i >= 5 && $i <= 8));
+
+        sort($morning);
+        sort($afternoon);
+
+        // Check morning block: sessions must be contiguous (no holes inside morning)
+        for ($i = 1; $i < count($morning); $i++) {
+            if ($morning[$i] - $morning[$i - 1] > 1) {
+                return true; // gap inside morning block
+            }
+        }
+
+        // Check afternoon block: sessions must be contiguous (no holes inside afternoon)
+        // BUT a lone start at 5, 6, or 7 with nothing before is fine — only gaps
+        // BETWEEN two afternoon sessions are forbidden
+        for ($i = 1; $i < count($afternoon); $i++) {
+            if ($afternoon[$i] - $afternoon[$i - 1] > 1) {
+                return true; // gap inside afternoon block e.g. slot 5 then slot 7
+            }
+        }
+
+        // Cross-block check is intentionally skipped:
+        // Morning ending at any slot (1-4) then continuing in afternoon (5-8)
+        // is always valid — the 12:00-13:00 lunch break separates them naturally.
+
+        return false;
+    }
+
     private function isTeacherAvailableForSlot($teacher, string $day, string $start, string $end): bool
     {
         if (!$teacher) {
@@ -1327,7 +1703,7 @@ class scheduleController extends Controller
 
         $availabilities = $teacher->availabilities ?? collect();
         if ($availabilities->isEmpty()) {
-            // If no availability defined, assume Monday-Friday 08:00-16:00.
+            // If no availability defined, assume Sunday-Thursday 08:00-16:00.
             return in_array($day, $this->generationDays) && $start >= '08:00' && $end <= '16:00';
         }
 
@@ -1411,7 +1787,13 @@ class scheduleController extends Controller
         return $html;
     }
 
-    private function diagnoseUnfilledReason(array $demand, array $teacherSessionMap, array $classSessionMap, array $classImportantPerDay): array
+    private function diagnoseUnfilledReason(
+        array $demand,
+        array $teacherSessionMap,
+        array $teacherWeeklyLoad,
+        array $classSessionMap,
+        array $classImportantPerDay
+    ): array
     {
         $assignment = $demand['assignment'];
         $teacher = $assignment->teacher;
@@ -1419,13 +1801,24 @@ class scheduleController extends Controller
         $classId = $assignment->class_id;
 
         $counts = [
+            'teacher_weekly_target_reached' => 0,
             'outside_teacher_availability' => 0,
             'teacher_slot_conflict' => 0,
             'class_slot_conflict' => 0,
+            'class_gap_constraint' => 0,
             'important_subject_daily_limit' => 0,
             'class_day_capacity_reached' => 0,
             'candidate_slots' => 0,
         ];
+
+        if (($teacherWeeklyLoad[$teacherId] ?? 0) >= $this->teacherWeeklyTargetSessions) {
+            return [
+                'message' => 'Teacher reached the weekly target of ' . $this->teacherWeeklyTargetSessions . ' sessions.',
+                'counts' => array_merge($counts, [
+                    'teacher_weekly_target_reached' => count($this->generationDays) * count($this->sessionSlots),
+                ]),
+            ];
+        }
 
         foreach ($this->generationDays as $day) {
             foreach ($this->sessionSlots as $slot) {
@@ -1444,6 +1837,11 @@ class scheduleController extends Controller
 
                 if (!empty($classSessionMap[$classId][$day][$start])) {
                     $counts['class_slot_conflict']++;
+                    continue;
+                }
+
+                if ($this->wouldCreateClassInternalGap($classSessionMap[$classId][$day] ?? [], $start)) {
+                    $counts['class_gap_constraint']++;
                     continue;
                 }
 
@@ -1470,9 +1868,11 @@ class scheduleController extends Controller
         }
 
         $map = [
+            'teacher_weekly_target_reached' => 'Teacher reached weekly target sessions.',
             'outside_teacher_availability' => 'Teacher availability windows are too restrictive for remaining sessions.',
             'teacher_slot_conflict' => 'Teacher already occupied in all remaining available slots.',
             'class_slot_conflict' => 'Class timetable already occupied in all feasible slots.',
+            'class_gap_constraint' => 'Adding more sessions would create internal class gaps (except 12:00-13:00 break).',
             'important_subject_daily_limit' => 'Daily important-subject limit reached for this class.',
             'class_day_capacity_reached' => 'Class reached daily session capacity (7 sessions).',
         ];
@@ -1559,16 +1959,16 @@ class scheduleController extends Controller
         // Use CASE WHEN for SQLite compatibility instead of FIELD()
         if (config('database.default') === 'sqlite') {
             return $query->orderByRaw("CASE day 
-                WHEN 'Monday' THEN 1 
-                WHEN 'Tuesday' THEN 2 
-                WHEN 'Wednesday' THEN 3 
-                WHEN 'Thursday' THEN 4 
-                WHEN 'Friday' THEN 5 
-                WHEN 'Saturday' THEN 6 
-                WHEN 'Sunday' THEN 7 
+                WHEN 'Sunday' THEN 1 
+                WHEN 'Monday' THEN 2 
+                WHEN 'Tuesday' THEN 3 
+                WHEN 'Wednesday' THEN 4 
+                WHEN 'Thursday' THEN 5 
+                WHEN 'Friday' THEN 6 
+                WHEN 'Saturday' THEN 7 
                 ELSE 8 END " . $direction);
         } else {
-            return $query->orderByRaw("FIELD(day, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday') " . $direction);
+            return $query->orderByRaw("FIELD(day, 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday') " . $direction);
         }
     }
 }

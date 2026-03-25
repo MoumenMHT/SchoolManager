@@ -47,12 +47,11 @@ const availableClasses = ref<any[]>([]);
 
 // Days and hours for schedule grid
 const weekDays = computed(() => [
+  t('common.sunday'),
   t('common.monday'),
   t('common.tuesday'),
   t('common.wednesday'),
-  t('common.thursday'),
-  t('common.friday'),
-  t('common.saturday')
+  t('common.thursday')
 ]);
 
 const genderOptions = computed(() => [

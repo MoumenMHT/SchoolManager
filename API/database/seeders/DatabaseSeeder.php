@@ -46,16 +46,17 @@ class DatabaseSeeder extends Seeder
         // Create subjects
         $this->command->info('Creating subjects...');
         $subjects = [
+            ['name' => 'Arabic', 'code' => 'AR', 'description' => 'Arabic language'],
             ['name' => 'Mathematics', 'code' => 'MATH', 'description' => 'Mathematics curriculum'],
             ['name' => 'Physics', 'code' => 'PHYS', 'description' => 'Physics curriculum'],
-            ['name' => 'Chemistry', 'code' => 'CHEM', 'description' => 'Chemistry curriculum'],
+            ['name' => 'Islamic Studies', 'code' => 'ISL', 'description' => 'Islamic Studies curriculum'],
+            ['name' => 'Civics', 'code' => 'CIV', 'description' => 'Civics curriculum'],
             ['name' => 'French', 'code' => 'FR', 'description' => 'French language'],
-            ['name' => 'Arabic', 'code' => 'AR', 'description' => 'Arabic language'],
             ['name' => 'English', 'code' => 'EN', 'description' => 'English language'],
-            ['name' => 'History', 'code' => 'HIST', 'description' => 'History curriculum'],
-            ['name' => 'Geography', 'code' => 'GEO', 'description' => 'Geography curriculum'],
-            ['name' => 'Biology', 'code' => 'BIO', 'description' => 'Biology curriculum'],
-            ['name' => 'Physical Education', 'code' => 'PE', 'description' => 'Physical Education'],
+            ['name' => 'History and Geography', 'code' => 'HISGEO', 'description' => 'History and Geography curriculum'],
+            ['name' => 'Natural Sciences', 'code' => 'NS', 'description' => 'Natural Sciences curriculum'],
+            ['name' => 'Informatics', 'code' => 'INFO', 'description' => 'Informatics curriculum'],
+            ['name' => 'Sports', 'code' => 'SP', 'description' => 'Physical Education and Sports'],
         ];
 
         $createdSubjects = [];
@@ -88,70 +89,86 @@ class DatabaseSeeder extends Seeder
 
         // Create level-subject configuration (replacement for subject_coefficients)
         $this->command->info('Creating level subjects configuration...');
+        // Personalize weekly_hours for each subject/level here:
+        $personalizedWeeklyHours = [
+            '1er' => [
+                'AR' => 5, 'MATH' => 4, 'PHYS' => 2, 'ISL' => 1, 'CIV' => 1, 'FR' => 4, 'EN' => 2, 'HISGEO' => 2, 'NS' => 2 , 'INFO' => 1, 'SP' => 2,
+            ],
+            '2em' => [
+                'AR' => 5, 'MATH' => 4, 'PHYS' => 2, 'ISL' => 1, 'CIV' => 1, 'FR' => 4, 'EN' => 2, 'HISGEO' => 2, 'NS' => 2 , 'INFO' => 1, 'SP' => 2,
+            ],
+            '3em' => [
+                'AR' => 4, 'MATH' => 4, 'PHYS' => 2, 'ISL' => 1, 'CIV' => 1, 'FR' => 4, 'EN' => 3, 'HISGEO' => 2, 'NS' => 2 , 'INFO' => 1, 'SP' => 2,
+            ],
+            '4em' => [
+                'AR' => 4, 'MATH' => 4, 'PHYS' => 2, 'ISL' => 1, 'CIV' => 1, 'FR' => 4, 'EN' => 2, 'HISGEO' => 2, 'NS' => 2 , 'INFO' => 1, 'SP' => 2,
+            ],
+        ];
+
         foreach ($createdSubjects as $subject) {
             foreach ($createdLevelsByName as $level) {
+                $weeklyHours = $personalizedWeeklyHours[$level->name][$subject->code] ?? $this->getWeeklySessionsForSubject($subject->code);
                 LevelSubject::create([
                     'level_id' => $level->id,
                     'subject_id' => $subject->id,
                     'coefficient' => rand(1, 4),
-                    'weekly_sessions_required' => $this->getWeeklySessionsForSubject($subject->code),
+                    'weekly_sessions_required' => $weeklyHours,
+                    'weekly_hours' => $weeklyHours,
                 ]);
             }
         }
 
-        // Create teachers (20 teachers)
-        $this->command->info('Creating 20 teachers...');
+        // Create teachers: 2 teachers per subject
+        // Teacher 1 handles levels 1-2, Teacher 2 handles levels 3-4.
+        $teacherCount = count($createdSubjects) * 2;
+        $this->command->info('Creating ' . $teacherCount . ' teachers (2 per subject)...');
         $teachers = [];
-        $specializations = ['Mathematics', 'Physics', 'Chemistry', 'French', 'Arabic', 'English', 'History', 'Geography', 'Biology', 'Physical Education'];
-        
-        for ($i = 0; $i < 20; $i++) {
-            $teacherUser = \App\Models\User::create([
-                'username' => fake()->name(),
-                'email' => 'teacher' . ($i + 1) . '@schoolmanager.com',
-                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
-                'role' => 'teacher',
-                'phone' => '+213' . fake()->numerify('6########'),
-                'address' => fake()->address(),
-                'is_active' => true,
-            ]);
+        $subjectTeacherByBand = [];
+        $teacherIndex = 1;
 
-            $teacher = \App\Models\Teacher::create([
-                'user_id' => $teacherUser->id,
-                'first_name' => fake()->firstName(),
-                'last_name' => fake()->lastName(),
-                'cin' => fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
-                'birth_date' => fake()->date('Y-m-d', '-30 years'),
-                'specialization' => $specializations[array_rand($specializations)],
-                'hire_date' => fake()->date('Y-m-d', '-5 years'),
-                'salary' => fake()->randomFloat(2, 3000, 8000),
-                'contract_type' => fake()->boolean(30) ? 'part_time' : 'permanent',
-                'weekly_hours' => fake()->boolean(30) ? rand(10, 18) : 20,
-            ]);
-
-            $teachers[] = $teacher;
-
-            // Seed availability windows
-            $availableDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-            if ($teacher->contract_type === 'part_time') {
-                $availableDays = fake()->randomElements($availableDays, rand(3, 4));
-            }
-
-            foreach ($availableDays as $day) {
-                \App\Models\TeacherAvailability::create([
-                    'teacher_id' => $teacher->id,
-                    'day' => $day,
-                    'start_time' => $teacher->contract_type === 'part_time' ? '09:00' : '08:00',
-                    'end_time' => $teacher->contract_type === 'part_time' ? '13:00' : '16:00',
+        foreach ($createdSubjects as $subject) {
+            foreach (['lower', 'upper'] as $band) {
+                $teacherUser = \App\Models\User::create([
+                    'username' => fake()->name(),
+                    'email' => 'teacher' . $teacherIndex . '@schoolmanager.com',
+                    'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                    'role' => 'teacher',
+                    'phone' => '+213' . fake()->numerify('6########'),
+                    'address' => fake()->address(),
+                    'is_active' => true,
                 ]);
-            }
 
-            // Assign subjects to teachers
-            $randomSubjects = fake()->randomElements($createdSubjects, rand(1, 3));
-            foreach ($randomSubjects as $subject) {
+                $teacher = \App\Models\Teacher::create([
+                    'user_id' => $teacherUser->id,
+                    'first_name' => fake()->firstName(),
+                    'last_name' => fake()->lastName(),
+                    'cin' => fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
+                    'birth_date' => fake()->date('Y-m-d', '-30 years'),
+                    'specialization' => $subject->name,
+                    'hire_date' => fake()->date('Y-m-d', '-5 years'),
+                    'salary' => fake()->randomFloat(2, 3000, 8000),
+                    'contract_type' => 'permanent',
+                    'weekly_hours' => 20,
+                ]);
+
+                $teachers[] = $teacher;
+                $subjectTeacherByBand[$subject->id][$band] = $teacher->id;
+
+                foreach (['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'] as $day) {
+                    \App\Models\TeacherAvailability::create([
+                        'teacher_id' => $teacher->id,
+                        'day' => $day,
+                        'start_time' => '08:00',
+                        'end_time' => '16:00',
+                    ]);
+                }
+
                 \App\Models\TeacherSubject::create([
                     'teacher_id' => $teacher->id,
                     'subject_id' => $subject->id,
                 ]);
+
+                $teacherIndex++;
             }
         }
 
@@ -173,7 +190,7 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $supervisorUser->id,
                 'first_name' => fake()->firstName(),
                 'last_name' => fake()->lastName(),
-                'phone' => fake()->boolean(50) ? '+212' . fake()->numerify('6########') : null,
+                'phone' => fake()->boolean(50) ? '+213' . fake()->numerify('6########') : null,
                 'hire_date' => fake()->date('Y-m-d', '-10 years'),
                 'status' => fake()->boolean(80) ? 'active' : 'inactive',
             ]);
@@ -198,7 +215,7 @@ class DatabaseSeeder extends Seeder
                     'email' => 'parent' . ($i + 1) . '@schoolmanager.com',
                     'password' => \Illuminate\Support\Facades\Hash::make('password123'),
                     'role' => 'parent',
-                    'phone' => '+212' . fake()->numerify('6########'),
+                    'phone' => '+213' . fake()->numerify('6########'),
                     'address' => fake()->address(),
                     'is_active' => true,
                 ]);
@@ -209,7 +226,7 @@ class DatabaseSeeder extends Seeder
                 'first_name' => fake()->firstName(),
                 'last_name' => fake()->lastName(),
                 'cin' => fake()->unique()->regexify('[A-Z]{2}[0-9]{6}'),
-                'phone' => $hasAccount ? null : '+212' . fake()->numerify('6########'),
+                'phone' => $hasAccount ? null : '+213' . fake()->numerify('6########'),
                 'email' => $hasAccount ? null : fake()->unique()->email(),
                 'profession' => fake()->randomElement(['Engineer', 'Doctor', 'Teacher', 'Lawyer', 'Businessman', 'Accountant']),
             ]);
@@ -270,28 +287,33 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        $levelYearById = [];
+        foreach ($createdLevelsByName as $level) {
+            $levelYearById[$level->id] = $level->year_number;
+        }
+
         // Create class-subject-teacher assignments
         $this->command->info('Creating class assignments...');
         $assignments = [];
         
         foreach ($classes as $class) {
-            // Assign 5-7 subjects per class
-            $classSubjects = fake()->randomElements($createdSubjects, rand(5, 7));
-            
-            foreach ($classSubjects as $subject) {
-                // Find a teacher who teaches this subject
-                $teacherSubjects = \App\Models\TeacherSubject::where('subject_id', $subject->id)->get();
-                if ($teacherSubjects->isNotEmpty()) {
-                    $teacherSubject = $teacherSubjects->random();
-                    
-                    $assignment = \App\Models\ClassSubjectTeacher::create([
-                        'class_id' => $class->id,
-                        'subject_id' => $subject->id,
-                        'teacher_id' => $teacherSubject->teacher_id,
-                        'academic_year' => '2025-2026',
-                    ]);
-                    $assignments[] = $assignment;
+            $yearNumber = $levelYearById[$class->level_id] ?? null;
+            $band = $yearNumber !== null && $yearNumber <= 2 ? 'lower' : 'upper';
+
+            // Every class studies every subject.
+            foreach ($createdSubjects as $subject) {
+                $teacherId = $subjectTeacherByBand[$subject->id][$band] ?? null;
+                if ($teacherId === null) {
+                    continue;
                 }
+
+                $assignment = \App\Models\ClassSubjectTeacher::create([
+                    'class_id' => $class->id,
+                    'subject_id' => $subject->id,
+                    'teacher_id' => $teacherId,
+                    'academic_year' => '2025-2026',
+                ]);
+                $assignments[] = $assignment;
             }
         }
 
@@ -629,7 +651,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('📊 Summary:');
         $this->command->info('   • 1 Admin user');
-        $this->command->info('   • 20 Teachers');
+        $this->command->info('   • ' . $teacherCount . ' Teachers (2 per subject)');
         $this->command->info('   • 50 Parents (25 with portal accounts)');
         $this->command->info('   • 150 Students across 8 classes');
         $this->command->info('   • 10 Subjects with level configuration (coefficient + weekly sessions)');
@@ -651,7 +673,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('🔐 Login credentials:');
         $this->command->info('   Admin:    admin@schoolmanager.com / password123');
-        $this->command->info('   Teachers: teacher1-20@schoolmanager.com  / password123');
+        $this->command->info('   Teachers: teacher1-' . $teacherCount . '@schoolmanager.com  / password123');
         $this->command->info('   Parents:  parent1-25@schoolmanager.com   / password123');
     }
 
@@ -661,6 +683,7 @@ class DatabaseSeeder extends Seeder
     private function recentDateForDay(string $day): string
     {
         $dayMap = [
+            'Sunday'    => 0,
             'Monday'    => 1,
             'Tuesday'   => 2,
             'Wednesday' => 3,
@@ -672,7 +695,7 @@ class DatabaseSeeder extends Seeder
         $targetDow  = $dayMap[$day] ?? 1;
         $weeksBack  = rand(1, 4);
         $base       = Carbon::now()->subWeeks($weeksBack);
-        $currentDow = $base->dayOfWeek === 0 ? 7 : $base->dayOfWeek; // 1=Mon … 7=Sun
+        $currentDow = $base->dayOfWeek; // 0=Sun ... 6=Sat
         $diff       = $targetDow - $currentDow;
 
         return $base->addDays($diff)->format('Y-m-d');
