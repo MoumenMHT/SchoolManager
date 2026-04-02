@@ -55,6 +55,11 @@ const router = createRouter({
                     component: () => import('@/views/AdminAttendance.vue')
                 },
                 {
+                    path: '/analytics/grades',
+                    name: 'grade-analytics',
+                    component: () => import('@/views/GradeAnalytics.vue')
+                },
+                {
                     path: '/schedules/generate',
                     name: 'schedule-generate',
                     component: () => import('@/views/ScheduleGenerator.vue')
@@ -203,7 +208,7 @@ router.beforeEach((to, from, next) => {
     }
 
     // If teacher tries to access admin-only pages, redirect to their portal
-    const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/attendance', '/schedules/generate'];
+    const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/attendance', '/analytics/grades', '/schedules/generate'];
     if (isAuthenticated && userRole === 'teacher' && adminOnlyPaths.includes(to.path)) {
         next('/teacher/portal');
         return;

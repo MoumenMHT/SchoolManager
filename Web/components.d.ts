@@ -13,6 +13,7 @@ declare module 'vue' {
     BillStatusWidget: typeof import('./src/components/dashboard/BillStatusWidget.vue')['default']
     BlockViewer: typeof import('./src/components/BlockViewer.vue')['default']
     Button: typeof import('primevue/button')['default']
+    Chart: typeof import('primevue/chart')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
     Column: typeof import('primevue/column')['default']
     ContractPaymentWidget: typeof import('./src/components/dashboard/ContractPaymentWidget.vue')['default']

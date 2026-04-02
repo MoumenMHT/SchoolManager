@@ -1211,7 +1211,7 @@ const removeAvailabilityRow = (index: number) => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="contract_type" class="block font-semibold mb-2">
-              Contract Type <span class="text-red-500">*</span>
+              {{t('teachers.contract_type')}} <span class="text-red-500">*</span>
             </label>
             <Select
               id="contract_type"
@@ -1219,14 +1219,14 @@ const removeAvailabilityRow = (index: number) => {
               :options="contractTypeOptions"
               optionLabel="label"
               optionValue="value"
-              placeholder="Select contract type"
+              :placeholder="t('teachers.select_contract_type')"
               class="w-full"
             />
           </div>
 
           <div>
             <label for="weekly_hours" class="block font-semibold mb-2">
-              Weekly Hours <span class="text-red-500">*</span>
+              {{t('teachers.weekly_hours')}} <span class="text-red-500">*</span>
             </label>
             <InputNumber
               id="weekly_hours"
@@ -1235,16 +1235,16 @@ const removeAvailabilityRow = (index: number) => {
               :max="60"
               class="w-full"
               :invalid="submitted && (teacher.weekly_hours === undefined || teacher.weekly_hours === null || teacher.weekly_hours < 1)"
-              placeholder="20"
+              :placeholder="t('teachers.enter_weekly_hours')"
             />
           </div>
         </div>
 
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="block font-semibold">Teacher Availability</label>
+            <label class="block font-semibold">{{t('teachers.availability')}}</label>
             <Button
-              label="Add Slot"
+              :label="t('teachers.add_slot')"
               icon="pi pi-plus"
               size="small"
               text
@@ -1262,7 +1262,7 @@ const removeAvailabilityRow = (index: number) => {
               class="grid grid-cols-12 gap-2 items-end"
             >
               <div class="col-span-12 md:col-span-4">
-                <label class="block text-xs mb-1">Day</label>
+                <label class="block text-xs mb-1">{{t('teachers.day')}}</label>
                 <Select
                   v-model="slot.day"
                   :options="availabilityDayOptions"
@@ -1273,12 +1273,12 @@ const removeAvailabilityRow = (index: number) => {
               </div>
 
               <div class="col-span-6 md:col-span-3">
-                <label class="block text-xs mb-1">Start</label>
+                <label class="block text-xs mb-1">{{t('teachers.start')}}</label>
                 <InputText v-model="slot.start_time" type="time" class="w-full" />
               </div>
 
               <div class="col-span-6 md:col-span-3">
-                <label class="block text-xs mb-1">End</label>
+                <label class="block text-xs mb-1">{{t('teachers.end')}}</label>
                 <InputText v-model="slot.end_time" type="time" class="w-full" />
               </div>
 
@@ -1294,7 +1294,7 @@ const removeAvailabilityRow = (index: number) => {
             </div>
           </div>
 
-          <small v-else class="text-muted-color">No availability slots added. Scheduler will use default availability.</small>
+          <small v-else class="text-muted-color">{{t('teachers.no_availability_slots')}}</small>
         </div>
 
         <!-- Subjects (only for new teachers) -->
@@ -1747,7 +1747,7 @@ const removeAvailabilityRow = (index: number) => {
               </p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Employee ID</label>
+              <label class="text-sm text-muted-color">{{ t('common.employee_id') }}</label>
               <p class="font-semibold">{{ selectedTeacherData.id || t('common.na') }}</p>
             </div>
           </div>
@@ -1756,7 +1756,7 @@ const removeAvailabilityRow = (index: number) => {
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-briefcase text-primary"></i>
-            Employment Information
+            {{ t('teachers.employment_information') }}
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -1764,7 +1764,7 @@ const removeAvailabilityRow = (index: number) => {
               <p class="font-semibold">{{ selectedTeacherData.specialization || t('common.na') }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Contract Type</label>
+              <label class="text-sm text-muted-color">{{ t('teachers.contract_type') }}</label>
               <p class="font-semibold">{{ getContractTypeLabel(selectedTeacherData.contract_type) }}</p>
             </div>
             <div>
@@ -1772,7 +1772,7 @@ const removeAvailabilityRow = (index: number) => {
               <p class="font-semibold">{{ formatCurrency(selectedTeacherData.salary) }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">{{ t('common.teacher_weekly_hours') }}</label>
+              <label class="text-sm text-muted-color">{{ t('teachers.teacher_weekly_hours') }}</label>
               <p class="font-semibold">{{ selectedTeacherData.weekly_hours ?? t('common.na') }}</p>
             </div>
           </div>
@@ -1797,7 +1797,7 @@ const removeAvailabilityRow = (index: number) => {
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-calendar text-primary"></i>
-            Weekly Availability
+            {{ t('teachers.availability') }}
           </h3>
           <div v-if="getTeacherDetailAvailabilities().length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div
@@ -1809,17 +1809,17 @@ const removeAvailabilityRow = (index: number) => {
               <p class="text-sm text-muted-color">{{ slot.start_time }} - {{ slot.end_time }}</p>
             </div>
           </div>
-          <p v-else class="text-muted-color">No availability defined.</p>
+          <p v-else class="text-muted-color">{{ t('teachers.no_availability_slots') }}</p>
         </div>
 
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-users text-primary"></i>
-            Class Assignment
+            {{ t('teachers.class_assignment') }}
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label class="text-sm text-muted-color">Total Classes</label>
+              <label class="text-sm text-muted-color">{{ t('teachers.total_classes') }}</label>
               <p class="font-semibold">{{ selectedTeacherData.classes_count ?? getTeacherDetailClasses().length }}</p>
             </div>
               
@@ -1833,21 +1833,21 @@ const removeAvailabilityRow = (index: number) => {
               severity="success"
             />
           </div>
-          <p v-else class="text-muted-color">No classes assigned.</p>
+          <p v-else class="text-muted-color">{{ t('teachers.no_classes_assigned') }}</p>
         </div>
 
         <div class="border border-surface-200 dark:border-surface-700 rounded-lg p-4">
           <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
             <i class="pi pi-clock text-primary"></i>
-            Record Information
+            {{ t('teachers.record_information') }}
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="text-sm text-muted-color">Created At</label>
+              <label class="text-sm text-muted-color">{{ t('teachers.created_at') }}</label>
               <p class="font-semibold">{{ formatDisplayDate(selectedTeacherData.created_at) }}</p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">Last Updated</label>
+              <label class="text-sm text-muted-color">{{ t('teachers.last_updated') }}</label>
               <p class="font-semibold">{{ formatDisplayDate(selectedTeacherData.updated_at) }}</p>
             </div>
           </div>

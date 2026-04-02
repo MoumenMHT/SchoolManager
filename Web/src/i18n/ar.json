@@ -10,6 +10,8 @@
     "export": "تصدير",
     "search": "بحث...",
     "loading": "جارٍ التحميل...",
+    "birth_date": "تاريخ الميلاد",
+  
     "na": "غير متاح",
     "actions": "إجراءات",
     "view": "عرض",
@@ -78,6 +80,9 @@
     "teachers": "الأساتذة",
     "parents": "أولياء الأمور",
     "classes": "الفصول",
+    "hire_date": "تاريخ التوظيف",
+    "employee_id": "رقم الموظف",
+
     "dashboard": "لوحة التحكم",
     "attendance": "الحضور والغياب"
   },
@@ -102,7 +107,8 @@
     "teachers": "الأساتذة",
     "students": "الطلاب",
     "classes": "الفصول",
-    "attendance": "الحضور والغياب"
+    "attendance": "الحضور والغياب",
+    "grade_analytics": "تحليلات النقاط"
   },
   "topbar": {
     "logout": "تسجيل الخروج",
@@ -275,6 +281,7 @@
     "new_teacher": "أستاذ جديد",
     "search_placeholder": "البحث عن أساتذة...",
     "no_teachers": "لم يُعثر على أساتذة.",
+    "employment_information": "معلومات التوظيف",
     "teacher_details": "تفاصيل الأستاذ",
     "birth_date": "تاريخ الميلاد",
     "hire_date": "تاريخ التوظيف",
@@ -321,7 +328,31 @@
     "birth_date_required": "تاريخ الميلاد مطلوب.",
     "hire_date_required": "تاريخ التوظيف مطلوب.",
     "specialization_required": "التخصص مطلوب.",
-    "salary_required": "الراتب مطلوب."
+    "salary_required": "الراتب مطلوب.",
+    "enter_first_name": "أدخل الاسم الأول",
+    "enter_last_name": "أدخل اسم العائلة",
+    "enter_cin": "أدخل رقم بطاقة الهوية",
+    "select_birth_date": "اختر تاريخ الميلاد",
+    "select_hire_date": "اختر تاريخ التوظيف",
+    "enter_salary": "أدخل الراتب",
+    "contract_type": "نوع العقد",
+    "select_contract_type": "اختر نوع العقد",
+    "weekly_hours": "الساعات الأسبوعية",
+    "enter_weekly_hours": "أدخل عدد الساعات الأسبوعية",
+    "availability": "توفر الأستاذ",
+    "add_slot": "إضافة فترة",
+    "no_availability_slots": "لم يتم إضافة أي فترات توفر. سيتم استخدام التوفر الافتراضي.",
+    "class_assignment": "تعيين الفصول",
+    "total_classes": "إجمالي الفصول",
+    "no_classes_assigned": "لم يتم تعيين أي فصول لهذا الأستاذ.",
+    "record_information": "تسجيل المعلومات",
+    "created_at": "تاريخ الإنشاء",
+    "last_updated": "آخر تحديث",
+    "day": "اليوم",
+    "start": "بداية",
+    "end": "نهاية",
+    "teacher_weekly_hours": "الساعات الأسبوعية للأستاذ",
+    "enter_specialization": "أدخل التخصص"
   },
   "parents": {
     "title": "إدارة أولياء الأمور",

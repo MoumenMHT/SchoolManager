@@ -18,10 +18,16 @@ export interface GradeRecord {
     first_name: string;
     last_name: string;
     code: string;
+    class_id?: number;
   };
   subject?: {
     id: number;
     name: string;
+  };
+  teacher?: {
+    id: number;
+    first_name: string;
+    last_name: string;
   };
 }
 
@@ -38,6 +44,11 @@ export interface CreateGradeDTO {
 }
 
 class GradeService {
+  async getGrades(params?: { student_id?: number; subject_id?: number; semester?: string; academic_year?: string }): Promise<GradeRecord[]> {
+    const response = await ApiService.get<GradeRecord[]>('/grades', params);
+    return (response.data as any) || [];
+  }
+
   async getClassGrades(classId: number, params?: { subject_id?: number; semester?: string; academic_year?: string }): Promise<GradeRecord[]> {
     const response = await ApiService.get<GradeRecord[]>(`/classes/${classId}/grades`, params);
     return (response.data as any) || [];

@@ -62,6 +62,11 @@ const model = computed(() => {
                 to: '/attendance'
             },
             {
+                label: t('nav.grade_analytics'),
+                icon: 'pi pi-fw pi-chart-bar',
+                to: '/analytics/grades'
+            },
+            {
                 label: 'Schedule Generator',
                 icon: 'pi pi-fw pi-calendar-plus',
                 to: '/schedules/generate'
