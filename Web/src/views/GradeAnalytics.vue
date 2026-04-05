@@ -37,6 +37,9 @@ const selectedAcademicYear = ref<string>('');
 const selectedSemester = ref<string>('all');
 const selectedExamType = ref<string>('all');
 const selectedClassId = ref<number | null>(null);
+const selectedSubjectId = ref<number | null>(null);
+const selectedTeacherId = ref<number | null>(null);
+const selectedStudentId = ref<number | null>(null);
 
 const selectedTeacherForChart = ref<number | null>(null);
 const selectedSubjectForChart = ref<number | null>(null);
@@ -102,6 +105,22 @@ const subjectOptions = computed(() => {
       label: subject.name,
       value: subject.id
     }))
+  ];
+});
+
+const studentOptions = computed(() => {
+  const studentsMap = new Map<number, string>();
+  allGrades.value.forEach((grade) => {
+    if (grade.student_id && grade.student_name && !studentsMap.has(grade.student_id)) {
+      studentsMap.set(grade.student_id, grade.student_name);
+    }
+  });
+  return [
+    { label: 'All Students', value: null as number | null },
+    ...Array.from(studentsMap.entries()).map(([id, name]) => ({
+      label: name,
+      value: id
+    })).sort((a, b) => a.label.localeCompare(b.label))
   ];
 });
 
@@ -175,6 +194,9 @@ const globalFilteredGrades = computed(() => {
     if (selectedSemester.value !== 'all' && grade.semester !== selectedSemester.value) return false;
     if (selectedExamType.value !== 'all' && grade.exam_type !== selectedExamType.value) return false;
     if (selectedClassId.value && grade.class_id !== selectedClassId.value) return false;
+    if (selectedSubjectId.value && grade.subject_id !== selectedSubjectId.value) return false;
+    if (selectedTeacherId.value && grade.teacher_id !== selectedTeacherId.value) return false;
+    if (selectedStudentId.value && grade.student_id !== selectedStudentId.value) return false;
     return true;
   });
 });
@@ -439,6 +461,9 @@ const resetFilters = async () => {
   selectedSemester.value = 'all';
   selectedExamType.value = 'all';
   selectedClassId.value = null;
+  selectedSubjectId.value = null;
+  selectedTeacherId.value = null;
+  selectedStudentId.value = null;
   selectedTeacherForChart.value = null;
   selectedSubjectForChart.value = null;
   await loadGrades();
@@ -474,7 +499,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
           <Select
             v-model="selectedAcademicYear"
             :options="academicYearOptions"
@@ -506,6 +531,36 @@ onMounted(async () => {
             optionValue="value"
             placeholder="Class"
             class="w-full"
+            filter
+          />
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Select
+            v-model="selectedSubjectId"
+            :options="subjectOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Subject"
+            class="w-full"
+            filter
+          />
+          <Select
+            v-model="selectedTeacherId"
+            :options="teacherOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Teacher"
+            class="w-full"
+            filter
+          />
+          <Select
+            v-model="selectedStudentId"
+            :options="studentOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Student"
+            class="w-full"
+            filter
           />
         </div>
       </div>

@@ -320,26 +320,36 @@ class DatabaseSeeder extends Seeder
      
 
 
-        // Create grades (450 grades)
-        $this->command->info('Creating 450 grade records...');
+        // Create grades for all students across all subjects and exam types
+        $this->command->info('Creating comprehensive grade records for all students...');
         $examTypes = ['Quiz', 'Midterm', 'Final', 'Homework', 'Project'];
         $semesters = ['Semester 1', 'Semester 2'];
-        
+
+        // Group assignments by class_id to quickly find the student's teachers and subjects
+        $assignmentsByClass = [];
+        foreach ($assignments as $assignment) {
+            $assignmentsByClass[$assignment->class_id][] = $assignment;
+        }
+
         foreach ($students as $student) {
-            for ($i = 0; $i < 3; $i++) {
-                $classAssignment = $assignments[array_rand($assignments)];
-                
-                \App\Models\Grade::create([
-                    'student_id' => $student->id,
-                    'subject_id' => $classAssignment->subject_id,
-                    'teacher_id' => $classAssignment->teacher_id,
-                    'exam_type' => $examTypes[array_rand($examTypes)],
-                    'grade' => fake()->randomFloat(2, 0, 20),
-                    'max_grade' => 20,
-                    'semester' => $semesters[array_rand($semesters)],
-                    'academic_year' => '2025-2026',
-                    'comment' => fake()->optional(0.3)->sentence(),
-                ]);
+            $studentAssignments = $assignmentsByClass[$student->class_id] ?? [];
+
+            foreach ($studentAssignments as $assignment) {
+                foreach ($semesters as $semester) {
+                    foreach ($examTypes as $examType) {
+                        \App\Models\Grade::create([
+                            'student_id' => $student->id,
+                            'subject_id' => $assignment->subject_id,
+                            'teacher_id' => $assignment->teacher_id,
+                            'exam_type' => $examType,
+                            'grade' => fake()->randomFloat(2, 0, 20),
+                            'max_grade' => 20,
+                            'semester' => $semester,
+                            'academic_year' => '2025-2026',
+                            'comment' => fake()->optional(0.3)->sentence(),
+                        ]);
+                    }
+                }
             }
         }
 
@@ -656,7 +666,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('   • 150 Students across 8 classes');
         $this->command->info('   • 10 Subjects with level configuration (coefficient + weekly sessions)');
         $this->command->info('   • 300 Attendance records');
-        $this->command->info('   • 450 Grade records');
+        $this->command->info('   • ' . \App\Models\Grade::count() . ' Grade records');
         $this->command->info('   • 5 Fees (2025-2026) + 5 archived (2024-2025)');
         $this->command->info('   • ' . $totalContracts . ' Contracts  (' . $contractCount . ' created this run)');
         $this->command->info('   • ' . $totalBills     . ' Bills');
