@@ -136,6 +136,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:teacher,admin')->group(function () {
         // Grade Management - specific routes MUST come before apiResource
         Route::post('/grades/bulk', [GradeController::class, 'bulkStore']);
+        Route::get('/grades/analytics/overview', [GradeController::class, 'getAnalyticsOverview']);
         Route::apiResource('grades', GradeController::class);
         Route::post('/attendances/bulk', [AttendanceController::class, 'bulkStore']);
         Route::apiResource('attendances', AttendanceController::class);

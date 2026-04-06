@@ -323,7 +323,7 @@ class DatabaseSeeder extends Seeder
         // Create grades for all students across all subjects and exam types
         $this->command->info('Creating comprehensive grade records for all students...');
         $examTypes = ['Quiz', 'Midterm', 'Final', 'Homework', 'Project'];
-        $semesters = ['Semester 1', 'Semester 2'];
+        $semesters = ['Trimester 1', 'Trimester 2', 'Trimester 3'];
 
         // Group assignments by class_id to quickly find the student's teachers and subjects
         $assignmentsByClass = [];

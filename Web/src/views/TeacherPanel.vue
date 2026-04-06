@@ -74,9 +74,9 @@ const examTypeOptions = [
 ];
 
 const semesterOptions = [
-  { label: 'Semester 1', value: '1' },
-  { label: 'Semester 2', value: '2' },
-  { label: 'Semester 3', value: '3' },
+  { label: 'Trimester 1', value: 'Trimester 1' },
+  { label: 'Trimester 2', value: 'Trimester 2' },
+  { label: 'Trimester 3', value: 'Trimester 3' },
 ];
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
@@ -271,7 +271,7 @@ const saveGrades = async () => {
     return;
   }
   if (!gradeSemester.value) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a semester', life: 3000 });
+    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a trimester', life: 3000 });
     return;
   }
   if (!teacherId.value) {
@@ -654,15 +654,15 @@ const getSubjectColor = (index: number | string) => {
           />
         </div>
 
-        <!-- Semester -->
+        <!-- Trimester -->
         <div class="col-12 md:col-6 lg:col-3">
-          <label class="block mb-1 font-medium text-sm">Semester <span class="text-red-400">*</span></label>
+          <label class="block mb-1 font-medium text-sm">Trimester <span class="text-red-400">*</span></label>
           <Select
             v-model="gradeSemester"
             :options="semesterOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Select semester"
+            placeholder="Select trimester"
             class="w-full"
           />
         </div>

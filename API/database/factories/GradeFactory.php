@@ -21,7 +21,7 @@ class GradeFactory extends Factory
             'exam_type' => fake()->randomElement(['midterm', 'final', 'quiz', 'homework']),
             'grade' => fake()->randomFloat(2, 0, 20),
             'max_grade' => 20,
-            'semester' => fake()->randomElement(['1', '2']),
+            'semester' => fake()->randomElement(['Trimester 1', 'Trimester 2', 'Trimester 3']),
             'academic_year' => '2025-2026',
             'comment' => fake()->optional()->sentence(),
         ];

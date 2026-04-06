@@ -64,7 +64,7 @@ const ATTENDANCE_OPTIONS = [
 
 // ─── Grades state ─────────────────────────────────────────
 const gradeSubjectId = ref<number | null>(null);
-const gradeSemester = ref<string>('1');
+const gradeSemester = ref<string>('Trimester 1');
 const gradeExamType = ref<string>('quiz');
 const gradeAcademicYear = ref<string>(computeAcademicYear());
 const gradeMaxGrade = ref<number>(20);
@@ -81,8 +81,9 @@ const EXAM_TYPES = [
 ];
 
 const SEMESTERS = [
-  { label: 'Semester 1', value: '1' },
-  { label: 'Semester 2', value: '2' },
+  { label: 'Trimester 1', value: 'Trimester 1' },
+  { label: 'Trimester 2', value: 'Trimester 2' },
+  { label: 'Trimester 3', value: 'Trimester 3' },
 ];
 
 function computeAcademicYear(): string {
@@ -616,7 +617,7 @@ onMounted(async () => {
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Semester</label>
+                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Trimester</label>
                 <Select v-model="gradeSemester" :options="SEMESTERS" option-label="label" option-value="value" class="w-full sm:w-44" />
               </div>
 
