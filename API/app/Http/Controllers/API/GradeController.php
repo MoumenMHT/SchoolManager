@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Models\LevelSubject;
+use App\Services\GradingService;
 
 
 class GradeController extends Controller
@@ -305,7 +307,7 @@ class GradeController extends Controller
      */
     public function getStudentReportCard(string $studentId, Request $request)
     {
-        $student = Student::with('class')->find($studentId);
+        $student = Student::with('class.levelProfile')->find($studentId);
 
         if (!$student) {
             return response()->json([
@@ -314,7 +316,6 @@ class GradeController extends Controller
             ], 404);
         }
 
-        // Parents can only access report cards for their own children
         if ($request->user()->role === 'parent') {
             $parent = $request->user()->parent;
             if (!$parent || $student->parent_id !== $parent->id) {
@@ -334,42 +335,43 @@ class GradeController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $grades = Grade::with(['subject', 'teacher'])
+        $averages = \App\Models\StudentAverage::with('subject')
+            ->where('student_id', $studentId)
+            ->where('trimester', $request->semester)
+            ->where('academic_year', $request->academic_year)
+            ->get();
+
+        $rawGrades = \App\Models\Grade::with('teacher')
             ->where('student_id', $studentId)
             ->where('semester', $request->semester)
             ->where('academic_year', $request->academic_year)
             ->get();
+        $gradesBySubject = $rawGrades->groupBy('subject_id');
 
-        // Group grades by subject
-        $gradesBySubject = $grades->groupBy('subject_id')->map(function ($subjectGrades) {
-            $subject = $subjectGrades->first()->subject;
-            $totalGrade = 0;
-            $totalMaxGrade = 0;
-    
-            foreach ($subjectGrades as $grade) {
-                $totalGrade += $grade->grade;
-                $totalMaxGrade += $grade->max_grade;
-            }
+        $subjectAverages = $averages->where('record_type', 'subject')->values();
+        $overallAverageRow = $averages->where('record_type', 'overall')->first();
 
-            $average = $totalMaxGrade > 0 ? ($totalGrade / $totalMaxGrade) * 20 : 0;
+        $levelId = $student->class->level_id;
+
+        $formattedSubjects = $subjectAverages->map(function ($avg) use ($levelId, $gradesBySubject) {
+            $coefficient = LevelSubject::getCoefficient($avg->subject_id, $levelId) ?? 1;
+            $subjectRawGrades = $gradesBySubject->get($avg->subject_id, collect());
+            
+            $cc = $subjectRawGrades->where('exam_type', 'evaluation_continue')->first();
+            $devoir = $subjectRawGrades->where('exam_type', 'devoir')->first();
+            $composition = $subjectRawGrades->where('exam_type', 'composition')->first();
 
             return [
-                'subject' => $subject,
-                'grades' => $subjectGrades,
-                'average' => round($average, 2),
+                'subject' => $avg->subject,
+                'teacher' => $subjectRawGrades->first()?->teacher,
+                'evaluation_continue' => $cc ? round(($cc->grade / max(1, $cc->max_grade)) * 20, 2) : '-',
+                'devoir' => $devoir ? round(($devoir->grade / max(1, $devoir->max_grade)) * 20, 2) : '-',
+                'composition' => $composition ? round(($composition->grade / max(1, $composition->max_grade)) * 20, 2) : '-',
+                'average' => $avg->average,
+                'coefficient' => $coefficient,
+                'weighted_average' => round($avg->average * $coefficient, 2)
             ];
         });
-
-        // Calculate overall average
-        $totalAverage = 0;
-        $subjectCount = $gradesBySubject->count();
-        
-        if ($subjectCount > 0) {
-            foreach ($gradesBySubject as $subjectData) {
-                $totalAverage += $subjectData['average'];
-            }
-            $totalAverage = round($totalAverage / $subjectCount, 2);
-        }
 
         return response()->json([
             'success' => true,
@@ -377,8 +379,8 @@ class GradeController extends Controller
                 'student' => $student,
                 'semester' => $request->semester,
                 'academic_year' => $request->academic_year,
-                'subjects' => $gradesBySubject->values(),
-                'overall_average' => $totalAverage,
+                'subjects' => $formattedSubjects,
+                'overall_average' => $overallAverageRow ? $overallAverageRow->average : 0,
             ]
         ]);
     }
@@ -565,47 +567,26 @@ class GradeController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $studentIds = Student::where('class_id', $classId)->pluck('id');
-
-        if ($studentIds->isEmpty()) {
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'class_id' => $classId,
-                    'semester' => $request->semester,
-                    'academic_year' => $request->academic_year,
-                    'rankings' => [],
-                ]
-            ]);
-        }
-
-        $subjectAveragesSubquery = Grade::query()
-            ->selectRaw('student_id, subject_id, (SUM(grade) / NULLIF(SUM(max_grade), 0)) * 20 as subject_average')
-            ->whereIn('student_id', $studentIds)
-            ->where('semester', $request->semester)
+        $rankingsRecords = \App\Models\StudentAverage::with('student')
+            ->where('class_id', $classId)
+            ->where('record_type', 'overall')
+            ->where('trimester', $request->semester)
             ->where('academic_year', $request->academic_year)
-            ->groupBy('student_id', 'subject_id');
-
-        $rankings = DB::query()
-            ->fromSub($subjectAveragesSubquery, 'subject_averages')
-            ->join('students', 'students.id', '=', 'subject_averages.student_id')
-            ->selectRaw('students.id as student_id, students.first_name, students.last_name, students.code, AVG(subject_averages.subject_average) as average')
-            ->groupBy('students.id', 'students.first_name', 'students.last_name', 'students.code')
             ->orderByDesc('average')
-            ->get()
-            ->values()
-            ->map(function ($row, $index) {
-                return [
-                    'student' => [
-                        'id' => $row->student_id,
-                        'first_name' => $row->first_name,
-                        'last_name' => $row->last_name,
-                        'code' => $row->code,
-                    ],
-                    'average' => round((float) $row->average, 2),
-                    'rank' => $index + 1,
-                ];
-            });
+            ->get();
+
+        $rankings = $rankingsRecords->map(function ($row, $index) {
+            return [
+                'student' => [
+                    'id' => $row->student->id,
+                    'first_name' => $row->student->first_name,
+                    'last_name' => $row->student->last_name,
+                    'code' => $row->student->code,
+                ],
+                'average' => $row->average,
+                'rank' => $index + 1,
+            ];
+        });
 
         return response()->json([
             'success' => true,

@@ -18,7 +18,7 @@ class GradeFactory extends Factory
             'student_id' => Student::factory(),
             'subject_id' => Subject::factory(),
             'teacher_id' => Teacher::factory(),
-            'exam_type' => fake()->randomElement(['midterm', 'final', 'quiz', 'homework']),
+            'exam_type' => fake()->randomElement(['evaluation_continue', 'devoir', 'composition']),
             'grade' => fake()->randomFloat(2, 0, 20),
             'max_grade' => 20,
             'semester' => fake()->randomElement(['Trimester 1', 'Trimester 2', 'Trimester 3']),

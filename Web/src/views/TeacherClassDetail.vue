@@ -65,7 +65,7 @@ const ATTENDANCE_OPTIONS = [
 // ─── Grades state ─────────────────────────────────────────
 const gradeSubjectId = ref<number | null>(null);
 const gradeSemester = ref<string>('Trimester 1');
-const gradeExamType = ref<string>('quiz');
+const gradeExamType = ref<string>('evaluation_continue');
 const gradeAcademicYear = ref<string>(computeAcademicYear());
 const gradeMaxGrade = ref<number>(20);
 const gradeLoading = ref(false);
@@ -74,10 +74,9 @@ const existingGradeMap = ref<Map<number, GradeRecord>>(new Map());
 const gradeValues = ref<Record<number, string>>({});
 
 const EXAM_TYPES = [
-  { label: 'Quiz', value: 'quiz' },
-  { label: 'Homework', value: 'homework' },
-  { label: 'Exam', value: 'exam' },
-  { label: 'Project', value: 'project' },
+  { label: 'Évaluation Continue', value: 'evaluation_continue' },
+  { label: 'Devoir', value: 'devoir' },
+  { label: 'Composition', value: 'composition' },
 ];
 
 const SEMESTERS = [

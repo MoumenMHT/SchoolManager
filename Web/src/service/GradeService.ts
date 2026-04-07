@@ -123,6 +123,11 @@ class GradeService {
     const response = await ApiService.get<GradeAnalyticsOverview>('/grades/analytics/overview', params);
     return (response.data as GradeAnalyticsOverview);
   }
+
+  async getStudentReportCard(studentId: number, params: { semester: string; academic_year: string }): Promise<any> {
+    const response = await ApiService.get<any>(`/students/${studentId}/report-card`, params);
+    return response;
+  }
 }
 
 export default new GradeService();

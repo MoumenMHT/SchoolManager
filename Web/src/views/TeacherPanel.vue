@@ -67,10 +67,9 @@ const gradeRows = ref<Array<{ student: any; grade: number | null; comment: strin
 const savingGrades = ref(false);
 
 const examTypeOptions = [
-  { label: 'Quiz', value: 'quiz' },
-  { label: 'Homework', value: 'homework' },
-  { label: 'Exam', value: 'exam' },
-  { label: 'Project', value: 'project' },
+  { label: 'Évaluation Continue', value: 'evaluation_continue' },
+  { label: 'Devoir', value: 'devoir' },
+  { label: 'Composition', value: 'composition' },
 ];
 
 const semesterOptions = [
