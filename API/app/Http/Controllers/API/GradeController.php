@@ -708,6 +708,65 @@ class GradeController extends Controller
                 ->selectRaw('SUM(CASE WHEN ' . $normalizedExpression . ' >= 16 THEN 1 ELSE 0 END) as band_16_20')
                 ->first();
 
+            $studentQuery = Grade::query()
+                ->join('students', 'students.id', '=', 'grades.student_id')
+                ->join('classes', 'classes.id', '=', 'students.class_id')
+                ->selectRaw('grades.student_id as id')
+                ->selectRaw('CONCAT(students.first_name, " ", students.last_name) as label')
+                ->selectRaw('students.class_id as class_id')
+                ->selectRaw('classes.name as class_name')
+                ->selectRaw('COUNT(*) as count')
+                ->selectRaw('AVG(' . $normalizedExpression . ') as average')
+                ->selectRaw('MIN(' . $normalizedExpression . ') as min')
+                ->selectRaw('MAX(' . $normalizedExpression . ') as max')
+                ->selectRaw('STDDEV_POP(' . $normalizedExpression . ') as std_dev')
+                ->groupBy('grades.student_id', 'students.first_name', 'students.last_name', 'students.class_id', 'classes.name')
+                ->orderByDesc('average');
+            $this->applyGradeFilters($studentQuery, $request);
+            $studentAggregates = $studentQuery->get();
+
+            // Pass rate based on subject averages:
+            // For each (student, subject) compute the average grade, then count how many subjects >= 10
+            $subjAvgQuery = Grade::query()
+                ->selectRaw('student_id, subject_id, AVG(' . $normalizedExpression . ') as subj_avg')
+                ->groupBy('student_id', 'subject_id');
+            $this->applyGradeFilters($subjAvgQuery, $request);
+
+            $passRateMap = DB::table(DB::raw('(' . $subjAvgQuery->toSql() . ') as sub'))
+                ->mergeBindings($subjAvgQuery->getQuery())
+                ->selectRaw('student_id')
+                ->selectRaw('ROUND(AVG(CASE WHEN subj_avg >= 10 THEN 100 ELSE 0 END), 2) as pass_rate')
+                ->groupBy('student_id')
+                ->get()
+                ->keyBy('student_id');
+
+            // Best subject per student: find the subject with the highest avg
+            $bestSubjectQuery = Grade::query()
+                ->join('subjects', 'subjects.id', '=', 'grades.subject_id')
+                ->selectRaw('grades.student_id')
+                ->selectRaw('subjects.name as best_subject')
+                ->selectRaw('AVG(' . $normalizedExpression . ') as best_avg')
+                ->groupBy('grades.student_id', 'grades.subject_id', 'subjects.name');
+            $this->applyGradeFilters($bestSubjectQuery, $request);
+
+            // Pick the top subject per student
+            $bestSubjectMap = [];
+            foreach ($bestSubjectQuery->get() as $row) {
+                $sid = $row->student_id;
+                if (!isset($bestSubjectMap[$sid]) || $row->best_avg > $bestSubjectMap[$sid]['avg']) {
+                    $bestSubjectMap[$sid] = ['subject' => $row->best_subject, 'avg' => round((float)$row->best_avg, 2)];
+                }
+            }
+
+            // Merge pass_rate + best_subject into student aggregates
+            $studentAggregates = $studentAggregates->map(function ($row) use ($bestSubjectMap, $passRateMap) {
+                $sid = $row->id;
+                $row->pass_rate       = (float) ($passRateMap[$sid]->pass_rate ?? 0);
+                $row->best_subject    = $bestSubjectMap[$sid]['subject'] ?? null;
+                $row->best_subject_avg = $bestSubjectMap[$sid]['avg'] ?? null;
+                return $row;
+            });
+
             return [
                 'stats' => [
                     'records' => (int) ($statsRow->records ?? 0),
@@ -727,6 +786,7 @@ class GradeController extends Controller
                 'subject_aggregates' => $subjectAggregates,
                 'class_aggregates' => $classAggregates,
                 'teacher_aggregates' => $teacherAggregates,
+                'student_aggregates' => $studentAggregates,
                 'distribution' => [
                     ['label' => '0-5', 'count' => (int) ($distribution->band_0_5 ?? 0)],
                     ['label' => '5-10', 'count' => (int) ($distribution->band_5_10 ?? 0)],

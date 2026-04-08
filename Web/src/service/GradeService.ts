@@ -74,6 +74,7 @@ export interface GradeAnalyticsOverview {
   subject_aggregates: GradeAggregateRow[];
   class_aggregates: GradeAggregateRow[];
   teacher_aggregates: GradeAggregateRow[];
+  student_aggregates: Array<GradeAggregateRow & { class_name: string; class_id: number; best_subject: string | null; best_subject_avg: number | null }>;
   distribution: Array<{ label: string; count: number }>;
 }
 

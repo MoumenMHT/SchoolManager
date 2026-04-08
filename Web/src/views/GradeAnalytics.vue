@@ -160,6 +160,105 @@ const classBottomStudents = computed(() => {
   return sorted.slice(0, 5);
 });
 
+// Teacher Impact table: teacher → subjects they teach + their avg/pass rate in this class
+const classTeacherBreakdown = computed(() => {
+  if (classGrades.value.length === 0) return [];
+
+  const map = new Map<string, {
+    teacher_name: string;
+    subjects: Set<string>;
+    sum: number;
+    count: number;
+    passed: number;
+  }>();
+
+  classGrades.value.forEach(g => {
+    const key = g.teacher_id != null ? String(g.teacher_id) : (g.teacher_name || 'unknown');
+    if (!map.has(key)) {
+      map.set(key, {
+        teacher_name: g.teacher_name || 'Unknown',
+        subjects: new Set(),
+        sum: 0,
+        count: 0,
+        passed: 0
+      });
+    }
+    const entry = map.get(key)!;
+    if (g.subject_name) entry.subjects.add(g.subject_name);
+    const norm = normalizedGrade(g);
+    entry.sum += norm;
+    entry.count += 1;
+    if (norm >= 10) entry.passed += 1;
+  });
+
+  return Array.from(map.values()).map(e => ({
+    teacher_name: e.teacher_name,
+    subjects: Array.from(e.subjects).join(', '),
+    average: round2(e.sum / e.count),
+    passRate: round2((e.passed / e.count) * 100)
+  })).sort((a, b) => b.average - a.average);
+});
+
+// Fail threshold helper: 5/20 for primaire, 10/20 for CEM/Lycée
+const getClassFailThreshold = (classId: number | null): number => {
+  if (!classId) return 10;
+  const cls = allClasses.value.find(c => c.id === classId) as any;
+  return cls?.level_profile?.cycle === 'primaire' ? 5 : 10;
+};
+
+// Subject view: per-student summary sorted worst → best
+const subjectStudentBreakdown = computed(() => {
+  if (subjectGrades.value.length === 0) return [];
+
+  interface StudentEntry {
+    student_id: number;
+    student_name: string;
+    class_id: number | null;
+    class_name: string;
+    cc: number[];
+    devoir: number[];
+    composition: number[];
+    allNorms: number[];
+  }
+
+  const map = new Map<number, StudentEntry>();
+
+  subjectGrades.value.forEach(g => {
+    const sid = g.student_id;
+    if (!map.has(sid)) {
+      map.set(sid, {
+        student_id: sid,
+        student_name: g.student_name,
+        class_id: g.class_id,
+        class_name: g.class_name,
+        cc: [],
+        devoir: [],
+        composition: [],
+        allNorms: []
+      });
+    }
+    const entry = map.get(sid)!;
+    const norm = normalizedGrade(g);
+    entry.allNorms.push(norm);
+    if (g.exam_type === 'evaluation_continue') entry.cc.push(norm);
+    else if (g.exam_type === 'devoir') entry.devoir.push(norm);
+    else if (g.exam_type === 'composition') entry.composition.push(norm);
+  });
+
+  const avg = (arr: number[]) => arr.length ? round2(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+  return Array.from(map.values()).map(e => ({
+    student_name: e.student_name,
+    class_name: e.class_name,
+    class_id: e.class_id,
+    cc: avg(e.cc),
+    devoir: avg(e.devoir),
+    composition: avg(e.composition),
+    average: avg(e.allNorms),
+    threshold: getClassFailThreshold(e.class_id)
+  })).sort((a, b) => (a.average ?? 99) - (b.average ?? 99));
+});
+
 const teacherDistributionChartData = computed(() => {
   const labels = distributionRows.value.map(r => r.label);
   const data = distributionRows.value.map(r => r.count);
@@ -205,9 +304,14 @@ const statsData = ref({
 const subjectAggregatesData = ref<AggregatedRow[]>([]);
 const classAggregatesData = ref<AggregatedRow[]>([]);
 const teacherAggregatesData = ref<AggregatedRow[]>([]);
+const studentAggregatesData = ref<any[]>([]);
 const distributionRows = ref<AggregatedRow[]>([]);
 const teacherDrilldownRows = ref<AggregatedRow[]>([]);
 const subjectDrilldownRows = ref<AggregatedRow[]>([]);
+
+// Raw grades for the selected subject (used for student needs-work table)
+const subjectGrades = ref<EnrichedGrade[]>([]);
+const subjectGradesLoading = ref(false);
 
 const selectedAcademicYear = ref<string>('');
 const selectedSemester = ref<string>('all');
@@ -391,6 +495,15 @@ const applyOverviewData = (overview: GradeAnalyticsOverview) => {
   subjectAggregatesData.value = mapAggregateRows(overview.subject_aggregates);
   classAggregatesData.value = mapAggregateRows(overview.class_aggregates);
   teacherAggregatesData.value = mapAggregateRows(overview.teacher_aggregates);
+  studentAggregatesData.value = (overview.student_aggregates || []).map(row => ({
+    id: row.id,
+    student_name: row.label,
+    class_name: (row as any).class_name || '',
+    average: round2(Number(row.average ?? 0)),
+    passRate: round2(Number(row.pass_rate ?? 0)),
+    best_subject: (row as any).best_subject || '—',
+    best_subject_avg: (row as any).best_subject_avg ?? null
+  }));
   distributionRows.value = mapDistributionRows(overview.distribution);
 };
 
@@ -617,7 +730,10 @@ const loadClassGrades = async () => {
     classGrades.value = rawGrades.map((g: any) => ({
       ...g,
       normalized_grade: normalizedGrade(g),
-      student_name: `${g.student?.first_name || ''} ${g.student?.last_name || ''}`.trim()
+      student_name: `${g.student?.first_name || ''} ${g.student?.last_name || ''}`.trim(),
+      teacher_name: getTeacherName(g),
+      subject_name: getSubjectName(g),
+      ...getClassInfo(g)
     }));
   } catch (err: any) {
     console.error(err);
@@ -747,6 +863,29 @@ const loadStudentReportCard = async () => {
   }
 };
 
+const loadSubjectGrades = async () => {
+  if (!selectedSubjectId.value || selectedStudentId.value || selectedClassId.value || selectedTeacherId.value) {
+    subjectGrades.value = [];
+    return;
+  }
+  subjectGradesLoading.value = true;
+  try {
+    const rawGrades = await GradeService.getGrades({ ...buildAnalyticsParams(), subject_id: selectedSubjectId.value });
+    subjectGrades.value = rawGrades.map((g: any) => ({
+      ...g,
+      normalized_grade: normalizedGrade(g),
+      student_name: `${g.student?.first_name || ''} ${g.student?.last_name || ''}`.trim(),
+      teacher_name: getTeacherName(g),
+      subject_name: getSubjectName(g),
+      ...getClassInfo(g)
+    }));
+  } catch (err: any) {
+    console.error('Failed to load subject grades:', err);
+  } finally {
+    subjectGradesLoading.value = false;
+  }
+};
+
 const loadAnalytics = async () => {
   loading.value = true;
   error.value = null;
@@ -757,6 +896,7 @@ const loadAnalytics = async () => {
     await loadChartDrilldowns();
     await loadStudentGrades();
     await loadClassGrades();
+    await loadSubjectGrades();
     await loadStudentReportCard();
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Failed to load grade analytics data.';
@@ -1156,14 +1296,15 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Teacher Performace for Class -->
+      <!-- Teacher Impact for Class -->
       <div class="col-span-12 xl:col-span-6">
          <div class="card chart-card">
           <div class="flex justify-between items-center mb-3">
             <h5 class="m-0">Teacher Impact</h5>
           </div>
-          <DataTable :value="teacherAggregates" size="small" stripedRows>
-            <Column field="label" header="Teacher" />
+          <DataTable :value="classTeacherBreakdown" size="small" stripedRows>
+            <Column field="teacher_name" header="Teacher" />
+            <Column field="subjects" header="Subject(s)" />
             <Column field="average" header="Avg /20" />
             <Column field="passRate" header="Pass Rate %" />
           </DataTable>
@@ -1274,6 +1415,99 @@ onMounted(async () => {
             <Column field="label" header="Teacher" sortable />
             <Column field="average" header="Avg /20" sortable />
             <Column field="passRate" header="Pass Rate %" sortable />
+          </DataTable>
+        </div>
+      </div>
+
+      <!-- Students Needing Work for this Subject -->
+      <div class="col-span-12">
+        <div class="card">
+          <div class="flex justify-between items-center mb-4">
+            <h5 class="m-0">
+              <i class="pi pi-exclamation-triangle mr-2 text-rose-500"></i>
+              Students — Ranked Worst to Best
+            </h5>
+            <span class="text-sm text-muted-color">Red = below passing threshold for their cycle</span>
+          </div>
+          <DataTable
+            :value="subjectStudentBreakdown"
+            :loading="subjectGradesLoading"
+            size="small"
+            stripedRows
+            paginator
+            :rows="15"
+            :rowClass="(row: any) => row.average !== null && row.average < row.threshold ? 'subject-student-fail' : ''"
+          >
+            <Column field="student_name" header="Student" sortable>
+              <template #body="{ data }">
+                <div class="flex items-center gap-2">
+                  <i v-if="data.average !== null && data.average < data.threshold" class="pi pi-exclamation-triangle text-rose-500 text-xs"></i>
+                  <span :class="{ 'text-rose-600 font-semibold': data.average !== null && data.average < data.threshold }">
+                    {{ data.student_name }}
+                  </span>
+                </div>
+              </template>
+            </Column>
+            <Column field="class_name" header="Class" sortable />
+            <Column field="cc" header="CC /20" sortable>
+              <template #body="{ data }">
+                <span :class="{ 'text-rose-500': data.cc !== null && data.cc < data.threshold }">
+                  {{ data.cc !== null ? data.cc : '—' }}
+                </span>
+              </template>
+            </Column>
+            <Column field="devoir" header="Devoir /20" sortable>
+              <template #body="{ data }">
+                <span :class="{ 'text-rose-500': data.devoir !== null && data.devoir < data.threshold }">
+                  {{ data.devoir !== null ? data.devoir : '—' }}
+                </span>
+              </template>
+            </Column>
+            <Column field="composition" header="Composition /20" sortable>
+              <template #body="{ data }">
+                <span :class="{ 'text-rose-500': data.composition !== null && data.composition < data.threshold }">
+                  {{ data.composition !== null ? data.composition : '—' }}
+                </span>
+              </template>
+            </Column>
+            <Column field="average" header="Average /20" sortable>
+              <template #body="{ data }">
+                <div
+                  class="font-bold px-2 py-1 rounded text-center"
+                  :class="data.average !== null && data.average < data.threshold
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'bg-emerald-50 text-emerald-700'"
+                >
+                  {{ data.average !== null ? data.average : '—' }}
+                </div>
+              </template>
+            </Column>
+            <Column header="Status">
+              <template #body="{ data }">
+                <Tag
+                  v-if="data.average !== null && data.average < data.threshold"
+                  severity="danger"
+                  value="Needs Work"
+                  rounded
+                />
+                <Tag
+                  v-else-if="data.average !== null && data.average >= 16"
+                  severity="success"
+                  value="Excellent"
+                  rounded
+                />
+                <Tag
+                  v-else-if="data.average !== null"
+                  severity="info"
+                  value="Passing"
+                  rounded
+                />
+                <span v-else class="text-muted-color text-sm">—</span>
+              </template>
+            </Column>
+            <template #empty>
+              <div class="text-center py-4 text-muted-color">No grade data for this subject.</div>
+            </template>
           </DataTable>
         </div>
       </div>
@@ -1418,6 +1652,85 @@ onMounted(async () => {
             <Column field="stdDev" :header="$t('grade_analytics.col_std_dev')" />
             <Column field="average" :header="$t('grade_analytics.col_avg_20')" />
             <Column field="count" :header="$t('grade_analytics.col_records')" />
+          </DataTable>
+        </div>
+      </div>
+
+      <!-- Overall Student Rankings table -->
+      <div class="col-span-12">
+        <div class="card">
+          <div class="flex justify-between items-center mb-4">
+            <h5 class="m-0">
+              <i class="pi pi-users mr-2 text-primary"></i>
+              Student Rankings — Best to Worst
+            </h5>
+            <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} students</span>
+          </div>
+          <DataTable
+            :value="studentAggregatesData"
+            size="small"
+            stripedRows
+            paginator
+            :rows="20"
+            :loading="loading"
+          >
+            <Column header="#" style="width: 3rem">
+              <template #body="{ index }">
+                <span
+                  class="font-bold"
+                  :class="index === 0 ? 'text-amber-500' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-orange-600' : 'text-muted-color'"
+                >
+                  {{ index + 1 }}
+                </span>
+              </template>
+            </Column>
+            <Column field="student_name" header="Student" sortable>
+              <template #body="{ data, index }">
+                <div class="flex items-center gap-2">
+                  <i v-if="index === 0" class="pi pi-trophy text-amber-500"></i>
+                  <span class="font-medium">{{ data.student_name }}</span>
+                </div>
+              </template>
+            </Column>
+            <Column field="class_name" header="Class" sortable />
+            <Column field="average" header="Overall Avg /20" sortable>
+              <template #body="{ data }">
+                <div
+                  class="font-bold px-2 py-1 rounded text-center inline-block min-w-12"
+                  :class="data.average >= 16 ? 'bg-emerald-100 text-emerald-700'
+                    : data.average >= 10 ? 'bg-blue-50 text-blue-700'
+                    : 'bg-rose-100 text-rose-700'"
+                >
+                  {{ data.average }}
+                </div>
+              </template>
+            </Column>
+            <Column field="best_subject" header="Best Subject" sortable />
+            <Column field="best_subject_avg" header="Best Avg /20" sortable>
+              <template #body="{ data }">
+                <span v-if="data.best_subject_avg !== null" class="font-semibold text-emerald-600">
+                  {{ data.best_subject_avg }}
+                </span>
+                <span v-else class="text-muted-color">—</span>
+              </template>
+            </Column>
+            <Column field="passRate" header="Pass Rate %" sortable>
+              <template #body="{ data }">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
+                    <div
+                      class="h-1.5 rounded-full"
+                      :class="data.passRate >= 70 ? 'bg-emerald-500' : data.passRate >= 40 ? 'bg-amber-400' : 'bg-rose-500'"
+                      :style="{ width: data.passRate + '%' }"
+                    ></div>
+                  </div>
+                  <span class="text-xs font-semibold w-10 text-right">{{ data.passRate }}%</span>
+                </div>
+              </template>
+            </Column>
+            <template #empty>
+              <div class="text-center py-4 text-muted-color">No student data available.</div>
+            </template>
           </DataTable>
         </div>
       </div>
@@ -1619,5 +1932,10 @@ onMounted(async () => {
   color: #f59e0b;
   font-style: italic;
   opacity: 0.85;
+}
+
+/* Subject view — row background for students below the fail threshold */
+:deep(.subject-student-fail) {
+  background: color-mix(in srgb, var(--p-red-500) 8%, var(--p-content-background)) !important;
 }
 </style>
