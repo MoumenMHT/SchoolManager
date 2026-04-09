@@ -67,6 +67,11 @@ const model = computed(() => {
                 to: '/analytics/grades'
             },
             {
+                label: t('dashboard.payment_dashboard'),
+                icon: 'pi pi-fw pi-credit-card',
+                to: '/payments'
+            },
+            {
                 label: 'Schedule Generator',
                 icon: 'pi pi-fw pi-calendar-plus',
                 to: '/schedules/generate'

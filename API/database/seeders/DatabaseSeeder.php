@@ -108,10 +108,11 @@ class DatabaseSeeder extends Seeder
         foreach ($createdSubjects as $subject) {
             foreach ($createdLevelsByName as $level) {
                 $weeklyHours = $personalizedWeeklyHours[$level->name][$subject->code] ?? $this->getWeeklySessionsForSubject($subject->code);
+                $coefficient = $this->getCoefficientForSubjectAndLevel($subject->code, $level);
                 LevelSubject::create([
                     'level_id' => $level->id,
                     'subject_id' => $subject->id,
-                    'coefficient' => rand(1, 4),
+                    'coefficient' => $coefficient,
                     'weekly_sessions_required' => $weeklyHours,
                     'weekly_hours' => $weeklyHours,
                 ]);
@@ -684,6 +685,26 @@ class DatabaseSeeder extends Seeder
         $this->command->info('   Admin:    admin@schoolmanager.com / password123');
         $this->command->info('   Teachers: teacher1-' . $teacherCount . '@schoolmanager.com  / password123');
         $this->command->info('   Parents:  parent1-25@schoolmanager.com   / password123');
+    }
+
+    private function getCoefficientForSubjectAndLevel(string $subjectCode, \App\Models\Level $level): int
+    {
+        if (strtolower($level->cycle) === 'primaire') {
+            return 1;
+        }
+
+        if (strtolower($level->cycle) === 'cem') {
+            $coefficients = [
+                '1er' => ['AR' => 2, 'MATH' => 2, 'FR' => 1, 'EN' => 1, 'PHYS' => 1, 'NS' => 1, 'HISGEO' => 2, 'ISL' => 1, 'CIV' => 1, 'INFO' => 1, 'SP' => 1],
+                '2em' => ['AR' => 3, 'MATH' => 3, 'FR' => 2, 'EN' => 1, 'PHYS' => 2, 'NS' => 2, 'HISGEO' => 2, 'ISL' => 1, 'CIV' => 1, 'INFO' => 1, 'SP' => 1],
+                '3em' => ['AR' => 3, 'MATH' => 3, 'FR' => 2, 'EN' => 1, 'PHYS' => 2, 'NS' => 2, 'HISGEO' => 2, 'ISL' => 1, 'CIV' => 1, 'INFO' => 1, 'SP' => 1],
+                '4em' => ['AR' => 5, 'MATH' => 4, 'FR' => 3, 'EN' => 2, 'PHYS' => 2, 'NS' => 2, 'HISGEO' => 3, 'ISL' => 2, 'CIV' => 1, 'INFO' => 1, 'SP' => 1],
+            ];
+
+            return $coefficients[$level->name][$subjectCode] ?? 1;
+        }
+
+        return 1;
     }
 
     /**

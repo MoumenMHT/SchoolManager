@@ -26,6 +26,10 @@ interface EnrichedGrade extends GradeRecord {
   class_name: string;
 }
 
+const studentRankingsFilters = ref({
+  global: { value: null, matchMode: 'contains' }
+});
+
 const loading = ref(false);
 const error = ref<string | null>(null);
 
@@ -40,6 +44,9 @@ const selectedStudentInfo = computed(() => {
 });
 
 const studentAverage = computed(() => {
+  if (studentReportCardData.value?.data?.overall_average !== undefined) {
+    return round2(Number(studentReportCardData.value.data.overall_average));
+  }
   if (studentGrades.value.length === 0) return 0;
   const sum = studentGrades.value.reduce((acc, g) => acc + normalizedGrade(g), 0);
   return round2(sum / studentGrades.value.length);
@@ -47,7 +54,8 @@ const studentAverage = computed(() => {
 
 const studentPassRate = computed(() => {
   if (studentGrades.value.length === 0) return 0;
-  const passed = studentGrades.value.filter(g => normalizedGrade(g) >= 10).length;
+  const threshold = bulletinFailThreshold.value || 10;
+  const passed = studentGrades.value.filter(g => normalizedGrade(g) >= threshold).length;
   return round2((passed / studentGrades.value.length) * 100);
 });
 
@@ -743,7 +751,8 @@ const loadClassGrades = async () => {
 };
 
 const loadStudentReportCard = async () => {
-  if (!selectedStudentId.value) {
+  const studentId = selectedStudentId.value;
+  if (!studentId) {
     studentReportCardData.value = null;
     return;
   }
@@ -755,7 +764,7 @@ const loadStudentReportCard = async () => {
       const TRIMESTERS = ['Trimester 1', 'Trimester 2', 'Trimester 3'];
       const results = await Promise.allSettled(
         TRIMESTERS.map(sem =>
-          GradeService.getStudentReportCard(selectedStudentId.value, {
+          GradeService.getStudentReportCard(studentId, {
             semester: sem,
             academic_year: selectedAcademicYear.value,
           })
@@ -850,7 +859,7 @@ const loadStudentReportCard = async () => {
 
     } else {
       // ── Single trimester mode ──────────────────────────────────────────
-      const data = await GradeService.getStudentReportCard(selectedStudentId.value, {
+      const data = await GradeService.getStudentReportCard(studentId, {
         semester: selectedSemester.value,
         academic_year: selectedAcademicYear.value,
       });
@@ -967,6 +976,7 @@ onMounted(async () => {
             optionValue="value"
             :placeholder="$t('grade_analytics.academic_year')"
             class="w-full"
+            filter
           />
           <Select
             v-model="selectedSemester"
@@ -975,6 +985,7 @@ onMounted(async () => {
             optionValue="value"
             :placeholder="$t('grade_analytics.trimester')"
             class="w-full"
+            filter
           />
           <Select
             v-model="selectedExamType"
@@ -983,6 +994,7 @@ onMounted(async () => {
             optionValue="value"
             :placeholder="$t('grade_analytics.exam_type')"
             class="w-full"
+            filter
           />
           <Select
             v-model="selectedClassId"
@@ -1051,7 +1063,7 @@ onMounted(async () => {
             <div class="ml-auto flex gap-4 text-center">
               <div>
                 <p class="text-sm font-semibold text-blue-700 uppercase m-0">{{ $t('grade_analytics.overall_average') }}</p>
-                <p class="text-2xl font-bold text-blue-900 m-0 mt-1" :class="{'text-red-600': studentAverage < 10}">
+                <p class="text-2xl font-bold text-blue-900 m-0 mt-1" :class="{'text-red-600': studentAverage < bulletinFailThreshold}">
                   {{ studentAverage }} / 20
                 </p>
               </div>
@@ -1098,7 +1110,7 @@ onMounted(async () => {
             </Column>
             <Column :header="$t('grade_analytics.col_status')" sortable sortField="normalized_grade">
               <template #body="{ data }">
-                <Tag v-if="data.normalized_grade < 10" severity="danger" :value="$t('grade_analytics.needs_work')" rounded />
+                <Tag v-if="data.normalized_grade < bulletinFailThreshold" severity="danger" :value="$t('grade_analytics.needs_work')" rounded />
                 <Tag v-else-if="data.normalized_grade >= 16" severity="success" :value="$t('grade_analytics.excellent')" rounded />
                 <Tag v-else severity="info" :value="$t('grade_analytics.passing')" rounded />
               </template>
@@ -1307,6 +1319,93 @@ onMounted(async () => {
             <Column field="subjects" header="Subject(s)" />
             <Column field="average" header="Avg /20" />
             <Column field="passRate" header="Pass Rate %" />
+          </DataTable>
+        </div>
+      </div>
+
+      <!-- Full Class Student Rankings table -->
+      <div class="col-span-12">
+        <div class="card">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h5 class="m-0">
+              <i class="pi pi-users mr-2 text-primary"></i>
+              Class Student Rankings — Best to Worst
+            </h5>
+            <div class="flex gap-4 items-center">
+              <IconField>
+                <InputIcon class="pi pi-search" />
+                <InputText v-model="studentRankingsFilters['global'].value" placeholder="Search students..." />
+              </IconField>
+              <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} students</span>
+            </div>
+          </div>
+          <DataTable
+            :value="studentAggregatesData"
+            size="small"
+            stripedRows
+            paginator
+            :rows="20"
+            :loading="loading"
+            v-model:filters="studentRankingsFilters"
+            :globalFilterFields="['student_name', 'class_name', 'best_subject']"
+          >
+            <Column header="#" style="width: 3rem">
+              <template #body="{ index }">
+                <span
+                  class="font-bold"
+                  :class="index === 0 ? 'text-amber-500' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-orange-600' : 'text-muted-color'"
+                >
+                  {{ index + 1 }}
+                </span>
+              </template>
+            </Column>
+            <Column field="student_name" header="Student" sortable>
+              <template #body="{ data, index }">
+                <div class="flex items-center gap-2">
+                  <i v-if="index === 0" class="pi pi-trophy text-amber-500"></i>
+                  <span class="font-medium">{{ data.student_name }}</span>
+                </div>
+              </template>
+            </Column>
+            <Column field="class_name" header="Class" sortable />
+            <Column field="average" header="Overall Avg /20" sortable>
+              <template #body="{ data }">
+                <div
+                  class="font-bold px-2 py-1 rounded text-center inline-block min-w-12"
+                  :class="data.average >= 16 ? 'bg-emerald-100 text-emerald-700'
+                    : data.average >= getClassFailThreshold(data.class_id || selectedClassId) ? 'bg-blue-50 text-blue-700'
+                    : 'bg-rose-100 text-rose-700'"
+                >
+                  {{ data.average }}
+                </div>
+              </template>
+            </Column>
+            <Column field="best_subject" header="Best Subject" sortable />
+            <Column field="best_subject_avg" header="Best Avg /20" sortable>
+              <template #body="{ data }">
+                <span v-if="data.best_subject_avg !== null" class="font-semibold text-emerald-600">
+                  {{ data.best_subject_avg }}
+                </span>
+                <span v-else class="text-muted-color">—</span>
+              </template>
+            </Column>
+            <Column field="passRate" header="Pass Rate %" sortable>
+              <template #body="{ data }">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
+                    <div
+                      class="h-1.5 rounded-full"
+                      :class="data.passRate >= 70 ? 'bg-emerald-500' : data.passRate >= 40 ? 'bg-amber-400' : 'bg-rose-500'"
+                      :style="{ width: data.passRate + '%' }"
+                    ></div>
+                  </div>
+                  <span class="text-xs font-semibold w-10 text-right">{{ data.passRate }}%</span>
+                </div>
+              </template>
+            </Column>
+            <template #empty>
+              <div class="text-center py-4 text-muted-color">No student data available.</div>
+            </template>
           </DataTable>
         </div>
       </div>
@@ -1581,6 +1680,7 @@ onMounted(async () => {
               optionValue="value"
               :placeholder="$t('grade_analytics.filter_by_teacher')"
               class="w-full md:w-80"
+              filter
             />
           </div>
           <div class="chart-wrap">
@@ -1600,6 +1700,7 @@ onMounted(async () => {
               optionValue="value"
               :placeholder="$t('grade_analytics.filter_by_subject')"
               class="w-full md:w-80"
+              filter
             />
           </div>
           <div class="chart-wrap">
@@ -1659,12 +1760,18 @@ onMounted(async () => {
       <!-- Overall Student Rankings table -->
       <div class="col-span-12">
         <div class="card">
-          <div class="flex justify-between items-center mb-4">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h5 class="m-0">
               <i class="pi pi-users mr-2 text-primary"></i>
               Student Rankings — Best to Worst
             </h5>
-            <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} students</span>
+            <div class="flex gap-4 items-center">
+              <IconField>
+                <InputIcon class="pi pi-search" />
+                <InputText v-model="studentRankingsFilters['global'].value" placeholder="Search students..." />
+              </IconField>
+              <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} students</span>
+            </div>
           </div>
           <DataTable
             :value="studentAggregatesData"
@@ -1673,6 +1780,8 @@ onMounted(async () => {
             paginator
             :rows="20"
             :loading="loading"
+            v-model:filters="studentRankingsFilters"
+            :globalFilterFields="['student_name', 'class_name', 'best_subject']"
           >
             <Column header="#" style="width: 3rem">
               <template #body="{ index }">
