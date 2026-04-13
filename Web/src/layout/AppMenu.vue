@@ -78,7 +78,7 @@ const model = computed(() => {
             to: '/classes'
         });
         managementItems.push({
-            label: 'Subjects', // t('nav.subjects')
+            label: t('nav.subjects'),
             icon: 'pi pi-fw pi-book',
             to: '/subjects'
         });
@@ -103,7 +103,7 @@ const model = computed(() => {
                 to: '/payments'
             });
             managementItems.push({
-                label: 'Schedule Generator',
+                label: t('nav.schedule_generator'),
                 icon: 'pi pi-fw pi-calendar-plus',
                 to: '/schedules/generate'
             });

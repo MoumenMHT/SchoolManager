@@ -107,7 +107,9 @@
     "students": "Élèves",
     "classes": "Classes",
     "attendance": "Présences",
-    "grade_analytics": "Analyse des notes"
+    "grade_analytics": "Analyse des notes",
+    "subjects": "Matières",
+    "schedule_generator": "Générateur d'horaires"
   },
   "topbar": {
     "logout": "Déconnexion",

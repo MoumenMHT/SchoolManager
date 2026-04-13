@@ -106,7 +106,9 @@
     "students": "الطلاب",
     "classes": "الفصول",
     "attendance": "الحضور والغياب",
-    "grade_analytics": "تحليلات النقاط"
+    "grade_analytics": "تحليلات النقاط",
+    "subjects": "المواد",
+    "schedule_generator": "مولد الجداول"
   },
   "topbar": {
     "logout": "تسجيل الخروج",

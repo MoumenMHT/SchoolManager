@@ -106,7 +106,9 @@
     "students": "Students",
     "classes": "Classes",
     "attendance": "Attendance",
-    "grade_analytics": "Grade Analytics"
+    "grade_analytics": "Grade Analytics",
+    "subjects": "Subjects",
+    "schedule_generator": "Schedule Generator"
   },
   "topbar": {
     "logout": "Logout",
