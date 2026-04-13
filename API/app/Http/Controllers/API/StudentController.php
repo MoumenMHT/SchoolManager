@@ -19,6 +19,14 @@ class StudentController extends Controller
     {
         $query = Student::with('class','parent');
         
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $query->whereHas('class.levelProfile', function($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+        
         // Filter by class_id if provided
         if ($request->has('class_id')) {
             $query->where('class_id', $request->class_id);
@@ -316,6 +324,15 @@ class StudentController extends Controller
 
     public function studentsWithoutClass()
     {
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'count' => 0
+            ]);
+        }
+
         $students = Student::with('parent')
             ->where(function($query) {
                 $query->whereNull('class_id')

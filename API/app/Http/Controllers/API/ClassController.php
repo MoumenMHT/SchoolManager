@@ -18,8 +18,17 @@ class ClassController extends Controller
     public function index()
     {
         try {
-            $classes = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects', 'levelProfile'])
-                ->get()
+            $query = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects', 'levelProfile']);
+            
+            $user = auth()->user();
+            if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+                $directorCycle = $user->directorCycle();
+                $query->whereHas('levelProfile', function($q) use ($directorCycle) {
+                    $q->where('cycle', $directorCycle);
+                });
+            }
+
+            $classes = $query->get()
                 ->map(function ($class) {
                     $studentsData = [];
                     if ($class->students) {

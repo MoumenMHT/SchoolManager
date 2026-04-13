@@ -18,7 +18,17 @@ class TeacherController extends Controller
      */
     public function index()
     {
-        $teachers = Teacher::all();
+        $query = Teacher::query();
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $query->whereHas('classes.levelProfile', function($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+
+        $teachers = $query->get();
         $teachers->load('user:id,email,phone'); // Load email and phone fields from the related user
         $teachers->load('teachableSubjects'); // Load subjects relationship
         $teachers->load('availabilities');

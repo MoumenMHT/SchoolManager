@@ -15,7 +15,17 @@ class ParentController extends Controller
      */
     public function index()
     {
-        $parents = ParentModel::withCount('students')->get();
+        $query = ParentModel::withCount('students');
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $query->whereHas('students.class.levelProfile', function($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+
+        $parents = $query->get();
         $parents->load('user:id,email,phone'); // Load email and phone fields from the related user
 
          $parents->each(function ($parent) {

@@ -88,4 +88,42 @@ class User extends Authenticatable
     {
         return $this->role === 'supervisor';
     }
+
+    public function isSecretariat()
+    {
+        return $this->role === 'secretariat';
+    }
+
+    public function isAccountant()
+    {
+        return $this->role === 'accountant';
+    }
+
+    public function isPrimaryDirector()
+    {
+        return $this->role === 'primary_director';
+    }
+
+    public function isCemDirector()
+    {
+        return $this->role === 'cem_director';
+    }
+
+    public function isLyceeDirector()
+    {
+        return $this->role === 'lycee_director';
+    }
+
+    public function isDirector()
+    {
+        return in_array($this->role, ['primary_director', 'cem_director', 'lycee_director']);
+    }
+
+    public function directorCycle()
+    {
+        if ($this->isPrimaryDirector()) return 'primary';
+        if ($this->isCemDirector()) return 'cem';
+        if ($this->isLyceeDirector()) return 'lycee';
+        return null;
+    }
 }

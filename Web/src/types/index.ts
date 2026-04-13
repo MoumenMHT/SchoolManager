@@ -116,7 +116,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'admin' | 'teacher' | 'parent' | 'supervisor' | 'secretariat' | 'accountant' | 'primary_director' | 'cem_director' | 'lycee_director';
   phone?: string;
   address?: string;
   is_active: boolean;

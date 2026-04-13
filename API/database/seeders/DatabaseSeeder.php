@@ -43,6 +43,48 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        $this->command->info('Creating secretariat and accountant users...');
+        \App\Models\User::create([
+            'username' => 'General Secretariat',
+            'email' => 'secretariat@schoolmanager.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role' => 'secretariat',
+            'is_active' => true,
+        ]);
+
+        \App\Models\User::create([
+            'username' => 'Accountant',
+            'email' => 'accountant@schoolmanager.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role' => 'accountant',
+            'is_active' => true,
+        ]);
+
+        $this->command->info('Creating director users...');
+        \App\Models\User::create([
+            'username' => 'Primary Director',
+            'email' => 'primary@schoolmanager.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role' => 'primary_director',
+            'is_active' => true,
+        ]);
+
+        \App\Models\User::create([
+            'username' => 'CEM Director',
+            'email' => 'cem@schoolmanager.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role' => 'cem_director',
+            'is_active' => true,
+        ]);
+
+        \App\Models\User::create([
+            'username' => 'Lycee Director',
+            'email' => 'lycee@schoolmanager.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role' => 'lycee_director',
+            'is_active' => true,
+        ]);
+
         // Create subjects
         $this->command->info('Creating subjects...');
         $subjects = [
@@ -350,6 +392,12 @@ class DatabaseSeeder extends Seeder
                         ]);
                     }
                 }
+            }
+
+            // Since model events are disabled in the Seeder (use WithoutModelEvents;),
+            // The GradeObserver doesn't fire, so we manually calculate the averages for the report cards.
+            foreach ($semesters as $semester) {
+                \App\Services\GradingService::synchronizeAverages($student, $semester, '2025-2026');
             }
         }
 
@@ -682,9 +730,14 @@ class DatabaseSeeder extends Seeder
         $this->command->info('   G7 (1 contract)  – Overpayment, 600 DZD credit');
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('🔐 Login credentials:');
-        $this->command->info('   Admin:    admin@schoolmanager.com / password123');
-        $this->command->info('   Teachers: teacher1-' . $teacherCount . '@schoolmanager.com  / password123');
-        $this->command->info('   Parents:  parent1-25@schoolmanager.com   / password123');
+        $this->command->info('   Admin:       admin@schoolmanager.com / password123');
+        $this->command->info('   Secretariat: secretariat@school.com  / password');
+        $this->command->info('   Accountant:  accountant@school.com   / password');
+        $this->command->info('   Primary Dir: primary@school.com      / password');
+        $this->command->info('   CEM Dir:     cem@school.com          / password');
+        $this->command->info('   Lycee Dir:   lycee@school.com        / password');
+        $this->command->info('   Teachers:    teacher1-' . $teacherCount . '@schoolmanager.com  / password123');
+        $this->command->info('   Parents:     parent1-25@schoolmanager.com   / password123');
     }
 
     private function getCoefficientForSubjectAndLevel(string $subjectCode, \App\Models\Level $level): int

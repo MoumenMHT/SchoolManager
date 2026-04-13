@@ -21,6 +21,7 @@ declare module 'vue' {
     DatePicker: typeof import('primevue/datepicker')['default']
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
+    Dropdown: typeof import('primevue/dropdown')['default']
     FeaturesWidget: typeof import('./src/components/landing/FeaturesWidget.vue')['default']
     FinancialWidget: typeof import('./src/components/dashboard/FinancialWidget.vue')['default']
     FloatingConfigurator: typeof import('./src/components/FloatingConfigurator.vue')['default']

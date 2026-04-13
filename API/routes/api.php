@@ -21,6 +21,7 @@ use App\Http\Controllers\API\FeeController;
 use App\Http\Controllers\API\ContractController;
 use App\Http\Controllers\API\BillController;
 
+use App\Http\Controllers\API\LevelController;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
@@ -33,11 +34,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     
-    // Admin only routes
+    // Pure Admin Routes
     Route::middleware('role:admin')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::apiResource('users', UserController::class);
-        
+    });
+
+    // Admin, Secretariat, and Director routes
+    Route::middleware('role:admin,secretariat,primary_director,cem_director,lycee_director')->group(function () {
         // Student management - specific routes MUST come before apiResource
         Route::get('/students/without-class', [StudentController::class, 'studentsWithoutClass']);
         Route::get('/students/{student}/history', [StudentController::class, 'getHistory']);
@@ -48,46 +52,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('subjects', SubjectController::class);
         Route::apiResource('parents', ParentController::class);
         Route::post('/parents/{id}/create-account', [ParentController::class, 'createAccount']);
-        
-        // ============================================
-        // PAYMENT SYSTEM ROUTES - PHASE 1-6
-        // ============================================
-        
-        // Fee Management Routes (Phase 1)
-        Route::prefix('fees')->group(function () {
-            Route::post('/bulk', [FeeController::class, 'bulkStore']);
-            Route::post('/copy-to-new-year', [FeeController::class, 'copyToNewYear']);
-            Route::get('/available-for-contract', [FeeController::class, 'availableForContract']);
-            Route::get('/statistics', [FeeController::class, 'statistics']);
-            Route::put('/{id}/toggle-status', [FeeController::class, 'toggleStatus']);
-        });
-        Route::apiResource('fees', FeeController::class);
-        
-        // Contract Management Routes (Phase 2 & 4 & 5)
-        Route::prefix('contracts')->group(function () {
-            Route::post('/{id}/add-service', [ContractController::class, 'addService']);
-            Route::post('/{id}/withdraw', [ContractController::class, 'withdraw']);
-        });
-        Route::apiResource('contracts', ContractController::class);
-        
-        // Payment Processing Routes (Phase 3)
-        Route::prefix('payments')->group(function () {
-            Route::post('/calculate', [PaymentController::class, 'calculatePayment']);
-            Route::get('/financial-reports', [PaymentController::class, 'financialReports']);
-            Route::get('/contract-payments/{contractId}', [PaymentController::class, 'contractPayments']);
-            Route::get('/contract-statistics/{contractId}', [PaymentController::class, 'contractStatistics']);
-            Route::get('/payment-history/{contractId}', [PaymentController::class, 'paymentHistory']);
-            Route::get('/parent-dashboard/{parentId}', [PaymentController::class, 'parentDashboard']);
-            Route::get('/{id}/receipt', [PaymentController::class, 'receipt']);
-            Route::post('/{id}/refund', [PaymentController::class, 'refund']);
-        });
-        Route::apiResource('payments', PaymentController::class);
-        
-        // Bill Management Routes
-        Route::prefix('bills')->group(function () {
-            Route::get('/contract/{contractId}/unpaid', [BillController::class, 'unpaid']);
-        });
-        Route::apiResource('bills', BillController::class);
         
         // Dashboard statistics
         Route::get('/dashboard/stats', [DashboardController::class, 'index']);
@@ -132,8 +96,51 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('schedules', ScheduleController::class);
     });
     
-    // Teacher routes
-    Route::middleware('role:teacher,admin')->group(function () {
+    // Admin and Accountant routes
+    Route::middleware('role:admin,accountant')->group(function () {
+        // ============================================
+        // PAYMENT SYSTEM ROUTES - PHASE 1-6
+        // ============================================
+        
+        // Fee Management Routes (Phase 1)
+        Route::prefix('fees')->group(function () {
+            Route::post('/bulk', [FeeController::class, 'bulkStore']);
+            Route::post('/copy-to-new-year', [FeeController::class, 'copyToNewYear']);
+            Route::get('/available-for-contract', [FeeController::class, 'availableForContract']);
+            Route::get('/statistics', [FeeController::class, 'statistics']);
+            Route::put('/{id}/toggle-status', [FeeController::class, 'toggleStatus']);
+        });
+        Route::apiResource('fees', FeeController::class);
+        
+        // Contract Management Routes (Phase 2 & 4 & 5)
+        Route::prefix('contracts')->group(function () {
+            Route::post('/{id}/add-service', [ContractController::class, 'addService']);
+            Route::post('/{id}/withdraw', [ContractController::class, 'withdraw']);
+        });
+        Route::apiResource('contracts', ContractController::class);
+        
+        // Payment Processing Routes (Phase 3)
+        Route::prefix('payments')->group(function () {
+            Route::post('/calculate', [PaymentController::class, 'calculatePayment']);
+            Route::get('/financial-reports', [PaymentController::class, 'financialReports']);
+            Route::get('/contract-payments/{contractId}', [PaymentController::class, 'contractPayments']);
+            Route::get('/contract-statistics/{contractId}', [PaymentController::class, 'contractStatistics']);
+            Route::get('/payment-history/{contractId}', [PaymentController::class, 'paymentHistory']);
+            Route::get('/parent-dashboard/{parentId}', [PaymentController::class, 'parentDashboard']);
+            Route::get('/{id}/receipt', [PaymentController::class, 'receipt']);
+            Route::post('/{id}/refund', [PaymentController::class, 'refund']);
+        });
+        Route::apiResource('payments', PaymentController::class);
+        
+        // Bill Management Routes
+        Route::prefix('bills')->group(function () {
+            Route::get('/contract/{contractId}/unpaid', [BillController::class, 'unpaid']);
+        });
+        Route::apiResource('bills', BillController::class);
+    });
+    
+    // Teacher and Director routes
+    Route::middleware('role:teacher,admin,primary_director,cem_director,lycee_director')->group(function () {
         // Grade Management - specific routes MUST come before apiResource
         Route::post('/grades/bulk', [GradeController::class, 'bulkStore']);
         Route::get('/grades/analytics/overview', [GradeController::class, 'getAnalyticsOverview']);
@@ -180,6 +187,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Shared routes (all authenticated users)
     Route::get('/subjects', [SubjectController::class, 'index']);
+    Route::get('/levels', [LevelController::class, 'index']);
     
     // Schedule viewing (accessible by teachers, students, parents, admin)
     Route::get('/my-schedule', [ScheduleController::class, 'index']);

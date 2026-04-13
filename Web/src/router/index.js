@@ -40,6 +40,11 @@ const router = createRouter({
                     component: () => import('@/views/Students.vue')
                 },
                 {
+                    path: '/subjects',
+                    name: 'subjects',
+                    component: () => import('@/views/Subjects.vue')
+                },
+                {
                     path: '/teacher/portal',
                     name: 'teacher-portal',
                     component: () => import('@/views/TeacherPortal.vue')
@@ -200,9 +205,14 @@ router.beforeEach((to, from, next) => {
     const isAuthRoute = to.path.startsWith('/auth/');
     const userRole = apiService.getUser()?.role ?? null;
 
+    // Define base path for each role to redirect to when accessing '/' or unauthorized page
+    let roleHome = '/';
+    if (userRole === 'teacher') roleHome = '/teacher/portal';
+    if (userRole === 'accountant') roleHome = '/payments';
+
     // If trying to access auth page while logged in, redirect to role home
     if (isAuthRoute && isAuthenticated) {
-        next(userRole === 'teacher' ? '/teacher/portal' : '/');
+        next(roleHome);
         return;
     }
 
@@ -212,11 +222,35 @@ router.beforeEach((to, from, next) => {
         return;
     }
 
-    // If teacher tries to access admin-only pages, redirect to their portal
-    const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/attendance', '/analytics/grades', '/payments', '/schedules/generate'];
-    if (isAuthenticated && userRole === 'teacher' && adminOnlyPaths.includes(to.path)) {
-        next('/teacher/portal');
-        return;
+    // Role-specific path restrictions
+    if (isAuthenticated) {
+        // Enforce Subjects permission
+        const allowedSubjectRoles = ['admin', 'secretariat', 'supervisor', 'primary_director', 'cem_director', 'lycee_director'];
+        if (to.path === '/subjects' && !allowedSubjectRoles.includes(userRole)) {
+             next(roleHome);
+             return;
+        }
+
+        if (userRole === 'teacher') {
+            const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/subjects', '/attendance', '/analytics/grades', '/payments', '/schedules/generate'];
+            if (adminOnlyPaths.includes(to.path)) {
+                next(roleHome);
+                return;
+            }
+        } else if (userRole === 'accountant') {
+            // Accountant can ONLY access /payments and maybe auth related paths if they were allowed
+            if (to.path !== '/payments') {
+                next(roleHome);
+                return;
+            }
+        } else if (userRole === 'secretariat') {
+            // General Secretariat can access parent, teacher, class, student management + dashboard.
+            const allowedPaths = ['/', '/parents', '/teachers', '/classes', '/subjects', '/students'];
+            if (!allowedPaths.includes(to.path) && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
+                next('/');
+                return;
+            }
+        }
     }
 
     next();

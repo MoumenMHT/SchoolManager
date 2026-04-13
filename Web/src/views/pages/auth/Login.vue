@@ -91,7 +91,13 @@ const handleLogin = async () => {
       // Redirect based on role
       setTimeout(() => {
         const role = response.user?.role;
-        router.push(role === 'teacher' ? '/teacher/portal' : '/');
+        if (role === 'teacher') {
+            router.push('/teacher/portal');
+        } else if (role === 'accountant') {
+            router.push('/payments');
+        } else {
+            router.push('/');
+        }
       }, 500);
     }
   } catch (error: any) {

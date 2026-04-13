@@ -4,20 +4,46 @@ import type { ApiResponse } from "@/types";
 export interface Subject {
     id: number;
     name: string;
-    discipline: string;
+    code: string;
+    description?: string;
     created_at: string;
     updated_at: string;
 }
 
 export interface CreateSubjectDTO {
     name: string;
-    discipline: string;
+    code: string;
+    description?: string;
 }
 
 export interface UpdateSubjectDTO {
     name?: string;
-    discipline?: string;
+    code?: string;
+    description?: string;
 }
+
+export interface SubjectCoefficient {
+    id: number;
+    subject_id: number;
+    level_id: number;
+    coefficient: number;
+    weekly_sessions_required: number;
+    level?: any; // Contains Level details
+    subject?: Subject;
+}
+
+export interface CreateCoefficientDTO {
+    subject_id: number;
+    level_id: number;
+    coefficient: number;
+    weekly_sessions_required: number;
+}
+
+export interface UpdateCoefficientDTO {
+    coefficient?: number;
+    weekly_sessions_required?: number;
+}
+
 
 class SubjectService {
     /**
@@ -101,9 +127,37 @@ class SubjectService {
         const response = await ApiService.get<any[]>(`/subjects/${subjectId}/teachers`);
         return response.data || [];
     }
-     
-     
-    
+
+    /**
+     * Get coefficients for a subject
+     */
+    async getSubjectCoefficients(subjectId: number): Promise<SubjectCoefficient[]> {
+        const response = await ApiService.get<SubjectCoefficient[]>(`/subjects/${subjectId}/coefficients`);
+        return response.data || [];
+    }
+
+    /**
+     * Create a new coefficient
+     */
+    async createCoefficient(data: CreateCoefficientDTO): Promise<SubjectCoefficient> {
+        const response = await ApiService.post<SubjectCoefficient>('/subject-coefficients', data);
+        return response.data!;
+    }
+
+    /**
+     * Update an existing coefficient
+     */
+    async updateCoefficient(id: number, data: UpdateCoefficientDTO): Promise<SubjectCoefficient> {
+        const response = await ApiService.put<SubjectCoefficient>(`/subject-coefficients/${id}`, data);
+        return response.data!;
+    }
+
+    /**
+     * Delete a coefficient
+     */
+    async deleteCoefficient(id: number): Promise<void> {
+        await ApiService.delete(`/subject-coefficients/${id}`);
+    }
 }
 
 export default new SubjectService();

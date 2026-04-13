@@ -21,45 +21,85 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $academicYear = $request->get('academic_year', date('Y') . '-' . (date('Y') + 1));
+        
+        $user = auth()->user();
+        $isDirector = $user && method_exists($user, 'isDirector') && $user->isDirector();
+        $directorCycle = $isDirector ? $user->directorCycle() : null;
 
         // Total students
-        $totalStudents = Student::where('is_active', true)->count();
+        $studentQuery = Student::where('is_active', true);
+        if ($isDirector) {
+            $studentQuery->whereHas('class.levelProfile', function ($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+        $totalStudents = $studentQuery->count();
         
         // Total teachers
-        $totalTeachers = Teacher::count();
+        $teacherQuery = Teacher::query();
+        if ($isDirector) {
+            $teacherQuery->whereHas('classes.levelProfile', function ($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+        $totalTeachers = $teacherQuery->count();
         
         // Total classes
-        $totalClasses = SchoolClass::where('is_active', true)
-            ->where('academic_year', $academicYear)
-            ->count();
+        $classQuery = SchoolClass::where('is_active', true)
+            ->where('academic_year', $academicYear);
+        if ($isDirector) {
+            $classQuery->whereHas('levelProfile', function ($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+        $totalClasses = $classQuery->count();
 
         // Revenue statistics
-        $totalRevenue = Payment::whereHas('contract', function ($q) use ($academicYear) {
-                $q->where('academic_year', $academicYear);
-            })
-            ->where('status', 'completed')
-            ->sum('amount');
-            
-        $pendingPayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
-                $q->where('academic_year', $academicYear);
-            })
-            ->where('status', 'pending')
-            ->sum('amount');
-            
-        $latePayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
-                $q->where('academic_year', $academicYear);
-            })
-            ->where('status', 'late')
-            ->sum('amount');
+        if ($isDirector) {
+            $totalRevenue = 0;
+            $pendingPayments = 0;
+            $latePayments = 0;
+            $paymentRate = 0;
+            $recentPayments = [];
+        } else {
+            $totalRevenue = Payment::whereHas('contract', function ($q) use ($academicYear) {
+                    $q->where('academic_year', $academicYear);
+                })
+                ->where('status', 'completed')
+                ->sum('amount');
+                
+            $pendingPayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
+                    $q->where('academic_year', $academicYear);
+                })
+                ->where('status', 'pending')
+                ->sum('amount');
+                
+            $latePayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
+                    $q->where('academic_year', $academicYear);
+                })
+                ->where('status', 'late')
+                ->sum('amount');
 
-        // Payment rate
-        $totalExpected = Contract::where('academic_year', $academicYear)
-            ->sum(DB::raw('total_fees - discount_value'));
-        $paymentRate = $totalExpected > 0 ? ($totalRevenue / $totalExpected) * 100 : 0;
+            $totalExpected = Contract::where('academic_year', $academicYear)
+                ->sum(DB::raw('total_fees - discount_value'));
+            $paymentRate = $totalExpected > 0 ? ($totalRevenue / $totalExpected) * 100 : 0;
+            
+            $recentPayments = Payment::with(['contract.parent'])
+                ->where('status', 'completed')
+                ->latest('paid_date')
+                ->limit(10)
+                ->get();
+        }
 
         // Attendance statistics (last 30 days)
         $startDate = now()->subDays(30);
-        $attendanceStats = Attendance::where('date', '>=', $startDate)
+        $attendanceQuery = Attendance::where('date', '>=', $startDate);
+        if ($isDirector) {
+             $attendanceQuery->whereHas('student.class.levelProfile', function ($q) use ($directorCycle) {
+                 $q->where('cycle', $directorCycle);
+             });
+        }
+        $attendanceStats = $attendanceQuery
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->get()
@@ -71,19 +111,23 @@ class DashboardController extends Controller
             : 0;
 
         // Average grades (current academic year)
-        $averageGrade = Grade::where('academic_year', $academicYear)
-            ->avg('grade');
-
-        // Recent payments
-        $recentPayments = Payment::with(['contract.parent'])
-            ->where('status', 'completed')
-            ->latest('paid_date')
-            ->limit(10)
-            ->get();
+        $gradeQuery = Grade::where('academic_year', $academicYear);
+        if ($isDirector) {
+             $gradeQuery->whereHas('student.class.levelProfile', function ($q) use ($directorCycle) {
+                 $q->where('cycle', $directorCycle);
+             });
+        }
+        $averageGrade = $gradeQuery->avg('grade');
 
         // Students by class
-        $studentsByClass = SchoolClass::where('is_active', true)
-            ->where('academic_year', $academicYear)
+        $studentsByClassQuery = SchoolClass::where('is_active', true)
+            ->where('academic_year', $academicYear);
+        if ($isDirector) {
+            $studentsByClassQuery->whereHas('levelProfile', function ($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+        $studentsByClass = $studentsByClassQuery
             ->withCount('students')
             ->get()
             ->map(function ($class) {
