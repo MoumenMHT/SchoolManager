@@ -16,7 +16,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const chartRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
+let chartInstance: any = null;
 
 const chartData = computed(() => ({
   labels: props.data.map(item => item.class_name),

@@ -14,7 +14,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const chartRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
+let chartInstance: any = null;
 
 const typeLabels = computed(() => ({
   cash: t('dashboard.payment_type_cash'),

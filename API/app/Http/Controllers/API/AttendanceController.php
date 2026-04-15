@@ -51,7 +51,7 @@ class AttendanceController extends Controller
             $validator = Validator::make($request->all(), [
                 'student_id' => 'required|exists:students,id',
                 'subject_id' => 'nullable|exists:subjects,id',
-                'teacher_id' => 'required|exists:teachers,id',
+                'teacher_id' => 'nullable|exists:teachers,id',
                 'schedule_id' => 'nullable|exists:schedules,id',
                 'status' => 'required|in:present,absent,late,excused',
                 'date' => 'nullable|date',
@@ -297,7 +297,7 @@ class AttendanceController extends Controller
                         $results[] = Attendance::create([
                             'student_id'  => $record['student_id'],
                             'subject_id'  => $record['subject_id'] ?? null,
-                            'teacher_id'  => $record['teacher_id'],
+                            'teacher_id'  => $record['teacher_id'] ?? null,
                             'schedule_id' => $record['schedule_id'] ?? null,
                             'date'        => $record['date'] ?? now()->format('Y-m-d'),
                             'time'        => now()->format('H:i:s'),

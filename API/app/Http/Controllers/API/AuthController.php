@@ -72,6 +72,8 @@ class AuthController extends Controller
         } elseif ($user->role === 'parent' && $user->parent) {
             $userData['parent'] = $user->parent;
             $userData['parent']['students'] = $user->parent->students;
+        } elseif ($user->role === 'supervisor' && $user->supervisor) {
+            $userData['supervisor'] = $user->supervisor;
         }
 
         return response()->json([
@@ -190,6 +192,8 @@ class AuthController extends Controller
         } elseif ($user->role === 'parent' && $user->parent) {
             $userData['parent'] = $user->parent;
             $userData['parent']['students'] = $user->parent->students;
+        } elseif ($user->role === 'supervisor' && $user->supervisor) {
+            $userData['supervisor'] = $user->supervisor;
         }
 
         return response()->json([

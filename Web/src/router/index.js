@@ -75,6 +75,16 @@ const router = createRouter({
                     component: () => import('@/views/ScheduleGenerator.vue')
                 },
                 {
+                    path: '/supervisor/panel',
+                    name: 'supervisor-panel',
+                    component: () => import('@/views/SupervisorPanel.vue')
+                },
+                {
+                    path: '/supervisors',
+                    name: 'supervisors',
+                    component: () => import('@/views/Supervisors.vue')
+                },
+                {
                     path: '/uikit/input',
                     name: 'input',
                     component: () => import('@/views/uikit/InputDoc.vue')
@@ -209,6 +219,7 @@ router.beforeEach((to, from, next) => {
     let roleHome = '/';
     if (userRole === 'teacher') roleHome = '/teacher/portal';
     if (userRole === 'accountant') roleHome = '/payments';
+    if (userRole === 'supervisor') roleHome = '/supervisor/panel';
 
     // If trying to access auth page while logged in, redirect to role home
     if (isAuthRoute && isAuthenticated) {
@@ -248,6 +259,13 @@ router.beforeEach((to, from, next) => {
             const allowedPaths = ['/', '/parents', '/teachers', '/classes', '/subjects', '/students'];
             if (!allowedPaths.includes(to.path) && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
                 next('/');
+                return;
+            }
+        } else if (userRole === 'supervisor') {
+            // Supervisor can access their panel and subjects
+            const allowedPaths = ['/supervisor/panel', '/subjects'];
+            if (!allowedPaths.includes(to.path) && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
+                next(roleHome);
                 return;
             }
         }

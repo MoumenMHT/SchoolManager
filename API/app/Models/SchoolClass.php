@@ -20,6 +20,7 @@ class SchoolClass extends Model
         'academic_year',
         'capacity',
         'main_teacher_id',
+        'supervisor_id',
         'is_active',
     ];
 
@@ -63,9 +64,9 @@ class SchoolClass extends Model
             ->withTimestamps();
     }
 
-    public function supervisors(): BelongsToMany
+    public function supervisor(): BelongsTo
     {
-        return $this->belongsToMany(Supervisor::class, 'supervisor_classes')->withTimestamps();
+        return $this->belongsTo(Supervisor::class, 'supervisor_id');
     }
 
     // Helper methods

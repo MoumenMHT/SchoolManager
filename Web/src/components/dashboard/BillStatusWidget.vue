@@ -13,7 +13,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const chartRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
+let chartInstance: any = null;
 
 const STATUSES = computed(() => [
   { key: 'paid',    label: t('dashboard.bill_status_paid'),    color: 'rgba(34,197,94,0.8)',   text: 'text-green-600 dark:text-green-400'  },
@@ -27,7 +27,7 @@ const stats = computed(() =>
     const filtered = props.bills.filter(b => b.status === s.key);
     return {
       ...s,
-      count:  filtered.length,
+        count:  filtered.length,
       amount: filtered.reduce((sum, b) => sum + Number(b.amount_due), 0),
       balance: filtered.reduce((sum, b) => sum + Number(b.balance), 0),
     };

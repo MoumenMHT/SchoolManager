@@ -20,6 +20,7 @@ use App\Http\Controllers\API\ScheduleController;
 use App\Http\Controllers\API\FeeController;
 use App\Http\Controllers\API\ContractController;
 use App\Http\Controllers\API\BillController;
+use App\Http\Controllers\API\SupervisorController;
 
 use App\Http\Controllers\API\LevelController;
 
@@ -38,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::apiResource('users', UserController::class);
+        
+        // Supervisor Management (admin only)
+        Route::apiResource('supervisors', SupervisorController::class);
     });
 
     // Admin, Secretariat, and Director routes
@@ -139,8 +143,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('bills', BillController::class);
     });
     
-    // Teacher and Director routes
-    Route::middleware('role:teacher,admin,primary_director,cem_director,lycee_director')->group(function () {
+    // Teacher, Supervisor and Director routes
+    Route::middleware('role:teacher,supervisor,admin,primary_director,cem_director,lycee_director')->group(function () {
         // Grade Management - specific routes MUST come before apiResource
         Route::post('/grades/bulk', [GradeController::class, 'bulkStore']);
         Route::get('/grades/analytics/overview', [GradeController::class, 'getAnalyticsOverview']);
@@ -165,6 +169,13 @@ Route::middleware('auth:sanctum')->group(function () {
         // Teacher specific endpoints
         Route::get('/teacher/classes', [TeacherController::class, 'myClasses']);
         Route::get('/teacher/students', [TeacherController::class, 'myStudents']);
+    });
+    
+    // Supervisor Portal routes
+    Route::middleware('role:supervisor')->group(function () {
+        Route::get('/supervisor/classes', [SupervisorController::class, 'myClasses']);
+        Route::get('/supervisor/dashboard', [SupervisorController::class, 'dashboard']);
+        Route::get('/supervisor/classes/{class}/schedule-today', [SupervisorController::class, 'classScheduleToday']);
     });
     
     // Parent routes

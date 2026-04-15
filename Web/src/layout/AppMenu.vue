@@ -8,7 +8,8 @@ const { t } = useI18n();
 const currentUser = computed(() => apiService.getUser());
 const userRole = computed(() => currentUser.value?.role || 'admin');
 const isTeacher = computed(() => userRole.value === 'teacher');
-const isAdmin = computed(() => userRole.value === 'admin' || userRole.value === 'supervisor');
+const isAdmin = computed(() => userRole.value === 'admin');
+const isSupervisor = computed(() => userRole.value === 'supervisor');
 const isSecretariat = computed(() => userRole.value === 'secretariat');
 const isAccountant = computed(() => userRole.value === 'accountant');
 const isDirector = computed(() => ['primary_director', 'cem_director', 'lycee_director'].includes(userRole.value));
@@ -49,6 +50,19 @@ const model = computed(() => {
                     label: t('nav.my_classes'),
                     icon: 'pi pi-fw pi-building',
                     to: '/teacher/portal'
+                }
+            ]
+        });
+    }
+
+    if (isSupervisor.value) {
+        sections.push({
+            label: t('nav.supervision'),
+            items: [
+                {
+                    label: t('nav.supervisor_panel'),
+                    icon: 'pi pi-fw pi-eye',
+                    to: '/supervisor/panel'
                 }
             ]
         });
@@ -101,6 +115,11 @@ const model = computed(() => {
                 label: t('dashboard.payment_dashboard'),
                 icon: 'pi pi-fw pi-credit-card',
                 to: '/payments'
+            });
+            managementItems.push({
+                label: t('nav.supervisors'),
+                icon: 'pi pi-fw pi-eye',
+                to: '/supervisors'
             });
             managementItems.push({
                 label: t('nav.schedule_generator'),

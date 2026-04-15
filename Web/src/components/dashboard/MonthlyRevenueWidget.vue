@@ -13,7 +13,7 @@ interface Props {
 
 const props = defineProps<Props>();
 const chartRef = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
+let chartInstance: any = null;
 
 // Academic year months Sep 2025 → Jun 2026
 const MONTHS = [
