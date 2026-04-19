@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\ParentFee;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -297,6 +298,14 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        // Assign supervisors to classes (round-robin using supervisor_id on classes table)
+        $this->command->info('Assigning supervisors to classes...');
+        foreach ($classes as $index => $class) {
+            $supervisor = $supervisors[$index % count($supervisors)];
+            $class->supervisor_id = $supervisor->id;
+            $class->save();
+        }
+
         // Create students (150 students)
         $this->command->info('Creating 150 students...');
         $students = [];
@@ -316,19 +325,7 @@ class DatabaseSeeder extends Seeder
             ]);
             $students[] = $student;
         }
-        // Assign supervisors to classes (one class per supervisor)
-        $availableClassIds = collect($classes)->pluck('id')->shuffle()->values();
-        $supervisors = \App\Models\Supervisor::all();
-
-        foreach ($supervisors as $index => $supervisor) {
-            if ($index >= $availableClassIds->count()) {
-                break;
-            }
-
-            $supervisor->update([
-                'class_id' => $availableClassIds->get($index),
-            ]);
-        }
+        
 
         $levelYearById = [];
         foreach ($createdLevelsByName as $level) {
@@ -366,6 +363,7 @@ class DatabaseSeeder extends Seeder
         // Create grades for all students across all subjects and exam types
         $examTypes = ['evaluation_continue', 'devoir', 'composition'];
         $semesters = ['Trimester 1', 'Trimester 2', 'Trimester 3'];
+        $now = now()->toDateTimeString();
 
         // Group assignments by class_id to quickly find the student's teachers and subjects
         $assignmentsByClass = [];
@@ -373,29 +371,42 @@ class DatabaseSeeder extends Seeder
             $assignmentsByClass[$assignment->class_id][] = $assignment;
         }
 
+        // Use bulk DB inserts instead of Eloquent::create() to bypass the GradeObserver
+        // and avoid ~14,850 individual queries hammering the DB.
+        $this->command->info('Creating grades (bulk insert)...');
+        $gradeRows = [];
         foreach ($students as $student) {
             $studentAssignments = $assignmentsByClass[$student->class_id] ?? [];
 
             foreach ($studentAssignments as $assignment) {
                 foreach ($semesters as $semester) {
                     foreach ($examTypes as $examType) {
-                        \App\Models\Grade::create([
-                            'student_id' => $student->id,
-                            'subject_id' => $assignment->subject_id,
-                            'teacher_id' => $assignment->teacher_id,
-                            'exam_type' => $examType,
-                            'grade' => fake()->randomFloat(2, 0, 20),
-                            'max_grade' => 20,
-                            'semester' => $semester,
-                            'academic_year' => '2025-2026',
-                            'comment' => fake()->optional(0.3)->sentence(),
-                        ]);
+                        $gradeRows[] = [
+                            'student_id'   => $student->id,
+                            'subject_id'   => $assignment->subject_id,
+                            'teacher_id'   => $assignment->teacher_id,
+                            'exam_type'    => $examType,
+                            'grade'        => fake()->randomFloat(2, 0, 20),
+                            'max_grade'    => 20,
+                            'semester'     => $semester,
+                            'academic_year'=> '2025-2026',
+                            'comment'      => fake()->optional(0.3)->sentence(),
+                            'created_at'   => $now,
+                            'updated_at'   => $now,
+                        ];
                     }
                 }
             }
+        }
 
-            // Since model events are disabled in the Seeder (use WithoutModelEvents;),
-            // The GradeObserver doesn't fire, so we manually calculate the averages for the report cards.
+        // Insert in chunks of 500 to avoid hitting DB parameter limits
+        foreach (array_chunk($gradeRows, 500) as $chunk) {
+            DB::table('grades')->insert($chunk);
+        }
+
+        // Now synchronize averages for all students per semester (manually, since observer didn't fire)
+        $this->command->info('Calculating student averages...');
+        foreach ($students as $student) {
             foreach ($semesters as $semester) {
                 \App\Services\GradingService::synchronizeAverages($student, $semester, '2025-2026');
             }
