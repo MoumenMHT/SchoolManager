@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
-class scheduleController extends Controller
+class ScheduleController extends Controller
 {
     private array $generationDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     private int $teacherWeeklyTargetSessions = 20;
