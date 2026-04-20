@@ -112,6 +112,9 @@
     "schedule_generator": "Générateur d'horaires",
     "supervision": "Surveillance",
     "supervisor_panel": "Panneau du Surveillant",
+    "directors": "Directeurs",
+    "secretaries": "Secrétaires",
+    "accountants": "Comptables",
     "supervisors": "Surveillants"
   },
   "topbar": {

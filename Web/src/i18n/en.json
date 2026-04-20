@@ -111,7 +111,10 @@
     "schedule_generator": "Schedule Generator",
     "supervision": "Supervision",
     "supervisor_panel": "Supervisor Panel",
-    "supervisors": "Supervisors"
+    "supervisors": "Supervisors",
+    "secretaries": "Secretariats",
+    "accountants": "Accountants",
+    "directors": "Directors"
   },
   "topbar": {
     "logout": "Logout",
@@ -779,5 +782,22 @@
     "load_error": "Failed to load supervisors",
     "save_error": "Failed to save supervisor",
     "delete_error": "Failed to delete supervisor"
+  },
+  "admin_users": {
+    "secretariats_title": "Manage Secretariats",
+    "accountants_title": "Manage Accountants",
+    "directors_title": "Manage Directors",
+    "new_user": "New User",
+    "edit_user": "Edit User",
+    "search_placeholder": "Search users...",
+    "no_users": "No users found.",
+    "page_report": "Showing {first} to {last} of {totalRecords} users",
+    "created": "User created successfully",
+    "updated": "User updated successfully",
+    "deleted": "User deleted successfully",
+    "load_error": "Failed to load users",
+    "save_error": "Failed to save user",
+    "delete_error": "Failed to delete user",
+    "role": "Role"
   }
 }

@@ -20,6 +20,14 @@ class GradeController extends Controller
 {
     private function applyGradeFilters(Builder $query, Request $request): Builder
     {
+        $user = $request->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $query->whereHas('student.class.levelProfile', function ($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+
         if ($request->filled('student_id')) {
             $query->where('grades.student_id', $request->integer('student_id'));
         }
@@ -619,6 +627,9 @@ class GradeController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $user = $request->user();
+        $cycle = ($user && method_exists($user, 'isDirector') && $user->isDirector()) ? $user->directorCycle() : 'global';
+
         $filters = [
             'student_id' => $request->input('student_id', 'all'),
             'subject_id' => $request->input('subject_id', 'all'),
@@ -627,6 +638,7 @@ class GradeController extends Controller
             'semester' => $request->input('semester', 'all'),
             'academic_year' => $request->input('academic_year', 'all'),
             'exam_type' => $request->input('exam_type', 'all'),
+            'cycle' => $cycle,
         ];
 
         $cacheKey = 'grades:analytics:overview:' . md5(json_encode($filters));

@@ -85,6 +85,21 @@ const router = createRouter({
                     component: () => import('@/views/Supervisors.vue')
                 },
                 {
+                    path: '/secretariats',
+                    name: 'secretariats',
+                    component: () => import('@/views/Secretariats.vue')
+                },
+                {
+                    path: '/accountants',
+                    name: 'accountants',
+                    component: () => import('@/views/Accountants.vue')
+                },
+                {
+                    path: '/directors',
+                    name: 'directors',
+                    component: () => import('@/views/Directors.vue')
+                },
+                {
                     path: '/uikit/input',
                     name: 'input',
                     component: () => import('@/views/uikit/InputDoc.vue')
@@ -243,7 +258,7 @@ router.beforeEach((to, from, next) => {
         }
 
         if (userRole === 'teacher') {
-            const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/subjects', '/attendance', '/analytics/grades', '/payments', '/schedules/generate'];
+            const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/subjects', '/attendance', '/analytics/grades', '/payments', '/schedules/generate', '/supervisors', '/secretariats', '/accountants', '/directors'];
             if (adminOnlyPaths.includes(to.path)) {
                 next(roleHome);
                 return;

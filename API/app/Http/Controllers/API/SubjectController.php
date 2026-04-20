@@ -14,7 +14,18 @@ class SubjectController extends Controller
      */
     public function index()
     {
-        $subjects = \App\Models\Subject::all();
+        $query = \App\Models\Subject::query();
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $query->whereHas('levels', function($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+
+        $subjects = $query->get();
+
         return response()->json([
             'success' => true,
             'data' => $subjects

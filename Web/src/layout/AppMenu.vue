@@ -71,6 +71,34 @@ const model = computed(() => {
     if (isAdmin.value || isSecretariat.value || isDirector.value) {
         const managementItems = [];
 
+        // Put Admin-exclusive roles at the exact top
+        if (isAdmin.value) {
+            managementItems.push({
+                label: t('nav.directors', 'Directors'),
+                icon: 'pi pi-fw pi-star',
+                to: '/directors'
+            });
+            managementItems.push({
+                label: t('nav.secretaries', 'Secretariats'),
+                icon: 'pi pi-fw pi-desktop',
+                to: '/secretariats'
+            });
+            managementItems.push({
+                label: t('nav.accountants', 'Accountants'),
+                icon: 'pi pi-fw pi-wallet',
+                to: '/accountants'
+            });
+        }
+
+        if (isAdmin.value || isDirector.value) {
+            managementItems.push({
+                label: t('nav.supervisors', 'Supervisors'),
+                icon: 'pi pi-fw pi-eye',
+                to: '/supervisors'
+            });
+        }
+
+
         managementItems.push({
             label: t('nav.parents'),
             icon: 'pi pi-fw pi-users',
@@ -116,11 +144,7 @@ const model = computed(() => {
                 icon: 'pi pi-fw pi-credit-card',
                 to: '/payments'
             });
-            managementItems.push({
-                label: t('nav.supervisors'),
-                icon: 'pi pi-fw pi-eye',
-                to: '/supervisors'
-            });
+
             managementItems.push({
                 label: t('nav.schedule_generator'),
                 icon: 'pi pi-fw pi-calendar-plus',

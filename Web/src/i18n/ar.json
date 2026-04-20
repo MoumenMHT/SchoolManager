@@ -111,6 +111,9 @@
     "schedule_generator": "مولد الجداول",
     "supervision": "المراقبة",
     "supervisor_panel": "لوحة المراقب",
+    "directors": "المديرون",
+    "secretaries": "الأمناء",
+    "accountants": "المحاسبون",
     "supervisors": "المراقبون"
   },
   "topbar": {

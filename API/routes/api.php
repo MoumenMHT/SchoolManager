@@ -39,9 +39,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::apiResource('users', UserController::class);
-        
-        // Supervisor Management (admin only)
-        Route::apiResource('supervisors', SupervisorController::class);
     });
 
     // Admin, Secretariat, and Director routes
@@ -51,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/students/{student}/history', [StudentController::class, 'getHistory']);
         Route::apiResource('students', StudentController::class);
         
+        Route::apiResource('supervisors', SupervisorController::class);
         Route::apiResource('teachers', TeacherController::class);
         Route::apiResource('classes', ClassController::class);
         Route::apiResource('subjects', SubjectController::class);
