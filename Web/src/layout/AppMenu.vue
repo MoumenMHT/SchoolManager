@@ -19,7 +19,7 @@ const model = computed(() => {
 
     if (isAccountant.value) {
         sections.push({
-            label: t('nav.management'),
+            label: t('nav.finance', 'Finance'),
             items: [
                 {
                     label: t('dashboard.payment_dashboard'),
@@ -69,93 +69,52 @@ const model = computed(() => {
     }
 
     if (isAdmin.value || isSecretariat.value || isDirector.value) {
-        const managementItems = [];
+        const academicItems = [];
+        const peopleItems = [];
 
-        // Put Admin-exclusive roles at the exact top
-        if (isAdmin.value) {
-            managementItems.push({
-                label: t('nav.directors', 'Directors'),
-                icon: 'pi pi-fw pi-star',
-                to: '/directors'
-            });
-            managementItems.push({
-                label: t('nav.secretaries', 'Secretariats'),
-                icon: 'pi pi-fw pi-desktop',
-                to: '/secretariats'
-            });
-            managementItems.push({
-                label: t('nav.accountants', 'Accountants'),
-                icon: 'pi pi-fw pi-wallet',
-                to: '/accountants'
-            });
-        }
+        academicItems.push({ label: t('nav.classes'), icon: 'pi pi-fw pi-building', to: '/classes' });
+        academicItems.push({ label: t('nav.subjects'), icon: 'pi pi-fw pi-book', to: '/subjects' });
 
         if (isAdmin.value || isDirector.value) {
-            managementItems.push({
-                label: t('nav.supervisors', 'Supervisors'),
-                icon: 'pi pi-fw pi-eye',
-                to: '/supervisors'
-            });
-        }
-
-
-        managementItems.push({
-            label: t('nav.parents'),
-            icon: 'pi pi-fw pi-users',
-            to: '/parents'
-        });
-        managementItems.push({
-            label: t('nav.teachers'),
-            icon: 'pi pi-fw pi-id-card',
-            to: '/teachers'
-        });
-        managementItems.push({
-            label: t('nav.students'),
-            icon: 'pi pi-fw pi-graduation-cap',
-            to: '/students'
-        });
-        managementItems.push({
-            label: t('nav.classes'),
-            icon: 'pi pi-fw pi-building',
-            to: '/classes'
-        });
-        managementItems.push({
-            label: t('nav.subjects'),
-            icon: 'pi pi-fw pi-book',
-            to: '/subjects'
-        });
-
-        if (isAdmin.value || isDirector.value) {
-            managementItems.push({
-                label: t('nav.attendance'),
-                icon: 'pi pi-fw pi-check-circle',
-                to: '/attendance'
-            });
-            managementItems.push({
-                label: t('nav.grade_analytics'),
-                icon: 'pi pi-fw pi-chart-bar',
-                to: '/analytics/grades'
-            });
+            academicItems.push({ label: t('nav.attendance'), icon: 'pi pi-fw pi-check-circle', to: '/attendance' });
+            academicItems.push({ label: t('nav.grade_analytics'), icon: 'pi pi-fw pi-chart-bar', to: '/analytics/grades' });
         }
 
         if (isAdmin.value) {
-            managementItems.push({
-                label: t('dashboard.payment_dashboard'),
-                icon: 'pi pi-fw pi-credit-card',
-                to: '/payments'
-            });
-
-            managementItems.push({
-                label: t('nav.schedule_generator'),
-                icon: 'pi pi-fw pi-calendar-plus',
-                to: '/schedules/generate'
-            });
+            academicItems.push({ label: t('nav.schedule_generator'), icon: 'pi pi-fw pi-calendar-plus', to: '/schedules/generate' });
         }
 
-        sections.push({
-            label: t('nav.management'),
-            items: managementItems
-        });
+        sections.push({ label: t('nav.academic', 'Academic'), items: academicItems });
+
+
+        peopleItems.push({ label: t('nav.students'), icon: 'pi pi-fw pi-graduation-cap', to: '/students' });
+        peopleItems.push({ label: t('nav.parents'), icon: 'pi pi-fw pi-users', to: '/parents' });
+        peopleItems.push({ label: t('nav.teachers'), icon: 'pi pi-fw pi-id-card', to: '/teachers' });
+
+        if (isAdmin.value || isDirector.value) {
+            peopleItems.push({ label: t('nav.supervisors'), icon: 'pi pi-fw pi-eye', to: '/supervisors' });
+        }
+
+        sections.push({ label: t('nav.people', 'People'), items: peopleItems });
+
+
+        if (isAdmin.value) {
+            const adminItems = [];
+            adminItems.push({ label: t('nav.directors', 'Directors'), icon: 'pi pi-fw pi-star', to: '/directors' });
+            adminItems.push({ label: t('nav.secretaries', 'Secretariats'), icon: 'pi pi-fw pi-desktop', to: '/secretariats' });
+            adminItems.push({ label: t('nav.accountants', 'Accountants'), icon: 'pi pi-fw pi-wallet', to: '/accountants' });
+
+            sections.push({ label: t('nav.administration', 'Administration'), items: adminItems });
+        }
+
+        if (isAdmin.value) {
+            sections.push({
+                label: t('nav.finance', 'Finance'),
+                items: [
+                    { label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' }
+                ]
+            });
+        }
     }
 
     return sections;
