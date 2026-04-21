@@ -742,11 +742,11 @@ class DatabaseSeeder extends Seeder
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('🔐 Login credentials:');
         $this->command->info('   Admin:       admin@schoolmanager.com / password123');
-        $this->command->info('   Secretariat: secretariat@school.com  / password');
-        $this->command->info('   Accountant:  accountant@school.com   / password');
-        $this->command->info('   Primary Dir: primary@school.com      / password');
-        $this->command->info('   CEM Dir:     cem@school.com          / password');
-        $this->command->info('   Lycee Dir:   lycee@school.com        / password');
+        $this->command->info('   Secretariat: secretariat@schoolmanager.com  / password');
+        $this->command->info('   Accountant:  accountant@schoolmanager.com   / password');
+        $this->command->info('   Primary Dir: primary@schoolmanager.com      / password');
+        $this->command->info('   CEM Dir:     cem@schoolmanager.com          / password');
+        $this->command->info('   Lycee Dir:   lycee@schoolmanager.com        / password');
         $this->command->info('   Teachers:    teacher1-' . $teacherCount . '@schoolmanager.com  / password123');
         $this->command->info('   Parents:     parent1-25@schoolmanager.com   / password123');
     }
