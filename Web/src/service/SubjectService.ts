@@ -55,6 +55,14 @@ class SubjectService {
     }
 
     /**
+     * Get subjects for a specific level
+     */
+    async getLevelSubjects(levelId: number): Promise<Subject[]> {
+        const response = await ApiService.get<Subject[]>(`/levels/${levelId}/subjects`);
+        return response.data || [];
+    }
+
+    /**
      * Get a single subject by ID
      */
     async getSubject(id: number): Promise<Subject> {

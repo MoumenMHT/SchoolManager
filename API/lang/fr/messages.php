@@ -33,6 +33,7 @@ return [
     'teacher_not_found'         => 'Enseignant introuvable.',
     'teacher_profile_not_found' => 'Profil enseignant introuvable.',
     'teacher_deleted'           => 'Enseignant supprimé avec succès.',
+    'teacher_cin_exists'        => 'Un enseignant avec le même CIN existe déjà.',
 
     // Parents
     'parent_name_exists'        => 'Un parent avec le même prénom et nom de famille existe déjà.',
@@ -40,8 +41,10 @@ return [
     'parent_has_account'        => 'Ce parent possède déjà un compte',
     'parent_deleted'            => 'Parent supprimé avec succès',
     'account_created'           => 'Compte utilisateur créé avec succès',
+    'parent_cin_exists'         => 'Un parent avec le même CIN existe déjà.',
 
     // Classes
+    'class_already_assigned'    => 'Les classes suivantes sont déjà assignées à un surveillant : :classes',
     'failed_retrieve_classes'   => 'Impossible de récupérer les classes',
     'class_created'             => 'Classe créée avec succès',
     'failed_create_class'       => 'Impossible de créer la classe',

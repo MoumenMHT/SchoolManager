@@ -20,8 +20,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required_without:phone|email|nullable',
-            'phone' => 'required_without:email|string|nullable',
+            'username' => 'required_without:phone|string|nullable',
+            'phone' => 'required_without:username|string|nullable',
             'password' => 'required',
         ]);
 
@@ -33,8 +33,8 @@ class AuthController extends Controller
         }
 
         $user = User::where(function($query) use ($request) {
-            if ($request->email) {
-                $query->where('email', $request->email);
+            if ($request->username) {
+                $query->where('username', $request->username);
             }
             if ($request->phone) {
                 $query->orWhere('phone', $request->phone);
@@ -90,9 +90,8 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => ['required', Password::min(8)->letters()->mixedCase()->numbers()],
+            'username' => 'required|string|max:255|unique:users',
+            'password' => ['required', Password::min(8)],
             'role' => 'required|in:admin,teacher,parent',
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
@@ -128,7 +127,6 @@ class AuthController extends Controller
 
         $user = User::create([
             'username' => $request->username,
-            'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'phone' => $request->phone,

@@ -50,7 +50,7 @@ class SupervisorController extends Controller
             'phone' => 'nullable|string|max:20',
             'hire_date' => 'nullable|date',
             'status' => 'in:active,inactive',
-            'email' => 'required|email|unique:users,email',
+            'username' => 'required|string|unique:users,username',
             'password' => 'required|string|min:8',
             'class_ids' => 'nullable|array',
             'class_ids.*' => 'exists:classes,id',
@@ -60,12 +60,26 @@ class SupervisorController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
+        // Check for already-assigned classes
+        if ($request->has('class_ids') && is_array($request->class_ids)) {
+            $assignedClasses = SchoolClass::whereIn('id', $request->class_ids)
+                ->whereNotNull('supervisor_id')
+                ->get();
+
+            if ($assignedClasses->isNotEmpty()) {
+                $classNames = $assignedClasses->pluck('name')->join(', ');
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.class_already_assigned', ['classes' => $classNames]),
+                ], 422);
+            }
+        }
+
         try {
             return DB::transaction(function () use ($request) {
                 // Create user account
                 $user = User::create([
-                    'username' => $request->first_name . ' ' . $request->last_name,
-                    'email' => $request->email,
+                    'username' => $request->username,
                     'password' => Hash::make($request->password),
                     'role' => 'supervisor',
                     'phone' => $request->phone,
@@ -128,7 +142,7 @@ class SupervisorController extends Controller
                 'phone' => 'nullable|string|max:20',
                 'hire_date' => 'nullable|date',
                 'status' => 'in:active,inactive',
-                'email' => 'sometimes|required|email|unique:users,email,' . $supervisor->user_id,
+                'username' => 'sometimes|required|string|unique:users,username,' . $supervisor->user_id,
                 'password' => 'nullable|string|min:8',
                 'class_ids' => 'nullable|array',
                 'class_ids.*' => 'exists:classes,id',
@@ -138,17 +152,30 @@ class SupervisorController extends Controller
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
+            // Check for already-assigned classes (excluding classes already owned by this supervisor)
+            if ($request->has('class_ids') && is_array($request->class_ids)) {
+                $assignedClasses = SchoolClass::whereIn('id', $request->class_ids)
+                    ->whereNotNull('supervisor_id')
+                    ->where('supervisor_id', '!=', $supervisor->id)
+                    ->get();
+
+                if ($assignedClasses->isNotEmpty()) {
+                    $classNames = $assignedClasses->pluck('name')->join(', ');
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.class_already_assigned', ['classes' => $classNames]),
+                    ], 422);
+                }
+            }
+
             return DB::transaction(function () use ($request, $supervisor) {
                 $supervisor->update($request->only(['first_name', 'last_name', 'phone', 'hire_date', 'status']));
 
                 // Update user account
                 if ($supervisor->user_id) {
                     $userData = [];
-                    if ($request->has('email')) {
-                        $userData['email'] = $request->email;
-                    }
-                    if ($request->has('first_name') || $request->has('last_name')) {
-                        $userData['username'] = ($request->first_name ?? $supervisor->first_name) . ' ' . ($request->last_name ?? $supervisor->last_name);
+                    if ($request->has('username')) {
+                        $userData['username'] = $request->username;
                     }
                     if ($request->has('phone')) {
                         $userData['phone'] = $request->phone;

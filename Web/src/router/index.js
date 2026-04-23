@@ -40,6 +40,11 @@ const router = createRouter({
                     component: () => import('@/views/Students.vue')
                 },
                 {
+                    path: '/levels',
+                    name: 'levels',
+                    component: () => import('@/views/Levels.vue')
+                },
+                {
                     path: '/subjects',
                     name: 'subjects',
                     component: () => import('@/views/Subjects.vue')
@@ -98,6 +103,11 @@ const router = createRouter({
                     path: '/directors',
                     name: 'directors',
                     component: () => import('@/views/Directors.vue')
+                },
+                {
+                    path: '/user-management',
+                    name: 'user-management',
+                    component: () => import('@/views/UserManagement.vue')
                 },
                 {
                     path: '/uikit/input',
@@ -250,15 +260,15 @@ router.beforeEach((to, from, next) => {
 
     // Role-specific path restrictions
     if (isAuthenticated) {
-        // Enforce Subjects permission
+        // Enforce Subjects and Levels permission
         const allowedSubjectRoles = ['admin', 'secretariat', 'supervisor', 'primary_director', 'cem_director', 'lycee_director'];
-        if (to.path === '/subjects' && !allowedSubjectRoles.includes(userRole)) {
+        if ((to.path === '/subjects' || to.path === '/levels') && !allowedSubjectRoles.includes(userRole)) {
              next(roleHome);
              return;
         }
 
         if (userRole === 'teacher') {
-            const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/subjects', '/attendance', '/analytics/grades', '/payments', '/schedules/generate', '/supervisors', '/secretariats', '/accountants', '/directors'];
+            const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/subjects', '/levels', '/attendance', '/analytics/grades', '/payments', '/schedules/generate', '/supervisors', '/secretariats', '/accountants', '/directors'];
             if (adminOnlyPaths.includes(to.path)) {
                 next(roleHome);
                 return;
@@ -271,14 +281,14 @@ router.beforeEach((to, from, next) => {
             }
         } else if (userRole === 'secretariat') {
             // General Secretariat can access parent, teacher, class, student management + dashboard.
-            const allowedPaths = ['/', '/parents', '/teachers', '/classes', '/subjects', '/students'];
+            const allowedPaths = ['/', '/parents', '/teachers', '/classes', '/subjects', '/levels', '/students'];
             if (!allowedPaths.includes(to.path) && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
                 next('/');
                 return;
             }
         } else if (userRole === 'supervisor') {
             // Supervisor can access their panel and subjects
-            const allowedPaths = ['/supervisor/panel', '/subjects'];
+            const allowedPaths = ['/supervisor/panel', '/subjects', '/levels'];
             if (!allowedPaths.includes(to.path) && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
                 next(roleHome);
                 return;

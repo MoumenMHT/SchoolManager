@@ -15,7 +15,6 @@ return new class extends Migration
             $table->foreignId('subject_id')->constrained('subjects')->cascadeOnDelete();
             $table->integer('coefficient');
             $table->unsignedTinyInteger('weekly_sessions_required')->default(1);
-            $table->unsignedTinyInteger('weekly_hours')->default(1); // Personalized weekly hours
             $table->timestamps();
 
             $table->unique(['level_id', 'subject_id']);

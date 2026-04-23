@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('🌱 Starting database seeding...');
 
-        if (User::where('email', 'admin@schoolmanager.com')->exists()) {
+        if (User::where('username', 'admin')->exists()) {
             $this->command->info('Seed baseline already exists, skipping duplicate seeding.');
             return;
         }
@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
         // Create admin user
         $this->command->info('Creating admin user...');
         \App\Models\User::create([
-            'username' => 'Admin User',
+            'username' => 'admin',
             'email' => 'admin@schoolmanager.com',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),
             'role' => 'admin',
@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('Creating secretariat and accountant users...');
         \App\Models\User::create([
-            'username' => 'General Secretariat',
+            'username' => 'secretariat',
             'email' => 'secretariat@schoolmanager.com',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),
             'role' => 'secretariat',
@@ -54,7 +54,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         \App\Models\User::create([
-            'username' => 'Accountant',
+            'username' => 'accountant',
             'email' => 'accountant@schoolmanager.com',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),
             'role' => 'accountant',
@@ -63,7 +63,7 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('Creating director users...');
         \App\Models\User::create([
-            'username' => 'Primary Director',
+            'username' => 'director_primary',
             'email' => 'primary@schoolmanager.com',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),
             'role' => 'primary_director',
@@ -71,7 +71,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         \App\Models\User::create([
-            'username' => 'CEM Director',
+            'username' => 'director_cem',
             'email' => 'cem@schoolmanager.com',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),
             'role' => 'cem_director',
@@ -79,7 +79,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         \App\Models\User::create([
-            'username' => 'Lycee Director',
+            'username' => 'director_lycee',
             'email' => 'lycee@schoolmanager.com',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),
             'role' => 'lycee_director',
@@ -157,7 +157,6 @@ class DatabaseSeeder extends Seeder
                     'subject_id' => $subject->id,
                     'coefficient' => $coefficient,
                     'weekly_sessions_required' => $weeklyHours,
-                    'weekly_hours' => $weeklyHours,
                 ]);
             }
         }
@@ -173,7 +172,7 @@ class DatabaseSeeder extends Seeder
         foreach ($createdSubjects as $subject) {
             foreach (['lower', 'upper'] as $band) {
                 $teacherUser = \App\Models\User::create([
-                    'username' => fake()->name(),
+                    'username' => 'teacher' . $teacherIndex,
                     'email' => 'teacher' . $teacherIndex . '@schoolmanager.com',
                     'password' => \Illuminate\Support\Facades\Hash::make('password123'),
                     'role' => 'teacher',
@@ -221,7 +220,7 @@ class DatabaseSeeder extends Seeder
         $supervisors = [];
         for ($i = 0; $i < 5; $i++) {
             $supervisorUser = \App\Models\User::create([
-                'username' => fake()->name(),
+                'username' => 'supervisor' . ($i + 1),
                 'email' => 'supervisor' . ($i + 1) . '@schoolmanager.com',
                 'password' => \Illuminate\Support\Facades\Hash::make('password123'),
                 'role' => 'supervisor',
@@ -255,7 +254,7 @@ class DatabaseSeeder extends Seeder
 
             if ($hasAccount) {
                 $parentUser = \App\Models\User::create([
-                    'username' => fake()->name(),
+                    'username' => 'parent' . ($i + 1),
                     'email' => 'parent' . ($i + 1) . '@schoolmanager.com',
                     'password' => \Illuminate\Support\Facades\Hash::make('password123'),
                     'role' => 'parent',
@@ -741,14 +740,14 @@ class DatabaseSeeder extends Seeder
         $this->command->info('   G7 (1 contract)  – Overpayment, 600 DZD credit');
         $this->command->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         $this->command->info('🔐 Login credentials:');
-        $this->command->info('   Admin:       admin@schoolmanager.com / password123');
-        $this->command->info('   Secretariat: secretariat@schoolmanager.com  / password');
-        $this->command->info('   Accountant:  accountant@schoolmanager.com   / password');
-        $this->command->info('   Primary Dir: primary@schoolmanager.com      / password');
-        $this->command->info('   CEM Dir:     cem@schoolmanager.com          / password');
-        $this->command->info('   Lycee Dir:   lycee@schoolmanager.com        / password');
-        $this->command->info('   Teachers:    teacher1-' . $teacherCount . '@schoolmanager.com  / password123');
-        $this->command->info('   Parents:     parent1-25@schoolmanager.com   / password123');
+        $this->command->info('   Admin:       admin / password123');
+        $this->command->info('   Secretariat: secretariat / password123');
+        $this->command->info('   Accountant:  accountant / password123');
+        $this->command->info('   Primary Dir: director_primary / password123');
+        $this->command->info('   CEM Dir:     director_cem / password123');
+        $this->command->info('   Lycee Dir:   director_lycee / password123');
+        $this->command->info('   Teachers:    teacher1-' . $teacherCount . ' / password123');
+        $this->command->info('   Parents:     parent1-25 / password123');
     }
 
     private function getCoefficientForSubjectAndLevel(string $subjectCode, \App\Models\Level $level): int

@@ -170,11 +170,11 @@ class StudentController extends Controller
             'code' => 'sometimes|required|string|max:20|unique:students,code,' . $id,
             'birth_date' => 'sometimes|required|date',
             'gender' => 'sometimes|required|in:male,female,other',
-            'class_id' => 'sometimes|required|exists:classes,id',
+            'class_id' => 'nullable|exists:classes,id',
             'parent_id' => 'sometimes|required|exists:parents,id',
             'enrollment_date' => 'sometimes|required|date',
             'medical_info' => 'nullable|string',
-            'is_active' => 'sometimes|required|boolean',
+            'is_active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {

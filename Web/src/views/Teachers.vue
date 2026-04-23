@@ -25,14 +25,12 @@ const submitted = ref(false);
 const loading = ref(false);
 const createAccountDialog = ref(false);
 const accountData = ref({
-  email: '',
   password: '',
   confirmPassword: '',
   username: '',
   role: 'teacher'
 });
 const validationErrors = ref({
-  email: '',
   password: '',
   confirmPassword: '',
   role: 'teacher',
@@ -436,7 +434,6 @@ const getAccountStatusLabel = (hasAccount: boolean) => {
 const openCreateAccount = (teacherData: Teacher) => {
   teacher.value = teacherData;
   accountData.value = {
-    email: teacherData.email || '',
     password: '',
     confirmPassword: '',
     username: teacherData.first_name + '_' + teacherData.last_name,
@@ -444,7 +441,6 @@ const openCreateAccount = (teacherData: Teacher) => {
   };
   submitted.value = false;
   validationErrors.value = {
-    email: '',
     password: '',
     confirmPassword: '',
     username: '',
@@ -457,14 +453,12 @@ const openCreateAccount = (teacherData: Teacher) => {
 const hideCreateAccountDialog = () => {
   createAccountDialog.value = false;
   accountData.value = {
-    email: '',
     password: '',
     confirmPassword: '',
     username: '',
     role: 'teacher'
   };
   validationErrors.value = {
-    email: '',
     password: '',
     confirmPassword: '',
     username: '',
@@ -473,14 +467,10 @@ const hideCreateAccountDialog = () => {
   submitted.value = false;
 };
 
-// Validate email
-const validateEmail = (email: string): string => {
-  if (!email || !email.trim()) {
-    return t('validation.email_required');
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return t('validation.email_invalid');
+// Validate username
+const validateUsername = (username: string): string => {
+  if (!username || !username.trim()) {
+    return t('common.username_required');
   }
   return '';
 };
@@ -512,25 +502,22 @@ const createUserAccount = async () => {
   submitted.value = true;
 
   // Client-side validation
-  validationErrors.value.email = validateEmail(accountData.value.email);
   validationErrors.value.password = validatePassword(accountData.value.password);
   validationErrors.value.confirmPassword = validateConfirmPassword(
     accountData.value.password,
     accountData.value.confirmPassword,
-
   );
 
   // Check if there are any validation errors
-  if (validationErrors.value.email || validationErrors.value.password || validationErrors.value.confirmPassword) {
+  if (validationErrors.value.password || validationErrors.value.confirmPassword) {
     return;
   }
 
   try {
     const updated = await TeacherService.createUserAccount(
       teacher.value.id!,
-      accountData.value.email,
-      accountData.value.password,
       accountData.value.username,
+      accountData.value.password,
       accountData.value.role
     );
 
@@ -553,14 +540,12 @@ const createUserAccount = async () => {
 
     createAccountDialog.value = false;
     accountData.value = {
-      email: '',
       password: '',
       confirmPassword: '',
       username: '',
       role: 'teacher'
     };
     validationErrors.value = {
-      email: '',
       password: '',
       confirmPassword: '',
       username: '',
@@ -572,7 +557,6 @@ const createUserAccount = async () => {
     if (error.response?.data?.errors) {
       const serverErrors = error.response.data.errors;
       console.log('Server validation errors:', serverErrors);
-      validationErrors.value.email = serverErrors.email?.[0] || '';
       validationErrors.value.password = serverErrors.password?.[0] || '';
     } else {
       toast.add({
@@ -583,7 +567,6 @@ const createUserAccount = async () => {
       });
     }
   }finally {
-    submitted.value = false;
     await loadTeachers();
   }
 };
@@ -1417,27 +1400,7 @@ const removeAvailabilityRow = (index: number) => {
           </div>
         </div>
 
-        <!-- Email -->
-        <div>
-          <label for="account_email" class="block font-semibold mb-2">
-            {{ t('common.email') }} <span class="text-red-500">*</span>
-          </label>
-          <InputText
-            id="account_email"
-            v-model="accountData.email"
-            type="email"
-            required
-            autofocus
-            :invalid="submitted && !!validationErrors.email"
-            :placeholder="t('teachers.enter_email_address')"
-            @blur="validationErrors.email = validateEmail(accountData.email)"
-          />
-          <small v-if="submitted && validationErrors.email" class="text-red-500">
-            {{ validationErrors.email }}
-          </small>
-        </div>
-
-        <!-- Username -->
+        <!-- Username (pre-filled, editable) -->
         <div>
           <label for="account_username" class="block font-semibold mb-2">
             {{ t('common.username') }} <span class="text-red-500">*</span>
@@ -1446,17 +1409,15 @@ const removeAvailabilityRow = (index: number) => {
             id="account_username"
             v-model="accountData.username"
             required
+            autofocus
             :invalid="submitted && !!validationErrors.username"
-            :placeholder="t('teachers.enter_username')"
+            :placeholder="t('common.username')"
+            @blur="validationErrors.username = validateUsername(accountData.username)"
           />
           <small v-if="submitted && validationErrors.username" class="text-red-500">
             {{ validationErrors.username }}
           </small>
         </div>
-
-
-        <!-- Role -->
-
 
         <!-- Password -->
         <div>

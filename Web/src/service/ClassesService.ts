@@ -2,10 +2,11 @@ import apiService from './ApiService';
 import type { ApiResponse } from '@/types';
 
 export interface SchoolClass {
-  
+
   id: number;
   name: string;
   level: string;
+  level_id?: number | null;
   academic_year: string | null;
   capacity: number | null;
   main_teacher_id: number | null;
@@ -36,11 +37,13 @@ export interface CreateTeacherDTO {
   academic_year?: Date;
   capacity?: string;
   main_teacher_id?: string | null;
+  level_id?: number | null;
 }
 
 export interface UpdateTeacherDTO {
   name: string;
   level: string;
+  level_id?: number | null;
   academic_year?: Date;
   capacity?: string;
   main_teacher_id?: string | null;
@@ -52,7 +55,7 @@ class SchoolClassService {
    */
   async getClasses(): Promise<SchoolClass[]> {
     const response = await apiService.get<SchoolClass[]>('/classes');
-    console.log('Fetched classes:', response.data);    
+    console.log('Fetched classes:', response.data);
     return response.data || [];
   }
 
@@ -109,7 +112,13 @@ class SchoolClassService {
     return (response.data as any[]) || [];
   }
 
-
+  /**
+   * Get all level definitions
+   */
+  async getLevels(): Promise<any[]> {
+    const response = await apiService.get<any>('/levels');
+    return response.data || [];
+  }
 }
 
 export default new SchoolClassService();

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('levels', function (Blueprint $table) {
             $table->id();
-            $table->enum('cycle', ['primary', 'cem', 'lycee']);
+            $table->string('cycle');
             $table->unsignedTinyInteger('year_number');
             $table->string('track')->nullable();
             $table->string('name');
@@ -19,7 +19,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['cycle', 'year_number', 'track']);
-            $table->unique('name');
         });
     }
 

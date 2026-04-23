@@ -103,9 +103,9 @@ class ParentService {
   /**
    * Create user account for parent
    */
-  async createUserAccount(parentId: number, email: string, password: string): Promise<Parent> {
+  async createUserAccount(parentId: number, username: string, password: string): Promise<Parent> {
     const response = await apiService.post<Parent>(`/parents/${parentId}/create-account`, {
-      email,
+      username,
       password
     });
     return response.data!;

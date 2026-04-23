@@ -29,11 +29,16 @@ const selectedClassDetails = ref<SchoolClass | null>(null);
 const availableTeachers = ref<Teacher[]>([]);
 
 // Teacher assignment dialog states
+interface PendingAssignment {
+  subject_id: number | null;
+  teacher_id: number | null;
+  availableTeachers: any[];
+  loadingTeachers: boolean;
+}
+
 const assignTeacherDialog = ref(false);
-const selectedSubjectForAssignment = ref<number | null>(null);
 const availableSubjects = ref<Subject[]>([]);
-const availableTeachersForSubject = ref<any[]>([]);
-const selectedTeacherToAssign = ref<number | null>(null);
+const pendingAssignments = ref<PendingAssignment[]>([]);
 const assignmentLoading = ref(false);
 const classAssignments = ref<any[]>([]);
 
@@ -73,6 +78,14 @@ const schoolHours = [
   { hour: 16, label: '16:00 - 17:00' }
 ];
 
+// Helper to get correct current academic year based on current month
+const getCurrentAcademicYear = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const startYear = now.getMonth() < 8 ? year - 1 : year; // Month < 8 means Jan-Aug (previous school year)
+  return `${startYear}-${startYear + 1}`;
+};
+
 // Computed properties
 const currentYear = computed(() => new Date().getFullYear());
 const academicYears = computed(() => {
@@ -84,27 +97,46 @@ const academicYears = computed(() => {
   return years;
 });
 
-// Grade levels — label is translated, value is numeric string sent to the API
-const levels = computed(() => [
-  { label: t('classes.grade_1'),  value: '1' },
-  { label: t('classes.grade_2'),  value: '2' },
-  { label: t('classes.grade_3'),  value: '3' },
-  { label: t('classes.grade_4'),  value: '4' },
-  { label: t('classes.grade_5'),  value: '5' },
-  { label: t('classes.grade_6'),  value: '6' },
-  { label: t('classes.grade_7'),  value: '7' },
-  { label: t('classes.grade_8'),  value: '8' },
-  { label: t('classes.grade_9'),  value: '9' },
-  { label: t('classes.grade_10'), value: '10' },
-  { label: t('classes.grade_11'), value: '11' },
-  { label: t('classes.grade_12'), value: '12' },
-]);
+// Load levels from API
+const apiLevels = ref<any[]>([]);
+
+// Group levels by cycle for the Select dropdown
+const groupedLevels = computed(() => {
+  const groups: { label: string, items: any[] }[] = [];
+  
+  const cycles = [
+    { key: 'primary', label: t('cycles.primary', 'Primary') },
+    { key: 'cem', label: t('cycles.cem', 'Middle School (CEM)') },
+    { key: 'lycee', label: t('cycles.lycee', 'High School (Lycée)') }
+  ];
+
+  cycles.forEach(cycle => {
+    const cycleLevels = apiLevels.value.filter(level => level.cycle === cycle.key);
+    if (cycleLevels.length > 0) {
+      groups.push({
+        label: cycle.label,
+        items: cycleLevels
+      });
+    }
+  });
+
+  return groups;
+});
 
 // Load classes on mount
 onMounted(async () => {
   await loadClasses();
   await loadTeachers();
+  await loadLevels();
 });
+
+const loadLevels = async () => {
+  try {
+    apiLevels.value = await ClassesService.getLevels();
+  } catch (error) {
+    console.error("Failed to load levels", error);
+  }
+};
 
 // Load all classes
 const loadClasses = async () => {
@@ -170,7 +202,7 @@ const saveClass = async () => {
   submitted.value = true;
 
   // Validate required fields
-  if (!schoolClass.value.name?.trim() || !schoolClass.value.level?.trim()) {
+  if (!schoolClass.value.name?.trim() || !schoolClass.value.level_id) {
     toast.add({
       severity: 'error',
       summary: t('classes.validation_error'),
@@ -181,9 +213,12 @@ const saveClass = async () => {
   }
 
   try {
+    const selectedLevel = apiLevels.value.find(l => l.id === schoolClass.value.level_id);
+
     const classData: any = {
       name: schoolClass.value.name,
-      level: schoolClass.value.level,
+      level: selectedLevel ? selectedLevel.name : (schoolClass.value.level || ''),
+      level_id: schoolClass.value.level_id,
       academic_year: schoolClass.value.academic_year || null,
       capacity: schoolClass.value.capacity ? String(schoolClass.value.capacity) : null,
       main_teacher_id: schoolClass.value.main_teacher_id ? String(schoolClass.value.main_teacher_id) : null
@@ -339,10 +374,14 @@ const getCapacityStatus = (studentsCount: number, capacity: number | null) => {
   return 'success';
 };
 
-// Load available subjects
-const loadSubjects = async () => {
+// Load available subjects for this class's level
+const loadSubjects = async (levelId?: number) => {
   try {
-    availableSubjects.value = await SubjectService.getSubjects();
+    if (levelId) {
+      availableSubjects.value = await SubjectService.getLevelSubjects(levelId);
+    } else {
+      availableSubjects.value = await SubjectService.getSubjects();
+    }
   } catch (error: any) {
     toast.add({
       severity: 'error',
@@ -355,23 +394,29 @@ const loadSubjects = async () => {
 
 // Open assign teacher dialog
 const openAssignTeacherDialog = async () => {
-  await loadSubjects();
-  selectedSubjectForAssignment.value = null;
-  selectedTeacherToAssign.value = null;
-  availableTeachersForSubject.value = [];
+  await loadSubjects(selectedClassDetails.value?.level_id);
+  pendingAssignments.value = [{
+    subject_id: null,
+    teacher_id: null,
+    availableTeachers: [],
+    loadingTeachers: false
+  }];
   assignTeacherDialog.value = true;
 };
 
-// Handle subject selection change
-const onSubjectChange = async () => {
-  if (!selectedSubjectForAssignment.value) {
-    availableTeachersForSubject.value = [];
+// Handle subject selection change for a specific row
+const onSubjectChange = async (index: number) => {
+  const assignment = pendingAssignments.value[index];
+  assignment.teacher_id = null;
+  assignment.availableTeachers = [];
+
+  if (!assignment.subject_id) {
     return;
   }
 
   try {
-    assignmentLoading.value = true;
-    availableTeachersForSubject.value = await SubjectService.getTeachersBySubject(selectedSubjectForAssignment.value);
+    assignment.loadingTeachers = true;
+    assignment.availableTeachers = await SubjectService.getTeachersBySubject(assignment.subject_id);
   } catch (error: any) {
     toast.add({
       severity: 'error',
@@ -380,13 +425,28 @@ const onSubjectChange = async () => {
       life: 3000
     });
   } finally {
-    assignmentLoading.value = false;
+    assignment.loadingTeachers = false;
   }
+};
+
+const addAssignmentRow = () => {
+  pendingAssignments.value.push({
+    subject_id: null,
+    teacher_id: null,
+    availableTeachers: [],
+    loadingTeachers: false
+  });
+};
+
+const removeAssignmentRow = (index: number) => {
+  pendingAssignments.value.splice(index, 1);
 };
 
 // Assign teacher to class
 const assignTeacherToClass = async () => {
-  if (!selectedSubjectForAssignment.value || !selectedTeacherToAssign.value || !selectedClassDetails.value) {
+  const validAssignments = pendingAssignments.value.filter(a => a.subject_id && a.teacher_id);
+
+  if (validAssignments.length === 0 || !selectedClassDetails.value) {
     toast.add({
       severity: 'error',
       summary: t('classes.validation_error'),
@@ -400,15 +460,28 @@ const assignTeacherToClass = async () => {
     assignmentLoading.value = true;
 
     // Get the coefficient for this subject and class level
-    const academicYear = selectedClassDetails.value.academic_year || `${currentYear.value}-${currentYear.value + 1}`;
+    const academicYear = selectedClassDetails.value.academic_year || getCurrentAcademicYear();
 
-    await SubjectService.assignSubjectToTeacher(
-      selectedSubjectForAssignment.value,
-      selectedTeacherToAssign.value,
-      selectedClassDetails.value.id,
-      academicYear,
-      1 // Default coefficient, you can make this dynamic if needed
-    );
+    for (const assignment of validAssignments) {
+      try {
+        await SubjectService.assignSubjectToTeacher(
+          assignment.subject_id!,
+          assignment.teacher_id!,
+          selectedClassDetails.value.id,
+          academicYear,
+          1 // Default coefficient
+        );
+      } catch (err: any) {
+        // Log individual failures but continue
+        console.error(`Failed to assign teacher for subject ${assignment.subject_id}:`, err);
+        toast.add({
+          severity: 'error',
+          summary: t('common.error'),
+          detail: err.response?.data?.message || t('classes.assign_teacher_failed'),
+          life: 3000
+        });
+      }
+    }
 
     await loadClasses(); // Reload classes to update the main table
 
@@ -424,9 +497,7 @@ const assignTeacherToClass = async () => {
 
     // Close dialog
     assignTeacherDialog.value = false;
-    selectedSubjectForAssignment.value = null;
-    selectedTeacherToAssign.value = null;
-    availableTeachersForSubject.value = [];
+    pendingAssignments.value = [];
   } catch (error: any) {
     toast.add({
       severity: 'error',
@@ -1005,7 +1076,38 @@ const hideScheduleEditDialog = () => {
           </small>
         </div>
 
-        
+        <!-- Level -->
+        <div>
+          <label for="level" class="block font-semibold mb-2">
+            {{ t('classes.level') }} <span class="text-red-500">*</span>
+          </label>
+          <Select
+            id="level"
+            v-model="schoolClass.level_id"
+            :options="groupedLevels"
+            optionGroupLabel="label"
+            optionGroupChildren="items"
+            optionLabel="name"
+            optionValue="id"
+            :placeholder="t('classes.select_level', 'Select a Level')"
+            required
+            :invalid="submitted && !schoolClass.level_id"
+            filter
+          >
+            <template #optiongroup="slotProps">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-bars text-primary text-sm"></i>
+                <span class="font-bold text-primary">{{ slotProps.option.label }}</span>
+              </div>
+            </template>
+            <template #option="slotProps">
+              <div class="ml-2">{{ slotProps.option.name }}</div>
+            </template>
+          </Select>
+          <small v-if="submitted && !schoolClass.level_id" class="text-red-500">
+            {{ t('classes.level_required', 'Level is required') }}
+          </small>
+        </div>
 
         <!-- Academic Year -->
         <div>
@@ -1349,7 +1451,7 @@ const hideScheduleEditDialog = () => {
     <!-- Assign Teacher Dialog -->
     <Dialog
       v-model:visible="assignTeacherDialog"
-      :style="{ width: '550px' }"
+      :style="{ width: '800px' }"
       :header="t('classes.assign_teacher_to_class')"
       :modal="true"
       class="p-fluid"
@@ -1359,76 +1461,97 @@ const hideScheduleEditDialog = () => {
           {{ t('classes.assign_teacher_hint') }}
         </p>
 
-        <!-- Subject Selection -->
-        <div>
-          <label for="subject" class="block font-semibold mb-2">
-            {{ t('classes.subject') }} <span class="text-red-500">*</span>
-          </label>
-          <Select
-            id="subject"
-            v-model="selectedSubjectForAssignment"
-            :options="availableSubjects"
-            optionLabel="name"
-            optionValue="id"
-            :placeholder="t('classes.select_subject')"
-            filter
-            @change="onSubjectChange"
+        <div v-for="(assignment, index) in pendingAssignments" :key="index" class="p-4 border border-surface rounded-lg bg-surface-50 dark:bg-surface-900/20 relative">
+          <!-- Remove row button -->
+          <Button
+            v-if="pendingAssignments.length > 1"
+            icon="pi pi-times"
+            severity="danger"
+            text
+            rounded
+            class="absolute top-2 right-2"
+            @click="removeAssignmentRow(index)"
           />
-          <small class="text-muted-color">
-            {{ t('classes.subject_hint') }}
-          </small>
-        </div>
 
-        <!-- Teacher Selection (shows only after subject is selected) -->
-        <div v-if="selectedSubjectForAssignment">
-          <label for="teacher" class="block font-semibold mb-2">
-            {{ t('classes.teacher') }} <span class="text-red-500">*</span>
-          </label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+            <!-- Subject Selection -->
+            <div>
+              <label :for="'subject-' + index" class="block font-semibold mb-2">
+                {{ t('classes.subject') }} <span class="text-red-500">*</span>
+              </label>
+              <Select
+                :id="'subject-' + index"
+                v-model="assignment.subject_id"
+                :options="availableSubjects"
+                optionLabel="name"
+                optionValue="id"
+                :placeholder="t('classes.select_subject')"
+                filter
+                class="w-full"
+                @change="onSubjectChange(index)"
+              />
+            </div>
 
-          <div v-if="assignmentLoading" class="flex items-center gap-2 p-3">
-            <i class="pi pi-spin pi-spinner"></i>
-            <span>{{ t('classes.loading_teachers') }}</span>
-          </div>
+            <!-- Teacher Selection -->
+            <div>
+              <label :for="'teacher-' + index" class="block font-semibold mb-2">
+                {{ t('classes.teacher') }} <span class="text-red-500">*</span>
+              </label>
 
-          <Select
-            v-else-if="availableTeachersForSubject.length > 0"
-            id="teacher"
-            v-model="selectedTeacherToAssign"
-            :options="availableTeachersForSubject"
-            optionLabel="first_name"
-            optionValue="id"
-            :placeholder="t('classes.select_teacher')"
-            filter
-          >
-            <template #option="{ option }">
-              <div class="flex flex-col">
-                <span class="font-semibold">{{ option.first_name }} {{ option.last_name }}</span>
+              <div v-if="assignment.loadingTeachers" class="flex items-center gap-2 p-2 border border-transparent">
+                <i class="pi pi-spin pi-spinner text-primary"></i>
+                <span class="text-sm text-muted-color">{{ t('classes.loading_teachers') }}</span>
               </div>
-            </template>
-            <template #value="{ value }">
-              <div v-if="value">
-                {{ availableTeachersForSubject.find(t => t.id === value)?.first_name }}
-                {{ availableTeachersForSubject.find(t => t.id === value)?.last_name }}
-              </div>
-              <span v-else>{{ t('classes.select_teacher') }}</span>
-            </template>
-          </Select>
 
-          <div v-else class="p-3 border border-surface rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
-            <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
-              <i class="pi pi-info-circle"></i>
-              <span>{{ t('classes.no_teachers_for_subject') }}</span>
+              <Select
+                v-else-if="assignment.availableTeachers.length > 0"
+                :id="'teacher-' + index"
+                v-model="assignment.teacher_id"
+                :options="assignment.availableTeachers"
+                optionLabel="first_name"
+                optionValue="id"
+                :placeholder="t('classes.select_teacher')"
+                filter
+                class="w-full"
+              >
+                <template #option="{ option }">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold">{{ option.first_name }} {{ option.last_name }}</span>
+                  </div>
+                </template>
+                <template #value="{ value }">
+                  <div v-if="value">
+                    {{ assignment.availableTeachers.find(t => t.id === value)?.first_name }}
+                    {{ assignment.availableTeachers.find(t => t.id === value)?.last_name }}
+                  </div>
+                  <span v-else>{{ t('classes.select_teacher') }}</span>
+                </template>
+              </Select>
+
+              <div v-else-if="assignment.subject_id" class="p-2 border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-sm">
+                <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+                  <i class="pi pi-info-circle"></i>
+                  <span>{{ t('classes.no_teachers_for_subject') }}</span>
+                </div>
+              </div>
+
+              <div v-else class="p-2 border border-blue-200 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-sm">
+                <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                  <i class="pi pi-info-circle"></i>
+                  <span>{{ t('classes.select_subject_first') }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Info Message -->
-        <div v-if="!selectedSubjectForAssignment" class="p-3 border border-surface rounded-lg bg-blue-50 dark:bg-blue-900/20">
-          <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-            <i class="pi pi-info-circle"></i>
-            <span>{{ t('classes.select_subject_first') }}</span>
-          </div>
-        </div>
+        <Button
+          :label="'Add Another Subject'"
+          icon="pi pi-plus"
+          outlined
+          class="w-full mt-2"
+          @click="addAssignmentRow"
+        />
       </div>
 
       <template #footer>
@@ -1443,7 +1566,7 @@ const hideScheduleEditDialog = () => {
           :label="t('classes.assign')"
           icon="pi pi-check"
           @click="assignTeacherToClass"
-          :disabled="!selectedSubjectForAssignment || !selectedTeacherToAssign || assignmentLoading"
+          :disabled="pendingAssignments.filter(a => a.subject_id && a.teacher_id).length === 0 || assignmentLoading"
           :loading="assignmentLoading"
         />
       </template>

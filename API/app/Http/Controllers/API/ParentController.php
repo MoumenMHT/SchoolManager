@@ -57,7 +57,7 @@ class ParentController extends Controller
             'last_name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
-            'cin' => 'nullable|string|max:20|unique:parents,cin',
+            'cin' => 'nullable|string|max:20',
             'profession' => 'nullable|string|max:255',
         ]);
         
@@ -71,6 +71,15 @@ class ParentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => __('messages.parent_name_exists')
+                ], 409);
+            }
+        }
+        if ($request->cin) {
+            $existingParent = ParentModel::where('cin', $request->cin)->first();
+            if ($existingParent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.parent_cin_exists')
                 ], 409);
             }
         }
@@ -217,7 +226,7 @@ class ParentController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email|unique:users,email',
+            'username' => 'required|string|max:255|unique:users,username',
             'password' => 'required|string|min:8',
         ]);
 
@@ -230,8 +239,7 @@ class ParentController extends Controller
 
         // Create user account
         $user = \App\Models\User::create([
-            'username' => strtolower($parent->first_name . '_' . $parent->last_name),
-            'email' => $request->email,
+            'username' => $request->username,
             'password' => bcrypt($request->password),
             'role' => 'parent',
             'phone' => $parent->phone,

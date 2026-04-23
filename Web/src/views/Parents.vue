@@ -24,12 +24,12 @@ const submitted = ref(false);
 const loading = ref(false);
 const createAccountDialog = ref(false);
 const accountData = ref({
-  email: '',
+  username: '',
   password: '',
   confirmPassword: ''
 });
 const validationErrors = ref({
-  email: '',
+  username: '',
   password: '',
   confirmPassword: ''
 });
@@ -260,13 +260,13 @@ const getAccountStatusLabel = (hasAccount: boolean) => {
 const openCreateAccount = (parentData: Parent) => {
   parent.value = parentData;
   accountData.value = {
-    email: parentData.email || '',
+    username: (parentData.first_name + '_' + parentData.last_name).toLowerCase().replace(/\s+/g, '_'),
     password: '',
     confirmPassword: ''
   };
   submitted.value = false;
   validationErrors.value = {
-    email: '',
+    username: '',
     password: '',
     confirmPassword: ''
   };
@@ -277,26 +277,22 @@ const openCreateAccount = (parentData: Parent) => {
 const hideCreateAccountDialog = () => {
   createAccountDialog.value = false;
   accountData.value = {
-    email: '',
+    username: '',
     password: '',
     confirmPassword: ''
   };
   validationErrors.value = {
-    email: '',
+    username: '',
     password: '',
     confirmPassword: ''
   };
   submitted.value = false;
 };
 
-// Validate email
-const validateEmail = (email: string): string => {
-  if (!email || !email.trim()) {
-    return t('validation.email_required');
-  }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return t('validation.email_invalid');
+// Validate username
+const validateUsername = (username: string): string => {
+  if (!username || !username.trim()) {
+    return t('common.username_required');
   }
   return '';
 };
@@ -470,7 +466,7 @@ const createUserAccount = async () => {
   submitted.value = true;
 
   // Client-side validation
-  validationErrors.value.email = validateEmail(accountData.value.email);
+  validationErrors.value.username = validateUsername(accountData.value.username);
   validationErrors.value.password = validatePassword(accountData.value.password);
   validationErrors.value.confirmPassword = validateConfirmPassword(
     accountData.value.password,
@@ -478,14 +474,14 @@ const createUserAccount = async () => {
   );
 
   // Check if there are any validation errors
-  if (validationErrors.value.email || validationErrors.value.password || validationErrors.value.confirmPassword) {
+  if (validationErrors.value.username || validationErrors.value.password || validationErrors.value.confirmPassword) {
     return;
   }
 
   try {
     const updated = await ParentService.createUserAccount(
       parent.value.id!,
-      accountData.value.email,
+      accountData.value.username,
       accountData.value.password
     );
 
@@ -508,12 +504,12 @@ const createUserAccount = async () => {
 
     createAccountDialog.value = false;
     accountData.value = {
-      email: '',
+      username: '',
       password: '',
       confirmPassword: ''
     };
     validationErrors.value = {
-      email: '',
+      username: '',
       password: '',
       confirmPassword: ''
     };
@@ -522,9 +518,10 @@ const createUserAccount = async () => {
     // Handle server-side validation errors
     if (error.response?.data?.errors) {
       const serverErrors = error.response.data.errors;
-      validationErrors.value.email = serverErrors.email?.[0] || '';
+      validationErrors.value.username = serverErrors.username?.[0] || '';
       validationErrors.value.password = serverErrors.password?.[0] || '';
     } else {
+      console.error('Account creation error:', error.response.data.message);
       toast.add({
         severity: 'error',
         summary: t('common.error'),
@@ -1236,23 +1233,22 @@ const createUserAccount = async () => {
           </div>
         </div>
 
-        <!-- Email -->
+        <!-- Username -->
         <div>
-          <label for="account_email" class="block font-semibold mb-2">
-            {{ t('common.email') }} <span class="text-red-500">*</span>
+          <label for="account_username" class="block font-semibold mb-2">
+            {{ t('common.username') }} <span class="text-red-500">*</span>
           </label>
           <InputText
-            id="account_email"
-            v-model="accountData.email"
-            type="email"
+            id="account_username"
+            v-model="accountData.username"
             required
             autofocus
-            :invalid="submitted && !!validationErrors.email"
-            :placeholder="t('parents.enter_email')"
-            @blur="validationErrors.email = validateEmail(accountData.email)"
+            :invalid="submitted && !!validationErrors.username"
+            :placeholder="t('common.username')"
+            @blur="validationErrors.username = validateUsername(accountData.username)"
           />
-          <small v-if="submitted && validationErrors.email" class="text-red-500">
-            {{ validationErrors.email }}
+          <small v-if="submitted && validationErrors.username" class="text-red-500">
+            {{ validationErrors.username }}
           </small>
         </div>
 

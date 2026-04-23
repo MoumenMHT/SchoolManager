@@ -33,6 +33,7 @@ return [
     'teacher_not_found'         => 'Teacher not found.',
     'teacher_profile_not_found' => 'Teacher profile not found.',
     'teacher_deleted'           => 'Teacher deleted successfully.',
+    'teacher_cin_exists'        => 'A teacher with the same CIN already exists.',
 
     // Parents
     'parent_name_exists'        => 'A parent with the same first and last name already exists.',
@@ -40,8 +41,10 @@ return [
     'parent_has_account'        => 'Parent already has an account',
     'parent_deleted'            => 'Parent deleted successfully',
     'account_created'           => 'User account created successfully',
+    'parent_cin_exists'         => 'A parent with the same CIN already exists.',
 
     // Classes
+    'class_already_assigned'    => 'The following classes are already assigned to a supervisor: :classes',
     'failed_retrieve_classes'   => 'Failed to retrieve classes',
     'class_created'             => 'Class created successfully',
     'failed_create_class'       => 'Failed to create class',

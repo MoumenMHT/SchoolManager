@@ -38,11 +38,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Pure Admin Routes
     Route::middleware('role:admin')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
+        Route::get('/users/with-profile', [UserController::class, 'withProfile']);
+        Route::put('/users/{id}/credentials', [UserController::class, 'updateCredentials']);
         Route::apiResource('users', UserController::class);
     });
 
     // Admin, Secretariat, and Director routes
     Route::middleware('role:admin,secretariat,primary_director,cem_director,lycee_director')->group(function () {
+        // Level management
+        Route::apiResource('levels', LevelController::class)->except(['index', 'show']);
+        Route::post('/levels/{level}/assign-subjects', [LevelController::class, 'assignSubjects']);
+
         // Student management - specific routes MUST come before apiResource
         Route::get('/students/without-class', [StudentController::class, 'studentsWithoutClass']);
         Route::get('/students/{student}/history', [StudentController::class, 'getHistory']);
@@ -197,6 +203,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Shared routes (all authenticated users)
     Route::get('/subjects', [SubjectController::class, 'index']);
     Route::get('/levels', [LevelController::class, 'index']);
+    Route::get('/levels/{level}/subjects', [LevelController::class, 'subjects']);
     
     // Schedule viewing (accessible by teachers, students, parents, admin)
     Route::get('/my-schedule', [ScheduleController::class, 'index']);

@@ -296,6 +296,13 @@ class ClassController extends Controller
                 'main_teacher_id'
             ]));
 
+            // Update assignments academic year if updated
+            if ($request->has('academic_year')) {
+                \App\Models\ClassSubjectTeacher::where('class_id', $class->id)->update([
+                    'academic_year' => $request->academic_year
+                ]);
+            }
+
             $class->level_id = $resolvedLevelId;
             $class->save();
 

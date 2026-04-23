@@ -121,12 +121,11 @@ class TeacherService {
   /**
    * Create user account for teacher
    */
-  async createUserAccount(teacher_id: number, email: string, password: string, username: string, role: string): Promise<Teacher> {
-    console.log('Creating user account for teacher:', { teacher_id, email, username, role });
+  async createUserAccount(teacher_id: number, username: string, password: string, role: string): Promise<Teacher> {
+    console.log('Creating user account for teacher:', { teacher_id, username, role });
     const response = await apiService.post<Teacher>(`/register`, {
-      email,
-      password,
       username,
+      password,
       role,
       teacher_id
     });

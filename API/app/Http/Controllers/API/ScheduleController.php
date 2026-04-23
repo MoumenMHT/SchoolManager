@@ -1022,7 +1022,7 @@ class ScheduleController extends Controller
             if ($assignments->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No class assignments found for this academic year.'
+                    'message' => __('messages.no_class_assignments_found')
                 ], 422);
             }
 
@@ -1043,7 +1043,7 @@ class ScheduleController extends Controller
                 if (!$levelSubject) {
                     $unfilled[] = [
                         'assignment_id' => $assignment->id,
-                        'reason' => 'Missing level_subjects configuration (coefficient/weekly sessions).'
+                        'reason' => __('messages.missing_level_subject_config')
                     ];
                     continue;
                 }
@@ -1059,7 +1059,7 @@ class ScheduleController extends Controller
             if (empty($assignmentDemands)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No schedulable assignments found. Check level subject configuration.'
+                    'message' => __('messages.no_schedulable_assignments')
                 ], 422);
             }
 
@@ -1263,7 +1263,7 @@ class ScheduleController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $shouldSave ? 'Schedules generated successfully.' : 'Schedule preview generated.',
+                'message' => $shouldSave ? __('messages.schedules_generated_successfully') : __('messages.schedule_preview_generated'),
                 'summary' => [
                     'academic_year' => $academicYear,
                     'generated_sessions' => count($generatedRows),
@@ -1280,7 +1280,7 @@ class ScheduleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate schedules.',
+                'message' => __('messages.failed_generate_schedules'),
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
@@ -1813,7 +1813,7 @@ class ScheduleController extends Controller
 
         if (($teacherWeeklyLoad[$teacherId] ?? 0) >= $this->teacherWeeklyTargetSessions) {
             return [
-                'message' => 'Teacher reached the weekly target of ' . $this->teacherWeeklyTargetSessions . ' sessions.',
+                'message' => __('messages.teacher_weekly_target_reached', ['target' => $this->teacherWeeklyTargetSessions]),
                 'counts' => array_merge($counts, [
                     'teacher_weekly_target_reached' => count($this->generationDays) * count($this->sessionSlots),
                 ]),
@@ -1862,19 +1862,19 @@ class ScheduleController extends Controller
 
         if ($counts['candidate_slots'] > 0) {
             return [
-                'message' => 'No optimal slot could be selected after prioritization; consider manual adjustment for this assignment.',
+                'message' => __('messages.no_optimal_slot_found'),
                 'counts' => $counts,
             ];
         }
 
         $map = [
-            'teacher_weekly_target_reached' => 'Teacher reached weekly target sessions.',
-            'outside_teacher_availability' => 'Teacher availability windows are too restrictive for remaining sessions.',
-            'teacher_slot_conflict' => 'Teacher already occupied in all remaining available slots.',
-            'class_slot_conflict' => 'Class timetable already occupied in all feasible slots.',
-            'class_gap_constraint' => 'Adding more sessions would create internal class gaps (except 12:00-13:00 break).',
-            'important_subject_daily_limit' => 'Daily important-subject limit reached for this class.',
-            'class_day_capacity_reached' => 'Class reached daily session capacity (7 sessions).',
+            'teacher_weekly_target_reached' => __('messages.teacher_weekly_target_reached', ['target' => $this->teacherWeeklyTargetSessions]),
+            'outside_teacher_availability' => __('messages.outside_teacher_availability'),
+            'teacher_slot_conflict' => __('messages.teacher_slot_conflict'),
+            'class_slot_conflict' => __('messages.class_slot_conflict'),
+            'class_gap_constraint' => __('messages.class_gap_constraint'),
+            'important_subject_daily_limit' => __('messages.important_subject_daily_limit'),
+            'class_day_capacity_reached' => __('messages.class_day_capacity_reached'),
         ];
 
         $topKey = 'outside_teacher_availability';

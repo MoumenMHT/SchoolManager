@@ -51,7 +51,30 @@ const engObj = {
   notes_placeholder: 'Additional information...',
   assign_student_to_class: "Assign Student to Class",
   assign_teacher_to_class: "Assign Teacher to Class",
-  confirm_removal: "Confirm Removal"
+  confirm_removal: "Confirm Removal",
+  schedule_generator: 'Schedule Generator',
+  generator_desc: 'First assign teachers to classes, then generate weekly schedules for all classes.',
+  academic_year: 'Academic Year',
+  clear_existing: 'Clear existing schedules first',
+  generate_all: 'Generate All Schedules',
+  export_excel: 'Export Excel',
+  manual_assign_req: 'Manual class assignments are required before generation.',
+  current_assign_check: 'Current assignment check (sample): {count} records.',
+  gen_result: 'Generation Result',
+  generated: 'Generated',
+  saved: 'Saved',
+  unfilled: 'Unfilled',
+  year: 'Year',
+  unfilled_items: 'Unfilled Items',
+  assignment: 'Assignment',
+  class: 'Class',
+  needed: 'Needed',
+  placed: 'Placed',
+  reason: 'Reason',
+  adjust_manually: 'Adjust Manually in Classes',
+  download_json: 'Download JSON',
+  recheck_problems: 'Recheck Problems',
+  no_problems: 'No problems found.'
 };
 
 const frObj = {
@@ -105,7 +128,30 @@ const frObj = {
   notes_placeholder: 'Informations supplémentaires...',
   assign_student_to_class: "Assigner un élève à la classe",
   assign_teacher_to_class: "Assigner un professeur à la classe",
-  confirm_removal: "Confirmer la suppression"
+  confirm_removal: "Confirmer la suppression",
+  schedule_generator: 'Générateur d\'Emploi du Temps',
+  generator_desc: 'Assignez d\'abord les professeurs aux classes, puis gérez les emplois du temps pour toutes les classes.',
+  academic_year: 'Année Académique',
+  clear_existing: 'Effacer les emplois du temps existants',
+  generate_all: 'Générer Tous Les Emplois',
+  export_excel: 'Exporter vers Excel',
+  manual_assign_req: 'Assignations manuelles requises avant de générer.',
+  current_assign_check: 'Vérification (échantillon) : {count} enregistrements.',
+  gen_result: 'Résultat de la Génération',
+  generated: 'Générés',
+  saved: 'Sauvegardés',
+  unfilled: 'Non Remplis',
+  year: 'Année',
+  unfilled_items: 'Éléments Non Remplis',
+  assignment: 'Assignation',
+  class: 'Classe',
+  needed: 'Requis',
+  placed: 'Placés',
+  reason: 'Raison',
+  adjust_manually: 'Ajuster Manuellement',
+  download_json: 'Télécharger le JSON',
+  recheck_problems: 'Vérifier les Problèmes',
+  no_problems: 'Aucun problème.'
 };
 
 const arObj = {

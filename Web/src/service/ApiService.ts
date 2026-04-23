@@ -72,8 +72,8 @@ class ApiService {
   }
 
   // Authentication methods
-  async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await this.api.post<AuthResponse>('/login', { email, password });
+  async login(username: string, password: string): Promise<AuthResponse> {
+    const response = await this.api.post<AuthResponse>('/login', { username, password });
     if (response.data.success && response.data.token) {
       this.setToken(response.data.token);
       this.setUser(response.data.user);

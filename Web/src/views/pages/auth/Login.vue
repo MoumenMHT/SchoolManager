@@ -11,22 +11,16 @@ const toast = useToast();
 const { t } = useI18n();
 
 // Form fields
-const email = ref('admin@schoolmanager.com');
+const username = ref('admin');
 const password = ref('password123');
 const rememberMe = ref(false);
 
 // State management
 const loading = ref(false);
-const errors = ref<{ email?: string; password?: string }>({});
-
-// Validation
-const isEmailValid = computed(() => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email.value);
-});
+const errors = ref<{ username?: string; password?: string }>({});
 
 const isFormValid = computed(() => {
-  return email.value && password.value && isEmailValid.value;
+  return username.value && password.value;
 });
 
 // Clear error when user types
@@ -38,13 +32,8 @@ const clearErrors = () => {
 const validateForm = (): boolean => {
   errors.value = {};
 
-  if (!email.value) {
-    errors.value.email = t('login.email_required');
-    return false;
-  }
-
-  if (!isEmailValid.value) {
-    errors.value.email = t('login.email_invalid');
+  if (!username.value || !username.value.trim()) {
+    errors.value.username = t('login.username_required');
     return false;
   }
 
@@ -71,7 +60,7 @@ const handleLogin = async () => {
   clearErrors();
 
   try {
-    const response = await apiService.login(email.value, password.value);
+    const response = await apiService.login(username.value, password.value);
 
     if (response.success) {
       toast.add({
@@ -142,19 +131,19 @@ const handleKeyPress = (event: KeyboardEvent) => {
                     </div>
 
                     <div>
-                        <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">{{ t('login.email') }}</label>
+                        <label for="username1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">{{ t('login.username') }}</label>
                         <InputText
-                            id="email1"
-                            type="email"
-                            :placeholder="t('login.email_placeholder')"
+                            id="username1"
+                            type="text"
+                            :placeholder="t('login.username_placeholder')"
                             class="w-full md:w-[30rem]"
-                            :class="{ 'p-invalid': errors.email }"
-                            v-model="email"
+                            :class="{ 'p-invalid': errors.username }"
+                            v-model="username"
                             @input="clearErrors"
                             @keypress="handleKeyPress"
                             :disabled="loading"
                         />
-                        <small v-if="errors.email" class="p-error block mb-4 mt-1">{{ errors.email }}</small>
+                        <small v-if="errors.username" class="p-error block mb-4 mt-1">{{ errors.username }}</small>
                         <div v-else class="mb-8"></div>
 
                         <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">{{ t('login.password') }}</label>
@@ -195,9 +184,9 @@ const handleKeyPress = (event: KeyboardEvent) => {
                         <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-border border border-blue-200 dark:border-blue-800">
                             <div class="text-sm text-blue-900 dark:text-blue-100 font-semibold mb-2">{{ t('login.demo_credentials') }}</div>
                             <div class="text-xs text-blue-700 dark:text-blue-300">
-                                <div class="mb-1"><strong>{{ t('login.admin') }}:</strong> admin@schoolmanager.com / password123</div>
-                                <div class="mb-1"><strong>{{ t('login.teacher') }}:</strong> teacher@schoolmanager.com / password123</div>
-                                <div><strong>{{ t('login.parent') }}:</strong> parent@schoolmanager.com / password123</div>
+                                <div class="mb-1"><strong>{{ t('login.admin') }}:</strong> admin / password123</div>
+                                <div class="mb-1"><strong>{{ t('login.teacher') }}:</strong> teacher / password123</div>
+                                <div><strong>{{ t('login.parent') }}:</strong> parent / password123</div>
                             </div>
                         </div>
                     </div>

@@ -23,7 +23,6 @@ const submitted = ref(false);
 // Form
 const form = ref({
   username: '',
-  email: '',
   password: '',
   status: 'active',
   phone: '',
@@ -57,7 +56,6 @@ function openNew() {
   submitted.value = false;
   form.value = {
     username: '',
-    email: '',
     password: '',
     status: 'active',
     phone: '',
@@ -74,7 +72,6 @@ function editUser(user: any) {
   selectedUser.value = user;
   form.value = {
     username: user.username ?? '',
-    email: user.email ?? '',
     password: '',
     status: (user.is_active || user.is_active === 1) ? 'active' : 'inactive',
     phone: user.phone ?? '',
@@ -87,7 +84,7 @@ function editUser(user: any) {
 async function saveUser() {
   submitted.value = true;
 
-  if (!form.value.username || !form.value.email) {
+  if (!form.value.username) {
     toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('validation.required_fields'), life: 3000 });
     return;
   }
@@ -101,7 +98,6 @@ async function saveUser() {
   try {
     const payload: any = {
       username: form.value.username,
-      email: form.value.email,
       phone: form.value.phone || null,
       address: form.value.address || null,
       is_active: form.value.status === 'active',
@@ -175,7 +171,7 @@ onMounted(async () => {
       :rowsPerPageOptions="[5, 10, 25, 50]"
       :currentPageReportTemplate="t('admin_users.page_report')"
       class="p-datatable-sm"
-      :globalFilterFields="['username', 'email', 'phone']"
+      :globalFilterFields="['username', 'phone']"
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -208,15 +204,6 @@ onMounted(async () => {
         </template>
       </Column>
 
-      <Column field="email" :header="t('common.email')" sortable style="min-width: 14rem">
-        <template #body="{ data }">
-          <div v-if="data.email" class="flex items-center gap-2">
-            <i class="pi pi-envelope text-sm text-muted-color"></i>
-            <span>{{ data.email }}</span>
-          </div>
-          <span v-else class="text-muted-color">{{ t('common.na') }}</span>
-        </template>
-      </Column>
 
       <Column field="phone" :header="t('common.phone')" sortable style="min-width: 12rem">
         <template #body="{ data }">
@@ -272,11 +259,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block font-semibold mb-2">{{ t('common.email') }} <span class="text-red-500">*</span></label>
-            <InputText v-model="form.email" type="email" placeholder="email@example.com" :invalid="submitted && !form.email" />
-          </div>
+        <div class="grid grid-cols-1 gap-4">
           <div>
             <label class="block font-semibold mb-2">
               {{ t('common.password') }}

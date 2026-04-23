@@ -31,7 +31,7 @@ const form = ref({
   phone: '',
   hire_date: null as Date | null,
   status: 'active',
-  email: '',
+  username: '',
   password: '',
   class_ids: [] as number[],
 });
@@ -90,7 +90,7 @@ function openNew() {
     phone: '',
     hire_date: null,
     status: 'active',
-    email: '',
+    username: '',
     password: '',
     class_ids: [],
   };
@@ -108,7 +108,7 @@ function editSupervisor(supervisor: any) {
     phone: supervisor.phone ?? '',
     hire_date: supervisor.hire_date ? new Date(supervisor.hire_date) : null,
     status: supervisor.status ?? 'active',
-    email: supervisor.user?.email ?? '',
+    username: supervisor.user?.username ?? '',
     password: '',
     class_ids: (supervisor.classes ?? []).map((c: any) => c.id),
   };
@@ -123,16 +123,6 @@ async function saveSupervisor() {
     return;
   }
 
-  if (isNew.value && (!form.value.email || !form.value.password)) {
-    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('supervisors.email_password_required'), life: 3000 });
-    return;
-  }
-
-  if (!isNew.value && !form.value.email) {
-    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('common.email_required'), life: 3000 });
-    return;
-  }
-
   saving.value = true;
   try {
     const payload: any = {
@@ -144,10 +134,10 @@ async function saveSupervisor() {
         : null,
       status: form.value.status,
       class_ids: form.value.class_ids,
-      email: form.value.email,
     };
 
-    if (form.value.password) {
+    if (isNew.value) {
+      payload.username = form.value.username;
       payload.password = form.value.password;
     }
 
@@ -162,10 +152,34 @@ async function saveSupervisor() {
     supervisorDialog.value = false;
     await loadSupervisors();
   } catch (err: any) {
-    const msg = err?.response?.data?.errors
-      ? Object.values(err.response.data.errors).flat().join(', ')
-      : (err?.response?.data?.message ?? t('supervisors.save_error'));
-    toast.add({ severity: 'error', summary: t('common.error'), detail: msg, life: 4000 });
+    const data = err?.response?.data;
+
+    // Standard Laravel validation errors — show each field error individually
+    if (data?.errors) {
+      const fieldErrors = Object.entries(data.errors) as [string, string[]][];
+      for (const [field, messages] of fieldErrors) {
+        const fieldLabel = field === 'username'
+          ? t('common.username')
+          : field === 'class_ids'
+            ? t('supervisors.assign_classes')
+            : field;
+        toast.add({
+          severity: 'error',
+          summary: `${t('common.error')} — ${fieldLabel}`,
+          detail: Array.isArray(messages) ? messages.join(' ') : String(messages),
+          life: 5000,
+        });
+      }
+      return;
+    }
+
+    // Backend-translated message (e.g. class_already_assigned) or fallback
+    toast.add({
+      severity: 'error',
+      summary: t('common.error'),
+      detail: data?.message ?? t('supervisors.save_error'),
+      life: 5000,
+    });
   } finally {
     saving.value = false;
   }
@@ -218,7 +232,7 @@ onMounted(async () => {
       :rowsPerPageOptions="[5, 10, 25, 50]"
       :currentPageReportTemplate="t('supervisors.page_report')"
       class="p-datatable-sm"
-      :globalFilterFields="['first_name', 'last_name', 'phone', 'user.email']"
+      :globalFilterFields="['first_name', 'last_name', 'phone', 'user.username']"
       @row-click="showSupervisorDetails($event.data)"
     >
       <template #header>
@@ -262,11 +276,11 @@ onMounted(async () => {
         </template>
       </Column>
 
-      <Column field="email" :header="t('common.email')" sortable style="min-width: 14rem">
+      <Column field="username" :header="t('common.username', 'Username')" sortable style="min-width: 14rem">
         <template #body="{ data }">
-          <div v-if="data.user?.email" class="flex items-center gap-2">
-            <i class="pi pi-envelope text-sm text-muted-color"></i>
-            <span>{{ data.user.email }}</span>
+          <div v-if="data.user?.username" class="flex items-center gap-2">
+            <i class="pi pi-user text-sm text-muted-color"></i>
+            <span>{{ data.user.username }}</span>
           </div>
           <span v-else class="text-muted-color">{{ t('common.na') }}</span>
         </template>
@@ -350,23 +364,21 @@ onMounted(async () => {
           <Select v-model="form.status" :options="statusOptions" optionLabel="label" optionValue="value" />
         </div>
 
-        <div class="border-t border-surface-200 dark:border-surface-700 pt-4 mt-2">
+        <div class="border-t border-surface-200 dark:border-surface-700 pt-4 mt-2" v-if="isNew">
           <h4 class="text-sm font-semibold text-surface-600 dark:text-surface-300 mb-3">
             <i class="pi pi-user mr-1"></i> {{ t('supervisors.account_section') }}
           </h4>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-4" v-if="isNew">
           <div>
-            <label class="block font-semibold mb-2">{{ t('common.email') }} <span class="text-red-500">*</span></label>
-            <InputText v-model="form.email" type="email" placeholder="email@example.com" :invalid="submitted && !form.email" />
+            <label class="block font-semibold mb-2">{{ t('common.username') }} <span class="text-red-500">*</span></label>
+            <InputText v-model="form.username" type="text" placeholder="supervisor_123" :invalid="submitted && isNew && !form.username" />
           </div>
           <div>
             <label class="block font-semibold mb-2">
-              {{ t('common.password') }}
-              <span v-if="isNew" class="text-red-500">*</span>
-              <span v-else class="text-xs text-surface-400 font-normal ml-1">({{ t('common.optional') }})</span>
+              {{ t('common.password') }} <span class="text-red-500">*</span>
             </label>
-            <InputText v-model="form.password" type="password" :placeholder="isNew ? t('supervisors.password_placeholder') : t('common.leave_blank_to_keep')" :invalid="submitted && isNew && !form.password" />
+            <InputText v-model="form.password" type="password" :placeholder="t('supervisors.password_placeholder')" :invalid="submitted && isNew && !form.password" />
           </div>
         </div>
 
@@ -452,10 +464,10 @@ onMounted(async () => {
               </p>
             </div>
             <div>
-              <label class="text-sm text-muted-color">{{ t('common.email') }}</label>
+              <label class="text-sm text-muted-color">{{ t('common.username', 'Username') }}</label>
               <p class="font-semibold">
-                <i class="pi pi-envelope text-sm mr-2" v-if="selectedSupervisorDetails.user?.email"></i>
-                {{ selectedSupervisorDetails.user?.email || t('common.na') }}
+                <i class="pi pi-user text-sm mr-2" v-if="selectedSupervisorDetails.user?.username"></i>
+                {{ selectedSupervisorDetails.user?.username || t('common.na') }}
               </p>
             </div>
             <div>

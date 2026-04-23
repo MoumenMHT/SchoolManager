@@ -78,16 +78,23 @@ class GradingService
         $levelId = $student->class->level_id;
         $classId = $student->class_id;
 
+        // Get subjects assigned to this specific class
+        $classSubjects = \App\Models\ClassSubjectTeacher::where('class_id', $classId)
+            ->pluck('subject_id')
+            ->toArray();
+
         $gradesBySubject = $grades->groupBy('subject_id');
         
         $totalSum = 0;
         $totalCoef = 0;
 
-        foreach ($gradesBySubject as $subjectId => $subjectGrades) {
+        // Ensure we calculate for ALL subjects assigned to the class, even if no grades exist
+        foreach ($classSubjects as $subjectId) {
+            $subjectGrades = $gradesBySubject->get($subjectId, collect());
             $average = self::calculateSubjectAverage($subjectGrades, $cycle);
             $coefficient = \App\Models\LevelSubject::getCoefficient($subjectId, $levelId) ?? 1;
 
-            // 1. Upsert Subject Average
+            // Upsert Subject Average
             \App\Models\StudentAverage::updateOrCreate([
                 'student_id' => $student->id,
                 'subject_id' => $subjectId,
@@ -103,10 +110,18 @@ class GradingService
             $totalCoef += $coefficient;
         }
 
-        // 2. Upsert Overall Average
+        // Delete subject averages for subjects not explicitly assigned to the class
+        \App\Models\StudentAverage::where('student_id', $student->id)
+            ->where('record_type', 'subject')
+            ->where('trimester', $trimester)
+            ->where('academic_year', $academicYear)
+            ->whereNotIn('subject_id', $classSubjects)
+            ->delete();
+
+        // Upsert Overall Average
         $overallAverage = $totalCoef > 0 ? round($totalSum / $totalCoef, 2) : 0;
         
-        if ($gradesBySubject->isNotEmpty()) {
+        if (!empty($classSubjects)) {
             \App\Models\StudentAverage::updateOrCreate([
                 'student_id' => $student->id,
                 'subject_id' => null,
@@ -118,7 +133,7 @@ class GradingService
                 'average' => $overallAverage,
             ]);
         } else {
-            // Delete if no grades remain
+            // Delete if no subjects remain
             \App\Models\StudentAverage::where('student_id', $student->id)
                 ->where('trimester', $trimester)
                 ->where('academic_year', $academicYear)

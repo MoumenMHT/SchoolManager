@@ -33,6 +33,7 @@ return [
     'teacher_not_found'         => 'الأستاذ غير موجود.',
     'teacher_profile_not_found' => 'ملف الأستاذ غير موجود.',
     'teacher_deleted'           => 'تم حذف الأستاذ بنجاح.',
+    'teacher_cin_exists'        => 'أستاذ بنفس رقم بطاقة الهوية الوطنية موجود بالفعل.',
 
     // Parents
     'parent_name_exists'        => 'ولي أمر بنفس الاسم الأول واسم العائلة موجود بالفعل.',
@@ -40,8 +41,10 @@ return [
     'parent_has_account'        => 'ولي الأمر لديه حساب بالفعل',
     'parent_deleted'            => 'تم حذف ولي الأمر بنجاح',
     'account_created'           => 'تم إنشاء حساب المستخدم بنجاح',
+    'parent_cin_exists'         => 'ولي أمر بنفس رقم بطاقة الهوية الوطنية موجود بالفعل.',
 
     // Classes
+    'class_already_assigned'    => 'الفصول التالية معينة بالفعل لمراقب: :classes',
     'failed_retrieve_classes'   => 'فشل استرداد الفصول',
     'class_created'             => 'تم إنشاء الفصل بنجاح',
     'failed_create_class'       => 'فشل إنشاء الفصل',

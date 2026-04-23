@@ -29,13 +29,70 @@ class UserController extends Controller
     }
 
     /**
+     * Return all users with their associated profile (teacher/supervisor/parent) for full-name display.
+     */
+    public function withProfile(Request $request)
+    {
+        $query = User::with(['teacher', 'supervisor', 'parent']);
+
+        if ($request->has('roles')) {
+            $roles = explode(',', $request->input('roles'));
+            $query->whereIn('role', $roles);
+        } elseif ($request->has('role')) {
+            $query->where('role', $request->input('role'));
+        }
+
+        $users = $query->orderBy('created_at', 'desc')->get()->map(function ($user) {
+            $profile = $user->teacher ?? $user->supervisor ?? $user->parent ?? null;
+            $fullName = $profile
+                ? trim(($profile->first_name ?? '') . ' ' . ($profile->last_name ?? ''))
+                : null;
+
+            return [
+                'id'        => $user->id,
+                'username'  => $user->username,
+                'role'      => $user->role,
+                'is_active' => $user->is_active,
+                'full_name' => $fullName,
+            ];
+        });
+
+        return response()->json(['success' => true, 'data' => $users]);
+    }
+
+    /**
+     * Update only credentials (username / password) for the User Management page.
+     */
+    public function updateCredentials(Request $request, string $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('users')->ignore($user->id),
+            ],
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        $user->username = $validated['username'];
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+        $user->save();
+
+        return response()->json(['success' => true, 'message' => 'Credentials updated successfully']);
+    }
+
+    /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'username' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'username' => 'required|string|max:255|unique:users',
             'password' => 'required|string|min:8',
             'role' => 'required|string|in:admin,teacher,parent,supervisor,secretariat,accountant,primary_director,cem_director,lycee_director',
             'is_active' => 'boolean',
@@ -68,11 +125,9 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
-            'username' => 'sometimes|string|max:255',
-            'email' => [
+            'username' => [
                 'sometimes',
                 'string',
-                'email',
                 'max:255',
                 Rule::unique('users')->ignore($user->id),
             ],

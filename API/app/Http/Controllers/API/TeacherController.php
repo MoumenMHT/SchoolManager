@@ -29,6 +29,7 @@ class TeacherController extends Controller
         }
 
         $teachers = $query->get();
+        $teachers->makeVisible(['cin', 'salary']);
         $teachers->load('user:id,email,phone'); // Load email and phone fields from the related user
         $teachers->load('teachableSubjects'); // Load subjects relationship
         $teachers->load('availabilities');
@@ -67,6 +68,7 @@ class TeacherController extends Controller
             'last_name' => 'required|string|max:255',
             'birth_date' => 'required|date',
             'hire_date' => 'required|date',
+            'cin' => 'required|string|max:20',
             'specialization' => 'required|string|max:255',
             'salary' => 'required|numeric|min:0',
             'contract_type' => 'sometimes|in:permanent,part_time',
@@ -88,6 +90,16 @@ class TeacherController extends Controller
                 'message' => __('messages.teacher_name_exists')
             ], 409);
         }
+        if ($request->cin) {
+            $existingTeacher = Teacher::where('cin', $request->cin)->first();
+            if ($existingTeacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.teacher_cin_exists')
+                ], 409);
+            }
+        }
+
 
         $teacher = DB::transaction(function () use ($request) {
             $teacher = Teacher::create([
@@ -97,6 +109,7 @@ class TeacherController extends Controller
                 'hire_date' => $request->hire_date,
                 'specialization' => $request->specialization,
                 'salary' => $request->salary,
+                'cin' => $request->cin,
                 'contract_type' => $request->contract_type ?? 'permanent',
                 'weekly_hours' => $request->weekly_hours ?? 20,
             ]);
@@ -109,6 +122,7 @@ class TeacherController extends Controller
         });
 
         $teacher->load('availabilities');
+        $teacher->makeVisible(['cin', 'salary']);
 
         return response()->json([
             'success' => true,
@@ -124,18 +138,21 @@ class TeacherController extends Controller
     {
         //
         $teacher = Teacher::find($id);
-        $teacher->load('user:id,email,phone'); // Load email and phone fields from the related user
-        $teacher->load('teachableSubjects'); // Load subjects relationship
-        $teacher->load('availabilities');
-        $teacher->loadCount('classes'); // Load count of related classes
-        $teacher->load('classes'); // Load count of related students
-        
+
         if (!$teacher) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.teacher_not_found')
             ], 404);
         }
+
+        $teacher->makeVisible(['cin', 'salary']);
+        $teacher->load('user:id,email,phone'); // Load email and phone fields from the related user
+        $teacher->load('teachableSubjects'); // Load subjects relationship
+        $teacher->load('availabilities');
+        $teacher->loadCount('classes'); // Load count of related classes
+        $teacher->load('classes'); // Load count of related students
+        
         return response()->json([
             'success' => true,
             'data' => $teacher
@@ -162,6 +179,7 @@ class TeacherController extends Controller
             'hire_date' => 'sometimes|required|date',
             'specialization' => 'sometimes|required|string|max:255',
             'salary' => 'sometimes|required|numeric|min:0',
+            'cin' => 'sometimes|required|string|max:20',
             'contract_type' => 'sometimes|in:permanent,part_time',
             'weekly_hours' => 'sometimes|integer|min:1|max:60',
             'availabilities' => 'sometimes|array',
@@ -183,6 +201,31 @@ class TeacherController extends Controller
             ], 404);
         }
 
+        if ($request->first_name && $request->last_name) {
+            $existingTeacher = Teacher::where($request->only('first_name', 'last_name'))
+                ->where('id', '!=', $teacher->id)
+                ->first();
+
+            if ($existingTeacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.teacher_name_exists')
+                ], 409);
+            }
+        }
+        if ($request->cin) {
+            $existingTeacher = Teacher::where('cin', $request->cin)
+                ->where('id', '!=', $teacher->id)
+                ->first();
+            if ($existingTeacher) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.teacher_cin_exists')
+                ], 409);
+            }
+        }
+
+
         DB::transaction(function () use ($request, $teacher) {
             $teacher->update($request->only([
                 'first_name',
@@ -190,6 +233,7 @@ class TeacherController extends Controller
                 'birth_date',
                 'hire_date',
                 'specialization',
+                'cin',
                 'salary',
                 'contract_type',
                 'weekly_hours'
@@ -201,6 +245,7 @@ class TeacherController extends Controller
         });
 
         $teacher->load('availabilities');
+        $teacher->makeVisible(['cin', 'salary']);
 
         return response()->json([
             'success' => true,
