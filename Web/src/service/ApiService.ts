@@ -1,7 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import type { ApiResponse, AuthResponse } from '@/types';
 import config from '@/config';
-import { Message } from 'primevue';
 
 class ApiService {
   private api: AxiosInstance;
@@ -38,9 +37,17 @@ class ApiService {
       (response) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Token expired or invalid
-          this.removeToken();
-          window.location.href = '/auth/login';
+          const requestUrl = error.config?.url || '';
+          const isLoginRequest = /\/login\/?$/.test(requestUrl);
+          const hasToken = !!this.getToken();
+
+          // Keep login form errors on the same page; only force redirect for expired authenticated sessions.
+          if (!isLoginRequest && hasToken) {
+            this.removeToken();
+            if (window.location.pathname !== '/auth/login') {
+              window.location.href = '/auth/login';
+            }
+          }
         }
         return Promise.reject(error);
       }

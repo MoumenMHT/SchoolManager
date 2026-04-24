@@ -125,9 +125,9 @@ const groupedLevels = computed(() => {
 
 // Load classes on mount
 onMounted(async () => {
+  await loadLevels();
   await loadClasses();
   await loadTeachers();
-  await loadLevels();
 });
 
 const loadLevels = async () => {
@@ -142,20 +142,29 @@ const loadLevels = async () => {
 const loadClasses = async () => {
   try {
     loading.value = true;
+    const levelsById = new Map(apiLevels.value.map(level => [level.id, level]));
     classes.value = await ClassesService.getClasses();
 
     // Add computed properties for each class
-    classes.value = classes.value.map(c => ({
-      ...c,
-      subjects_text: c.subjects && Array.isArray(c.subjects)
-        ? c.subjects.map(s => s.name).join(', ')
-        : t('classes.no_subjects'),
-      teachers_text: c.teachers && Array.isArray(c.teachers)
-        ? c.teachers.map(teacher => teacher.name).join(', ')
-        : t('classes.no_teachers'),
-      students_display: c.students_count || 0,
-      teachers_display: c.teachers_count || 0,
-    }));
+    classes.value = classes.value.map(c => {
+      const levelById = c.level_id ? levelsById.get(c.level_id) : null;
+      const levelByName = apiLevels.value.find(level => level.name === c.level);
+      const cycleKey = levelById?.cycle || levelByName?.cycle || null;
+
+      return {
+        ...c,
+        cycle_key: cycleKey,
+        cycle_display: cycleKey ? t(`cycles.${cycleKey}`) : t('common.na'),
+        subjects_text: c.subjects && Array.isArray(c.subjects)
+          ? c.subjects.map(s => s.name).join(', ')
+          : t('classes.no_subjects'),
+        teachers_text: c.teachers && Array.isArray(c.teachers)
+          ? c.teachers.map(teacher => teacher.name).join(', ')
+          : t('classes.no_teachers'),
+        students_display: c.students_count || 0,
+        teachers_display: c.teachers_count || 0,
+      };
+    });
   } catch (error: any) {
     toast.add({
       severity: 'error',
@@ -992,9 +1001,12 @@ const hideScheduleEditDialog = () => {
         </template>
       </Column>
 
-      <Column field="subjects_text" :header="t('common.subjects')" style="min-width: 15rem">
+      <Column field="cycle_display" :header="t('common.cycle')" sortable style="min-width: 12rem">
         <template #body="{ data }">
-          <span class="text-sm">{{ data.subjects_text }}</span>
+          <Tag
+            :value="data.cycle_display"
+            :severity="data.cycle_key ? 'contrast' : 'secondary'"
+          />
         </template>
       </Column>
 

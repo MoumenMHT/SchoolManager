@@ -14,7 +14,7 @@ const toast = useToast();
 const { t } = useI18n();
 
 const classId = computed(() => Number(route.params.classId));
-const activeTab = ref<string>((route.query.tab as string) === 'grades' ? '1' : '0');
+const activeTab = ref<string>('1');
 
 // Session mode — set when navigating from "Today's Sessions"
 const sessionMode = computed(() => !!route.query.scheduleId);
@@ -100,20 +100,9 @@ async function loadClass() {
     const list = Array.isArray(raw) ? raw : Object.values(raw);
     classData.value = list.find((c: any) => Number(c.id) === classId.value) ?? null;
 
-    // Session mode: pre-select subject from URL
-    if (sessionMode.value && sessionSubjectId.value) {
-      attSubjectId.value = sessionSubjectId.value;
-    } else if (classData.value && subjects.value.length >= 1) {
-      attSubjectId.value = subjects.value[0].id;
+    if (classData.value && subjects.value.length >= 1) {
       gradeSubjectId.value = subjects.value[0].id;
     }
-
-    // Session mode: pre-fill date from URL
-    if (sessionMode.value && sessionDate.value) {
-      attDateObj.value = new Date(sessionDate.value + 'T00:00:00');
-    }
-
-    initAttStatuses();
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_class_error'), life: 3000 });
   } finally {
@@ -304,13 +293,10 @@ const gradeFilled = computed(() =>
 );
 
 // ─── Watchers ─────────────────────────────────────────────
-watch(attDateStr, () => { if (attSubjectId.value) loadAttendance(); });
-watch(attSubjectId, () => loadAttendance());
 watch([gradeSubjectId, gradeSemester, gradeExamType, gradeAcademicYear], () => loadGrades());
 
 onMounted(async () => {
   await loadClass();
-  if (attSubjectId.value) await loadAttendance();
   if (gradeSubjectId.value) await loadGrades();
 });
 </script>
@@ -371,7 +357,7 @@ onMounted(async () => {
 
     <Tabs v-else v-model:value="activeTab">
       <TabList>
-        <Tab value="0">
+        <Tab v-if="false" value="0">
           <span class="flex items-center gap-2">
             <i class="pi pi-check-circle"></i>
             <span>Attendance</span>
@@ -387,7 +373,7 @@ onMounted(async () => {
 
       <TabPanels>
         <!-- ═══════════ ATTENDANCE ═══════════ -->
-        <TabPanel value="0">
+        <TabPanel v-if="false" value="0">
           <div class="pt-4">
 
             <!-- ── SESSION MODE: Marking form ────────────────────── -->

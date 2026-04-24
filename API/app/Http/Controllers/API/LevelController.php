@@ -15,7 +15,17 @@ class LevelController extends Controller
      */
     public function index(): JsonResponse
     {
-        $levels = Level::orderBy('sort_order')->get();
+        $query = Level::query();
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            if ($directorCycle) {
+                $query->where('cycle', $directorCycle);
+            }
+        }
+
+        $levels = $query->orderBy('sort_order')->get();
 
         return response()->json([
             'success' => true,

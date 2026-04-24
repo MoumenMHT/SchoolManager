@@ -196,7 +196,7 @@ const saveSubjectMappings = async () => {
     <!-- Header / Toolbar -->
     <Toolbar class="mb-4">
       <template #start>
-        <Button label="Ajouter Cycle" icon="pi pi-plus" severity="success" class="mr-2" @click="() => openNew()" />
+        <Button :label="t('levels.add_cycle')" icon="pi pi-plus" severity="success" class="mr-2" @click="() => openNew()" />
       </template>
     </Toolbar>
 
@@ -211,7 +211,7 @@ const saveSubjectMappings = async () => {
     >
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
-          <h4 class="m-0">Cycles & {{ t('nav.levels') }}</h4>
+          <h4 class="m-0">{{ t('levels.cycles_and_levels') }}</h4>
         </div>
       </template>
 
@@ -224,7 +224,7 @@ const saveSubjectMappings = async () => {
           <span class="font-bold text-lg capitalize">{{ slotProps.data.cycle }}</span>
         </template>
       </Column>
-      <Column header="Total Niveaux" style="min-width: 12rem">
+      <Column :header="t('nav.levels')" style="min-width: 12rem">
         <template #body="slotProps">
           <Badge :value="slotProps.data.levels.length" severity="info" class="mr-2" />
           <span>{{ t('nav.levels') }}</span>
@@ -236,7 +236,7 @@ const saveSubjectMappings = async () => {
         <div class="p-3">
           <div class="flex justify-between items-center mb-3">
             <h5 class="m-0 capitalize">{{ t('nav.levels') }} ({{ slotProps.data.cycle }})</h5>
-            <Button label="Ajouter Niveau" icon="pi pi-plus" class="p-button-sm" severity="primary" @click="() => openNew(slotProps.data.cycle)" />
+            <Button :label="t('levels.add_level')" icon="pi pi-plus" class="p-button-sm" severity="primary" @click="() => openNew(slotProps.data.cycle)" />
           </div>
           <DataTable
              :value="slotProps.data.levels"
@@ -256,10 +256,10 @@ const saveSubjectMappings = async () => {
                 </IconField>
               </div>
             </template>
-            <Column field="year_number" header="Année" :sortable="true" style="min-width: 6rem"></Column>
+            <Column field="year_number" :header="t('common.year_number')" :sortable="true" style="min-width: 6rem"></Column>
             <Column field="name" :header="t('common.name')" :sortable="true" style="min-width: 12rem"></Column>
-            <Column field="track" header="Filière / Track" :sortable="true" style="min-width: 10rem"></Column>
-            <Column field="sort_order" header="Ordre" :sortable="true" style="min-width: 6rem"></Column>
+            <Column field="track" :header="t('common.track')" :sortable="true" style="min-width: 10rem"></Column>
+            <Column field="sort_order" :header="t('common.sort_order')" :sortable="true" style="min-width: 6rem"></Column>
             <Column field="is_active" :header="t('common.status')" :sortable="true" style="min-width: 8rem">
               <template #body="subProps">
                 <Tag :value="subProps.data.is_active ? t('common.active') : t('common.inactive')" :severity="subProps.data.is_active ? 'success' : 'danger'" />
@@ -267,10 +267,10 @@ const saveSubjectMappings = async () => {
             </Column>
 
             <!-- Actions -->
-            <Column :exportable="false" style="min-width: 12rem">
+            <Column :header="t('common.actions')" :exportable="false" style="min-width: 12rem">
               <template #body="subProps">
                 <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editLevel(subProps.data)" />
-                <Button icon="pi pi-list" outlined rounded severity="info" class="mr-2" @click="openAssignSubjects(subProps.data)" v-tooltip.top="'Assigner les Matières'" />
+                <Button icon="pi pi-list" outlined rounded severity="info" class="mr-2" @click="openAssignSubjects(subProps.data)" v-tooltip.top="t('levels.assign_subjects')" />
                 <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteLevel(subProps.data)" />
               </template>
             </Column>
@@ -290,7 +290,7 @@ const saveSubjectMappings = async () => {
         </div>
 
         <div>
-          <label for="year_number" class="block font-bold mb-2">Année *</label>
+          <label for="year_number" class="block font-bold mb-2">{{ t('common.year_number') }} *</label>
           <InputNumber id="year_number" v-model="level.year_number" class="w-full" :class="{ 'p-invalid': submitted && !level.year_number }" />
         </div>
 
@@ -300,18 +300,18 @@ const saveSubjectMappings = async () => {
         </div>
 
         <div>
-          <label for="track" class="block font-bold mb-2">Filière / Track</label>
+          <label for="track" class="block font-bold mb-2">{{ t('common.track') }}</label>
           <InputText id="track" v-model="level.track" class="w-full" />
         </div>
 
         <div>
-          <label for="sort_order" class="block font-bold mb-2">Ordre (Tri) *</label>
+          <label for="sort_order" class="block font-bold mb-2">{{ t('common.sort_order') }} *</label>
           <InputNumber id="sort_order" v-model="level.sort_order" class="w-full" :class="{ 'p-invalid': submitted && level.sort_order === undefined }" />
         </div>
 
         <div class="flex items-center gap-2 mt-2">
           <Checkbox v-model="level.is_active" :binary="true" inputId="is_active" />
-          <label for="is_active" class="font-bold">Actif</label>
+          <label for="is_active" class="font-bold">{{ t('common.active') }}</label>
         </div>
       </div>
       
@@ -322,10 +322,10 @@ const saveSubjectMappings = async () => {
     </Dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <Dialog v-model:visible="deleteLevelDialog" :style="{ width: '450px' }" :header="t('common.confirm')" :modal="true">
+    <Dialog v-model:visible="deleteLevelDialog" :style="{ width: '450px' }" :header="t('common.confirm_deletion')" :modal="true">
       <div class="flex items-center gap-4">
         <i class="pi pi-exclamation-triangle !text-3xl" />
-        <span v-if="level">Voulez-vous vraiment supprimer le niveau <b>{{ level.name }}</b> ?</span>
+        <span v-if="level">{{ t('levels.confirm_delete_level', { name: level.name }) }}</span>
       </div>
       <template #footer>
         <Button :label="t('common.no')" icon="pi pi-times" text @click="deleteLevelDialog = false" />
@@ -334,35 +334,35 @@ const saveSubjectMappings = async () => {
     </Dialog>
 
     <!-- Map Subjects Dialog -->
-    <Dialog v-model:visible="assignDialog" :style="{ width: '800px' }" header="Assigner les Matières" :modal="true">
+    <Dialog v-model:visible="assignDialog" :style="{ width: '800px' }" :header="t('levels.assign_subjects')" :modal="true">
       
       <div class="mb-4">
-        <Button label="Ajouter une ligne" icon="pi pi-plus" class="p-button-sm" @click="addSubjectRow" />
+        <Button :label="t('levels.add_row')" icon="pi pi-plus" class="p-button-sm" @click="addSubjectRow" />
       </div>
 
       <DataTable :value="mappingRows" class="p-datatable-sm" responsiveLayout="scroll">
-        <Column header="Matière">
+        <Column :header="t('levels.subject')">
           <template #body="{ data }">
-            <Dropdown v-model="data.subject_id" :options="subjects" optionLabel="name" optionValue="id" placeholder="Select Subject" class="w-full" filter />
+            <Dropdown v-model="data.subject_id" :options="subjects" optionLabel="name" optionValue="id" :placeholder="t('levels.select_subject')" class="w-full" filter />
           </template>
         </Column>
-        <Column header="Coefficient" style="width: 15%">
+        <Column :header="t('levels.coefficient')" style="width: 15%">
           <template #body="{ data }">
             <InputNumber v-model="data.coefficient" class="w-full" :min="1" />
           </template>
         </Column>
-        <Column header="Volume Horaire (Heures)" style="width: 20%">
+        <Column :header="t('levels.weekly_hours')" style="width: 20%">
           <template #body="{ data }">
             <InputNumber v-model="data.weekly_hours" class="w-full" :min="0" />
           </template>
         </Column>
-        <Column header="Actions" style="width: 10%">
+        <Column :header="t('common.actions')" style="width: 10%">
           <template #body="{ index }">
             <Button icon="pi pi-trash" outlined rounded severity="danger" @click="removeSubjectRow(index)" />
           </template>
         </Column>
         <template #empty>
-          <div class="p-3 text-center">Aucune matière assignée</div>
+          <div class="p-3 text-center">{{ t('levels.no_subjects_assigned') }}</div>
         </template>
       </DataTable>
 

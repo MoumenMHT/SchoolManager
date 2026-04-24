@@ -106,6 +106,7 @@ return [
     'failed_get_available_slots' => 'Failed to get available slots',
     'failed_get_weekly_overview' => 'Failed to get weekly overview',
     'failed_create_schedules'   => 'Failed to create schedules',
+    'teacher_weekly_target_reached' => 'Teacher weekly target reached (:target sessions).',
 
     // Attendance
     'failed_retrieve_attendance'          => 'Failed to retrieve attendance records',

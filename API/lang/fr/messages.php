@@ -106,6 +106,7 @@ return [
     'failed_get_available_slots' => 'Impossible de récupérer les créneaux disponibles',
     'failed_get_weekly_overview' => 'Impossible de récupérer la vue hebdomadaire',
     'failed_create_schedules'   => 'Impossible de créer les plannings',
+    'teacher_weekly_target_reached' => 'Objectif hebdomadaire de l\'enseignant atteint (:target séances).',
 
     // Attendance
     'failed_retrieve_attendance'          => 'Impossible de récupérer les présences',

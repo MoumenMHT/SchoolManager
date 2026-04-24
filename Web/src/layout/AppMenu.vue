@@ -31,23 +31,25 @@ const model = computed(() => {
         return sections;
     }
 
-    sections.push({
-        label: t('nav.home'),
-        items: [
-            {
-                label: t('nav.dashboard'),
-                icon: 'pi pi-fw pi-home',
-                to: '/'
-            }
-        ]
-    });
+    if (!isTeacher.value && !isSupervisor.value) {
+        sections.push({
+            label: t('nav.home'),
+            items: [
+                {
+                    label: t('nav.dashboard'),
+                    icon: 'pi pi-fw pi-home',
+                    to: '/'
+                }
+            ]
+        });
+    }
 
     if (isTeacher.value) {
         sections.push({
             label: t('nav.academic'),
             items: [
                 {
-                    label: t('nav.my_classes'),
+                    label: t('nav.dashboard'),
                     icon: 'pi pi-fw pi-building',
                     to: '/teacher/portal'
                 }

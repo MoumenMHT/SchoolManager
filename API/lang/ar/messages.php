@@ -106,6 +106,7 @@ return [
     'failed_get_available_slots' => 'فشل استرداد الفترات المتاحة',
     'failed_get_weekly_overview' => 'فشل استرداد النظرة العامة الأسبوعية',
     'failed_create_schedules'   => 'فشل إنشاء الجداول',
+    'teacher_weekly_target_reached' => 'تم الوصول إلى الهدف الأسبوعي للأستاذ (:target حصة).',
 
     // Attendance
     'failed_retrieve_attendance'          => 'فشل استرداد سجلات الحضور',

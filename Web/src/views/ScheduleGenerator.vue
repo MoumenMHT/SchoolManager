@@ -84,15 +84,15 @@ const generateSchedules = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
+      summary: t('common.success'),
       detail: result.message,
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error?.response?.data?.message || error?.message || 'Failed to generate schedules',
+      summary: t('common.error'),
+      detail: error?.response?.data?.message || error?.message || t('classes.generate_failed'),
       life: 4000
     });
   } finally {
@@ -106,15 +106,15 @@ const exportExcel = async () => {
     await ScheduleService.exportSchedulesExcel(academicYear.value);
     toast.add({
       severity: 'success',
-      summary: 'Exported',
-      detail: 'Excel export downloaded successfully.',
+      summary: t('classes.exported'),
+      detail: t('classes.export_success_detail'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Export Failed',
-      detail: error?.message || 'Could not export schedules.',
+      summary: t('classes.export_failed'),
+      detail: error?.message || t('classes.export_failed_detail'),
       life: 4000
     });
   } finally {
@@ -151,15 +151,15 @@ const checkProblems = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: result.unfilled?.length ? 'Problems found.' : 'No problems found.',
+      summary: t('common.success'),
+      detail: result.unfilled?.length ? t('classes.problems_found') : t('classes.no_problems'),
       life: 3000
     });
   } catch (error: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error?.response?.data?.message || 'Failed to check problems',
+      summary: t('common.error'),
+      detail: error?.response?.data?.message || t('classes.check_failed'),
       life: 4000
     });
   } finally {
@@ -253,11 +253,11 @@ onMounted(async () => {
             </div>
             <div class="text-sm">{{ t('classes.reason') }}: {{ item.reason }}</div>
             <div v-if="item.diagnostics" class="text-xs text-muted-color">
-              availability: {{ item.diagnostics.outside_teacher_availability }},
-              teacher-conflicts: {{ item.diagnostics.teacher_slot_conflict }},
-              class-conflicts: {{ item.diagnostics.class_slot_conflict }},
-              important-limit: {{ item.diagnostics.important_subject_daily_limit }},
-              day-capacity: {{ item.diagnostics.class_day_capacity_reached }}
+              {{ t('classes.availability') }}: {{ item.diagnostics.outside_teacher_availability }},
+              {{ t('classes.teacher_conflicts') }}: {{ item.diagnostics.teacher_slot_conflict }},
+              {{ t('classes.class_conflicts') }}: {{ item.diagnostics.class_slot_conflict }},
+              {{ t('classes.important_limit') }}: {{ item.diagnostics.important_subject_daily_limit }},
+              {{ t('classes.day_capacity') }}: {{ item.diagnostics.class_day_capacity_reached }}
             </div>
           </li>
         </ul>
