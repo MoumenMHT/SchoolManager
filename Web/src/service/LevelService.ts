@@ -1,5 +1,4 @@
 import ApiService from "./ApiService";
-import type { ApiResponse } from "@/types";
 import type { Subject } from "./SubjectService";
 
 export interface Level {
@@ -39,7 +38,7 @@ class LevelService {
      */
     async createLevel(level: Partial<Level>): Promise<Level> {
         const response = await ApiService.post<Level>('/levels', level);
-        return response.data;
+        return response.data as Level;
     }
 
     /**
@@ -47,7 +46,7 @@ class LevelService {
      */
     async updateLevel(id: number, level: Partial<Level>): Promise<Level> {
         const response = await ApiService.put<Level>(`/levels/${id}`, level);
-        return response.data;
+        return response.data as Level;
     }
 
     /**

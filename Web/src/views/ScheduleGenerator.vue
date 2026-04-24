@@ -59,10 +59,8 @@ const loadProblemsFromStorage = () => {
             saved_sessions: 0,
             unfilled_items: data.unfilled.length,
             clear_existing: false,
-            saved: false,
-            teacher_target_sessions: 0
+            saved: false
           },
-          teacher_weekly_load: [],
           unfilled: data.unfilled
         };
       }

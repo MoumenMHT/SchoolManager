@@ -375,9 +375,9 @@ const getCapacityStatus = (studentsCount: number, capacity: number | null) => {
 };
 
 // Load available subjects for this class's level
-const loadSubjects = async (levelId?: number) => {
+const loadSubjects = async (levelId?: number | null) => {
   try {
-    if (levelId) {
+    if (levelId != null) {
       availableSubjects.value = await SubjectService.getLevelSubjects(levelId);
     } else {
       availableSubjects.value = await SubjectService.getSubjects();
@@ -394,7 +394,7 @@ const loadSubjects = async (levelId?: number) => {
 
 // Open assign teacher dialog
 const openAssignTeacherDialog = async () => {
-  await loadSubjects(selectedClassDetails.value?.level_id);
+  await loadSubjects(selectedClassDetails.value?.level_id ?? undefined);
   pendingAssignments.value = [{
     subject_id: null,
     teacher_id: null,
