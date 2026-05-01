@@ -193,6 +193,28 @@ const router = createRouter({
                     name: 'empty',
                     component: () => import('@/views/pages/Empty.vue')
                 },
+                // --- PARENT PORTAL ROUTES ---
+                {
+                    path: '/parent/dashboard',
+                    name: 'parent-dashboard',
+                    component: () => import('@/views/parent/ParentDashboard.vue')
+                },
+                {
+                    path: '/parent/children',
+                    name: 'parent-children',
+                    component: () => import('@/views/parent/MyChildren.vue')
+                },
+                {
+                    path: '/parent/children/:id',
+                    name: 'parent-child-details',
+                    component: () => import('@/views/parent/ChildDetails.vue')
+                },
+                {
+                    path: '/parent/finances',
+                    name: 'parent-finances',
+                    component: () => import('@/views/parent/Finances.vue')
+                },
+                // ----------------------------
                 {
                     path: '/pages/crud',
                     name: 'crud',
@@ -243,8 +265,9 @@ router.beforeEach((to, from, next) => {
     // Define base path for each role to redirect to when accessing '/' or unauthorized page
     let roleHome = '/';
     if (userRole === 'teacher') roleHome = '/teacher/portal';
-    if (userRole === 'accountant') roleHome = '/payments';
-    if (userRole === 'supervisor') roleHome = '/supervisor/panel';
+    else if (userRole === 'accountant') roleHome = '/payments';
+    else if (userRole === 'supervisor') roleHome = '/supervisor/panel';
+    else if (userRole === 'parent') roleHome = '/parent/dashboard';
 
     // If trying to access auth page while logged in, redirect to role home
     if (isAuthRoute && isAuthenticated) {
@@ -290,6 +313,12 @@ router.beforeEach((to, from, next) => {
             // Supervisor can access their panel and subjects
             const allowedPaths = ['/supervisor/panel', '/subjects', '/levels'];
             if (!allowedPaths.includes(to.path) && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
+                next(roleHome);
+                return;
+            }
+        } else if (userRole === 'parent') {
+            // Parent can access their portal
+            if (!to.path.startsWith('/parent/') && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
                 next(roleHome);
                 return;
             }

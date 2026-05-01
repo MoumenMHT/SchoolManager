@@ -12,10 +12,35 @@ const isAdmin = computed(() => userRole.value === 'admin');
 const isSupervisor = computed(() => userRole.value === 'supervisor');
 const isSecretariat = computed(() => userRole.value === 'secretariat');
 const isAccountant = computed(() => userRole.value === 'accountant');
+const isParent = computed(() => userRole.value === 'parent');
 const isDirector = computed(() => ['primary_director', 'cem_director', 'lycee_director'].includes(userRole.value));
 
 const model = computed(() => {
     const sections = [];
+
+    if (isParent.value) {
+        sections.push({
+            label: t('nav.parent_portal', 'Parent Portal'),
+            items: [
+                {
+                    label: t('nav.dashboard', 'Dashboard'),
+                    icon: 'pi pi-fw pi-home',
+                    to: '/parent/dashboard'
+                },
+                {
+                    label: t('nav.my_children', 'My Children'),
+                    icon: 'pi pi-fw pi-users',
+                    to: '/parent/children'
+                },
+                {
+                    label: t('nav.finances', 'Finances'),
+                    icon: 'pi pi-fw pi-credit-card',
+                    to: '/parent/finances'
+                }
+            ]
+        });
+        return sections;
+    }
 
     if (isAccountant.value) {
         sections.push({
