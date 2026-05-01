@@ -165,7 +165,11 @@ const saveStudent = async () => {
   // Validate required fields
   if (!student.value.first_name?.trim() ||
       !student.value.last_name?.trim() ||
-      !student.value.code?.trim()) {
+      !student.value.code?.trim() ||
+      !student.value.parent_id ||
+      !student.value.gender ||
+      !student.value.birth_date ||
+      !student.value.enrollment_date) {
     toast.add({
       severity: 'error',
       summary: t('common.warning'),
@@ -650,74 +654,27 @@ const showStudentDetails = async (studentData: Student) => {
           </div>
         </div>
 
-        <!-- Student Code -->
-        <div>
-          <label for="code" class="block font-semibold mb-2">
-            {{ t('students.student_code') }} <span class="text-red-500">*</span>
-          </label>
-          <InputText
-            id="code"
-            v-model.trim="student.code"
-            required
-            :invalid="submitted && !student.code"
-            :placeholder="t('students.student_code_placeholder')"
-          />
-          <small v-if="submitted && !student.code" class="text-red-500">
-            {{ t('students.student_code_required') }}
-          </small>
-        </div>
-
-        <!-- Birth Date and Gender -->
+        <!-- Student Code and Parent -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="birth_date" class="block font-semibold mb-2">
-              {{ t('students.birth_date') }}
+            <label for="code" class="block font-semibold mb-2">
+              {{ t('students.student_code') }} <span class="text-red-500">*</span>
             </label>
-            <DatePicker
-              id="birth_date"
-              v-model="student.birth_date"
-              dateFormat="yy-mm-dd"
-              showIcon
-              :placeholder="t('students.birth_date')"
+            <InputText
+              id="code"
+              v-model.trim="student.code"
+              required
+              :invalid="submitted && !student.code"
+              :placeholder="t('students.student_code_placeholder')"
             />
-          </div>
-
-          <div>
-            <label for="gender" class="block font-semibold mb-2">
-              {{ t('common.gender') }}
-            </label>
-            <Select
-              id="gender"
-              v-model="student.gender"
-              :options="genderOptions"
-              optionLabel="label"
-              optionValue="value"
-              :placeholder="t('common.gender')"
-            />
-          </div>
-        </div>
-
-        <!-- Class and Parent -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="class" class="block font-semibold mb-2">
-              {{ t('common.class') }}
-            </label>
-            <Select
-              id="class"
-              v-model="student.class_id"
-              :options="availableClasses"
-              optionLabel="name"
-              optionValue="id"
-              :placeholder="t('students.select_class')"
-              filter
-              showClear
-            />
+            <small v-if="submitted && !student.code" class="text-red-500">
+              {{ t('students.student_code_required') }}
+            </small>
           </div>
 
           <div>
             <label for="parent" class="block font-semibold mb-2">
-              {{ t('common.parents') }}
+              {{ t('common.parents') }} <span class="text-red-500">*</span>
             </label>
             <Select
               id="parent"
@@ -729,6 +686,7 @@ const showStudentDetails = async (studentData: Student) => {
               filter
               :filterFields="['first_name', 'last_name']"
               showClear
+              :invalid="submitted && !student.parent_id"
             >
               <template #option="{ option }">
                 <div>{{ option.first_name }} {{ option.last_name }}</div>
@@ -741,21 +699,83 @@ const showStudentDetails = async (studentData: Student) => {
                 <span v-else>{{ t('students.select_parent') }}</span>
               </template>
             </Select>
+            <small v-if="submitted && !student.parent_id" class="text-red-500 mt-1 block">
+              {{ t('common.required_field') }}
+            </small>
           </div>
+        </div>
+
+        <!-- Birth Date and Gender -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="birth_date" class="block font-semibold mb-2">
+              {{ t('students.birth_date') }} <span class="text-red-500">*</span>
+            </label>
+            <DatePicker
+              id="birth_date"
+              v-model="student.birth_date"
+              dateFormat="yy-mm-dd"
+              showIcon
+              :invalid="submitted && !student.birth_date"
+              :placeholder="t('students.birth_date')"
+            />
+            <small v-if="submitted && !student.birth_date" class="text-red-500 mt-1 block">
+              {{ t('common.required_field') }}
+            </small>
+          </div>
+
+          <div>
+            <label for="gender" class="block font-semibold mb-2">
+              {{ t('common.gender') }} <span class="text-red-500">*</span>
+            </label>
+            <Select
+              id="gender"
+              v-model="student.gender"
+              :options="genderOptions"
+              optionLabel="label"
+              optionValue="value"
+              :invalid="submitted && !student.gender"
+              :placeholder="t('common.gender')"
+            />
+            <small v-if="submitted && !student.gender" class="text-red-500 mt-1 block">
+              {{ t('common.required_field') }}
+            </small>
+          </div>
+        </div>
+
+        <!-- Class -->
+        <div>
+          <label for="class" class="block font-semibold mb-2">
+            {{ t('common.class') }}
+          </label>
+          <Select
+            id="class"
+            v-model="student.class_id"
+            :options="availableClasses"
+            optionLabel="name"
+            optionValue="id"
+            :placeholder="t('students.select_class')"
+            filter
+            showClear
+          />
         </div>
 
         <!-- Enrollment Date -->
         <div>
           <label for="enrollment_date" class="block font-semibold mb-2">
-            {{ t('common.enrollment_date') }}
+            {{ t('common.enrollment_date') }} <span class="text-red-500">*</span>
           </label>
           <DatePicker
             id="enrollment_date"
             v-model="student.enrollment_date"
             dateFormat="yy-mm-dd"
             showIcon
+            :invalid="submitted && !student.enrollment_date"
             :placeholder="t('common.enrollment_date')"
           />
+          <small v-if="submitted && !student.enrollment_date" class="text-red-500 mt-1 block">
+            {{ t('common.required_field') }}
+          </small>
         </div>
 
         <!-- Medical Info -->
