@@ -753,7 +753,22 @@
     "col_avg_20": "Moy /20",
     "col_pass_pct": "Réussite %",
     "col_records": "Enr.",
-    "col_std_dev": "Écart-type"
+    "col_std_dev": "Écart-type",
+    "col_exercises": "Exercices",
+    "exercise_analytics_title": "Détail par exercice",
+    "exercise_analytics_subtitle": "Cliquez sur une ligne du tableau ci-dessus pour voir les moyennes par exercice de cet examen.",
+    "exercises_count": "exercices",
+    "exercise_select_hint": "Cliquez sur une note ci-dessus pour charger le détail par exercice.",
+    "no_exercises": "Cet examen n'a pas de découpage par exercice défini.",
+    "col_exercise_name": "Exercice / Niveau",
+    "col_max_note": "Note max",
+    "col_avg_note": "Moy. classe",
+    "col_pass_rate_ex": "Taux de réussite",
+    "col_difficulty": "Difficulté",
+    "avg_note": "Note moyenne",
+    "easy": "Facile",
+    "medium": "Moyen",
+    "hard": "Difficile"
   },
   "subject_management": {
     "title": "Gérer les Matières",

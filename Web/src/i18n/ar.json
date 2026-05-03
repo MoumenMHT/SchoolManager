@@ -797,7 +797,22 @@
     "col_avg_20": "المعدل /20",
     "col_pass_pct": "النجاح %",
     "col_records": "سجلات",
-    "col_std_dev": "انحراف معياري"
+    "col_std_dev": "انحراف معياري",
+    "col_exercises": "التمارين",
+    "exercise_analytics_title": "تفاصيل التمارين",
+    "exercise_analytics_subtitle": "انقر على أي صف في جدول النقاط لرؤية متوسطات التمارين لهذا الامتحان.",
+    "exercises_count": "تمارين",
+    "exercise_select_hint": "انقر على صف في جدول النقاط أعلاه لتحميل تفاصيل التمارين.",
+    "no_exercises": "هذا الامتحان لا يحتوي على تمارين محددة.",
+    "col_exercise_name": "التمرين / المستوى",
+    "col_max_note": "الأقصى",
+    "col_avg_note": "متوسط القسم",
+    "col_pass_rate_ex": "نسبة النجاح",
+    "col_difficulty": "الصعوبة",
+    "avg_note": "متوسط النقطة",
+    "easy": "سهل",
+    "medium": "متوسط",
+    "hard": "صعب"
   },
   "subject_management": {
     "title": "إدارة المواد",

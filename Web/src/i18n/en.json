@@ -752,7 +752,22 @@
     "col_avg_20": "Avg /20",
     "col_pass_pct": "Pass %",
     "col_records": "Records",
-    "col_std_dev": "Std Dev"
+    "col_std_dev": "Std Dev",
+    "col_exercises": "Exercises",
+    "exercise_analytics_title": "Exercise Analytics Drilldown",
+    "exercise_analytics_subtitle": "Click any row in the grade log above to inspect per-exercise averages for that exam.",
+    "exercises_count": "exercises",
+    "exercise_select_hint": "Click a grade row above to load exercise-level breakdown for that exam.",
+    "no_exercises": "This exam has no exercise breakdown defined.",
+    "col_exercise_name": "Exercise / Level",
+    "col_max_note": "Max Note",
+    "col_avg_note": "Class Avg",
+    "col_pass_rate_ex": "Pass Rate",
+    "col_difficulty": "Difficulty",
+    "avg_note": "Average Note",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
   },
   "subject_management": {
     "title": "Manage Subjects",

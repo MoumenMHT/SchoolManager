@@ -52,6 +52,11 @@ const model = computed(() => {
                     label: t('nav.dashboard'),
                     icon: 'pi pi-fw pi-building',
                     to: '/teacher/portal'
+                },
+                {
+                    label: t('nav.exams_management', 'Exams Management'),
+                    icon: 'pi pi-fw pi-file-edit',
+                    to: '/teacher/exams'
                 }
             ]
         });

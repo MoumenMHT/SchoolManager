@@ -359,51 +359,127 @@ class DatabaseSeeder extends Seeder
      
 
 
-        // Create grades for all students across all subjects and exam types
+        // ── New exam-based grade seeding ────────────────────────────────────────
         $examTypes = ['evaluation_continue', 'devoir', 'composition'];
         $semesters = ['Trimester 1', 'Trimester 2', 'Trimester 3'];
-        $now = now()->toDateTimeString();
+        $now       = now()->toDateTimeString();
 
-        // Group assignments by class_id to quickly find the student's teachers and subjects
+        // Group assignments by class_id
         $assignmentsByClass = [];
         foreach ($assignments as $assignment) {
             $assignmentsByClass[$assignment->class_id][] = $assignment;
         }
 
-        // Use bulk DB inserts instead of Eloquent::create() to bypass the GradeObserver
-        // and avoid ~14,850 individual queries hammering the DB.
+        // Step 1: Create one Exam per (subject, teacher, exam_type, semester) combination
+        // and link all relevant classes via the class_exam pivot.
+        $this->command->info('Creating exams and linking to classes...');
+        $examMap = []; // signature -> exam_id
+
+        foreach ($assignments as $assignment) {
+            foreach ($semesters as $semester) {
+                foreach ($examTypes as $examType) {
+                    $sig = implode('|', [$assignment->subject_id, $assignment->teacher_id, $examType, $semester]);
+                    if (!isset($examMap[$sig])) {
+                        $examId = DB::table('exams')->insertGetId([
+                            'subject_id'    => $assignment->subject_id,
+                            'teacher_id'    => $assignment->teacher_id,
+                            'exam_type'     => $examType,
+                            'semester'      => $semester,
+                            'academic_year' => '2025-2026',
+                            'max_grade'     => 20,
+                            'created_at'    => $now,
+                            'updated_at'    => $now,
+                        ]);
+
+                        // Seed 3 exercises per exam
+                        foreach (['Exercise 1', 'Exercise 2', 'Exercise 3'] as $exIdx => $exName) {
+                            DB::table('exam_exercises')->insert([
+                                'exam_id'    => $examId,
+                                'level_name' => $exName,
+                                'max_note'   => round(20 / 3, 2),
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ]);
+                        }
+
+                        $examMap[$sig] = ['id' => $examId, 'classes' => []];
+                    }
+
+                    // Link class to exam (pivot) if not already done
+                    if (!in_array($assignment->class_id, $examMap[$sig]['classes'])) {
+                        $examMap[$sig]['classes'][] = $assignment->class_id;
+                        DB::table('class_exam')->insertOrIgnore([
+                            'exam_id'  => $examMap[$sig]['id'],
+                            'class_id' => $assignment->class_id,
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Step 2: Bulk insert grades (one grade per student per exam)
         $this->command->info('Creating grades (bulk insert)...');
-        $gradeRows = [];
+        $gradeRows          = [];
+        $exerciseGradeRows  = [];
+
+        // Pre-fetch exercise IDs grouped by exam_id
+        $exercisesByExam = [];
+        foreach (DB::table('exam_exercises')->get() as $ex) {
+            $exercisesByExam[$ex->exam_id][] = $ex->id;
+        }
+
         foreach ($students as $student) {
             $studentAssignments = $assignmentsByClass[$student->class_id] ?? [];
 
             foreach ($studentAssignments as $assignment) {
                 foreach ($semesters as $semester) {
                     foreach ($examTypes as $examType) {
+                        $sig    = implode('|', [$assignment->subject_id, $assignment->teacher_id, $examType, $semester]);
+                        $examId = $examMap[$sig]['id'] ?? null;
+                        if (!$examId) continue;
+
+                        $totalGrade = fake()->randomFloat(2, 0, 20);
                         $gradeRows[] = [
-                            'student_id'   => $student->id,
-                            'subject_id'   => $assignment->subject_id,
-                            'teacher_id'   => $assignment->teacher_id,
-                            'exam_type'    => $examType,
-                            'grade'        => fake()->randomFloat(2, 0, 20),
-                            'max_grade'    => 20,
-                            'semester'     => $semester,
-                            'academic_year'=> '2025-2026',
-                            'comment'      => fake()->optional(0.3)->sentence(),
-                            'created_at'   => $now,
-                            'updated_at'   => $now,
+                            'student_id' => $student->id,
+                            'exam_id'    => $examId,
+                            'grade'      => $totalGrade,
+                            'comment'    => fake()->optional(0.3)->sentence(),
+                            'created_at' => $now,
+                            'updated_at' => $now,
                         ];
                     }
                 }
             }
         }
 
-        // Insert in chunks of 500 to avoid hitting DB parameter limits
         foreach (array_chunk($gradeRows, 500) as $chunk) {
             DB::table('grades')->insert($chunk);
         }
 
-        // Now synchronize averages for all students per semester (manually, since observer didn't fire)
+        // Step 3: Seed exercise_grades for each inserted grade
+        $this->command->info('Creating exercise grades...');
+        $allGrades = DB::table('grades')->select('id', 'exam_id')->get();
+        foreach ($allGrades as $grade) {
+            $exIds = $exercisesByExam[$grade->exam_id] ?? [];
+            foreach ($exIds as $exId) {
+                $exerciseGradeRows[] = [
+                    'grade_id'         => $grade->id,
+                    'exam_exercise_id' => $exId,
+                    'note'             => fake()->randomFloat(2, 0, round(20 / 3, 2)),
+                    'created_at'       => $now,
+                    'updated_at'       => $now,
+                ];
+            }
+            if (count($exerciseGradeRows) >= 500) {
+                DB::table('exercise_grades')->insert($exerciseGradeRows);
+                $exerciseGradeRows = [];
+            }
+        }
+        if (!empty($exerciseGradeRows)) {
+            DB::table('exercise_grades')->insert($exerciseGradeRows);
+        }
+
+        // Step 4: Synchronize student averages
         $this->command->info('Calculating student averages...');
         foreach ($students as $student) {
             foreach ($semesters as $semester) {

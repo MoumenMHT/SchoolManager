@@ -152,6 +152,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Grade Management - specific routes MUST come before apiResource
         Route::post('/grades/bulk', [GradeController::class, 'bulkStore']);
         Route::get('/grades/analytics/overview', [GradeController::class, 'getAnalyticsOverview']);
+        Route::get('/analytics/subject-exercise-averages', [GradeController::class, 'getSubjectExerciseAverages']);
         Route::apiResource('grades', GradeController::class);
         Route::post('/attendances/bulk', [AttendanceController::class, 'bulkStore']);
         Route::apiResource('attendances', AttendanceController::class);
@@ -162,6 +163,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/classes/{class}/grades', [GradeController::class, 'getClassGrades']);
         Route::get('/classes/{class}/ranking', [GradeController::class, 'getClassRanking']);
         Route::get('/subjects/{subject}/statistics', [GradeController::class, 'getSubjectStatistics']);
+
+        // Exam management (new arch)
+        Route::get('/exams/{exam}/exercise-averages', [GradeController::class, 'getExamExerciseAverages']);
+        Route::apiResource('exams', \App\Http\Controllers\API\ExamController::class);
         
         // Attendance specific endpoints
         Route::get('/students/{student}/attendances', [AttendanceController::class, 'getAttendanceByStudent']);

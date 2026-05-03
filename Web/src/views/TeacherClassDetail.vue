@@ -65,13 +65,15 @@ const ATTENDANCE_OPTIONS = [
 // ─── Grades state ─────────────────────────────────────────
 const gradeSubjectId = ref<number | null>(null);
 const gradeSemester = ref<string>('Trimester 1');
-const gradeExamType = ref<string>('evaluation_continue');
 const gradeAcademicYear = ref<string>(computeAcademicYear());
-const gradeMaxGrade = ref<number>(20);
+const availableExams = ref<any[]>([]);
+const gradeSelectedExam = ref<any>(null);
 const gradeLoading = ref(false);
 const gradeSaving = ref(false);
+
 const existingGradeMap = ref<Map<number, GradeRecord>>(new Map());
-const gradeValues = ref<Record<number, string>>({});
+// Nested dictionary: exerciseValues.value[student_id][exercise_id] = input_string
+const exerciseValues = ref<Record<number, Record<number, number | string>>>({});
 
 const EXAM_TYPES = [
   { label: 'Évaluation Continue', value: 'evaluation_continue' },
@@ -206,26 +208,81 @@ const absentCount = computed(() => Object.values(attStatuses.value).filter(v => 
 const lateCount = computed(() => Object.values(attStatuses.value).filter(v => v === 'late').length);
 
 // ─── Grades ───────────────────────────────────────────────
-async function loadGrades() {
+async function fetchExams() {
   if (!gradeSubjectId.value) return;
-  gradeLoading.value = true;
+  availableExams.value = [];
+  gradeSelectedExam.value = null;
+  exerciseValues.value = {};
+  existingGradeMap.value = new Map();
   try {
-    const records = await GradeService.getClassGrades(classId.value, {
+    const data = await GradeService.getExams({
+      class_id: classId.value,
       subject_id: gradeSubjectId.value,
       semester: gradeSemester.value,
       academic_year: gradeAcademicYear.value,
     });
-    const filtered = (records as GradeRecord[]).filter((r) => r.exam_type === gradeExamType.value);
+    availableExams.value = data || [];
+    if (availableExams.value.length > 0) {
+      gradeSelectedExam.value = availableExams.value[0];
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: t('common.error'), detail: 'Failed to fetch exams', life: 3000 });
+  }
+}
+
+async function loadGrades() {
+  if (!gradeSubjectId.value || !gradeSelectedExam.value) return;
+  gradeLoading.value = true;
+  try {
+    let records: any = await GradeService.getClassGrades(classId.value, {
+      subject_id: gradeSubjectId.value,
+      semester: gradeSemester.value,
+      academic_year: gradeAcademicYear.value,
+    });
+
+    // Normalize possible wrapper shapes:
+    // - API may return { success: true, data: [...] }
+    // - Or { success: true, data: { grades: [...] } }
+    // - Or { grades: [...] }
+    if (!records) records = [];
+    if (records && records.data) {
+      if (Array.isArray(records.data)) records = records.data;
+      else if (records.data.grades && Array.isArray(records.data.grades)) records = records.data.grades;
+    } else if (records && records.grades && Array.isArray(records.grades)) {
+      records = records.grades;
+    }
     const map = new Map<number, GradeRecord>();
-    for (const r of filtered) map.set(r.student_id, r);
+    for (const r of (records as GradeRecord[])) {
+      const recExamId = (r as any).exam_id ?? (r as any).exam?.id ?? null;
+      const studentIdKey = (r as any).student_id ?? (r as any).student?.id ?? null;
+      if (Number(recExamId) == Number(gradeSelectedExam.value.id) && studentIdKey !== null) {
+        map.set(Number(studentIdKey), r);
+      }
+    }
     existingGradeMap.value = map;
 
-    const vals: Record<number, string> = {};
-    for (const s of students.value) {
-      const ex = map.get(s.id);
-      vals[s.id] = ex ? String(ex.grade) : '';
+    // Initialize exerciseValues
+    const newVals: Record<number, Record<number, number | string>> = {};
+    for (const student of students.value) {
+      newVals[student.id] = {};
+      const exercises = gradeSelectedExam.value.exercises || [];
+      const record = map.get(Number(student.id));
+      
+      for (const ex of exercises) {
+        // Default to 0 as requested if no grade exists
+        newVals[student.id][ex.id] = 0;
+        
+        if (record && record.exercise_grades) {
+          const exGrade = (record.exercise_grades || []).find((eg: any) => 
+            Number(eg.exam_exercise_id ?? eg.exam_exercise?.id) == Number(ex.id)
+          );
+          if (exGrade) {
+            newVals[student.id][ex.id] = exGrade.note !== null && exGrade.note !== undefined ? Number(exGrade.note) : 0;
+          }
+        }
+      }
     }
-    gradeValues.value = vals;
+    exerciseValues.value = newVals;
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_grades_error'), life: 3000 });
   } finally {
@@ -233,49 +290,101 @@ async function loadGrades() {
   }
 }
 
-async function saveGrades() {
-  if (!gradeSubjectId.value) {
-    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a subject', life: 3000 });
+function calculateStudentTotal(studentId: number): number {
+  if (!gradeSelectedExam.value || Object.keys(exerciseValues.value).length === 0) return 0;
+  const values = exerciseValues.value[studentId] || {};
+  let total = 0;
+  for (const val of Object.values(values)) {
+    const num = parseFloat(String(val));
+    if (!isNaN(num)) total += num;
+  }
+  return total;
+}
+
+function clampExerciseValue(studentId: number, exerciseId: number, maxNote: any) {
+  if (!exerciseValues.value[studentId]) return;
+  const raw = exerciseValues.value[studentId][exerciseId];
+  if (raw === '' || raw === null || raw === undefined) return;
+  const num = parseFloat(String(raw));
+  const max = Number(maxNote);
+
+  if (isNaN(num)) {
+    exerciseValues.value[studentId][exerciseId] = 0;
     return;
   }
-  const toCreate: any[] = [];
-  const toUpdate: Array<{ id: number; data: any }> = [];
 
-  for (const s of students.value) {
-    const raw = gradeValues.value[s.id];
-    if (raw === '' || raw === null || raw === undefined) continue;
-    const num = parseFloat(raw);
-    if (isNaN(num)) continue;
+  if (num < 0) {
+    exerciseValues.value[studentId][exerciseId] = 0;
+  } else if (!isNaN(max) && num > max) {
+    exerciseValues.value[studentId][exerciseId] = max;
+    toast.add({ severity: 'warn', summary: 'Warning', detail: `Value cannot exceed ${max}`, life: 3000 });
+  }
+}
 
-    const payload = {
-      student_id: s.id,
-      subject_id: gradeSubjectId.value!,
-      teacher_id: teacherId.value,
-      exam_type: gradeExamType.value,
-      grade: num,
-      max_grade: gradeMaxGrade.value,
-      semester: gradeSemester.value,
-      academic_year: gradeAcademicYear.value,
+async function saveGrades() {
+  if (!gradeSelectedExam.value) {
+    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an exam first', life: 3000 });
+    return;
+  }
+  const allGrades: any[] = [];
+
+  for (const student of students.value) {
+    const exercises = gradeSelectedExam.value.exercises || [];
+    const exGrades: any[] = [];
+    let hasAnyValue = false;
+    let totalGrade = 0;
+
+    for (const ex of exercises) {
+      const raw = exerciseValues.value[student.id]?.[ex.id];
+      if (raw !== '' && raw !== null && raw !== undefined) {
+        const num = parseFloat(String(raw));
+        if (!isNaN(num)) {
+          exGrades.push({ exam_exercise_id: ex.id, note: num });
+          totalGrade += num;
+          hasAnyValue = true;
+        }
+      }
+    }
+
+    if (!hasAnyValue) continue;
+
+    const existing = existingGradeMap.value.get(Number(student.id));
+
+    const payload: any = {
+      student_id: student.id,
+      exam_id: gradeSelectedExam.value.id,
+      grade: totalGrade,
+      exercise_grades: exGrades,
     };
 
-    const ex = existingGradeMap.value.get(s.id);
-    ex ? toUpdate.push({ id: ex.id, data: payload }) : toCreate.push(payload);
+    if (existing) {
+      payload.id = existing.id;
+    }
+
+    // Validation: each exercise note must not exceed its max_note
+    for (const ex of exercises) {
+      const entry = exGrades.find(e => e.exam_exercise_id === ex.id);
+      if (entry && typeof ex.max_note === 'number' && entry.note > ex.max_note) {
+        toast.add({ severity: 'warn', summary: 'Invalid value', detail: `${student.first_name} ${student.last_name}: ${ex.level_name} cannot exceed ${ex.max_note}`, life: 4000 });
+        return;
+      }
+    }
+
+    allGrades.push(payload);
   }
 
-  if (toCreate.length === 0 && toUpdate.length === 0) {
+  if (allGrades.length === 0) {
     toast.add({ severity: 'info', summary: 'Nothing to save', detail: 'Enter at least one grade', life: 3000 });
     return;
   }
 
   gradeSaving.value = true;
   try {
-    const ops: Promise<any>[] = [];
-    if (toCreate.length > 0) ops.push(GradeService.bulkCreateGrades(toCreate));
-    for (const item of toUpdate) ops.push(GradeService.updateGrade(item.id, item.data));
-    await Promise.all(ops);
-    toast.add({ severity: 'success', summary: 'Saved', detail: `${toCreate.length + toUpdate.length} grade(s) saved`, life: 3000 });
+    await GradeService.bulkCreateGrades(allGrades);
+    toast.add({ severity: 'success', summary: 'Saved', detail: `${allGrades.length} student grade(s) saved`, life: 3000 });
     await loadGrades();
-  } catch {
+  } catch (err: any) {
+    console.error('Save error:', err);
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.save_grades_error'), life: 3000 });
   } finally {
     gradeSaving.value = false;
@@ -283,21 +392,36 @@ async function saveGrades() {
 }
 
 const gradeAverage = computed(() => {
-  const vals = Object.values(gradeValues.value).filter(v => v !== '' && !isNaN(parseFloat(v as string)));
-  if (vals.length === 0) return null;
-  return (vals.reduce((s, v) => s + parseFloat(v as string), 0) / vals.length).toFixed(1);
+  let sum = 0;
+  let count = 0;
+  for (const s of students.value) {
+    const val = calculateStudentTotal(s.id);
+    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== '' && v !== null && v !== undefined);
+    if (hasAnyGrade) {
+      sum += val;
+      count++;
+    }
+  }
+  if (count === 0) return null;
+  return (sum / count).toFixed(1);
 });
 
-const gradeFilled = computed(() =>
-  Object.values(gradeValues.value).filter(v => v !== '' && v !== null && v !== undefined).length
-);
+const gradeFilled = computed(() => {
+  let filled = 0;
+  for (const s of students.value) {
+    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== '' && v !== null && v !== undefined);
+    if (hasAnyGrade) filled++;
+  }
+  return filled;
+});
 
 // ─── Watchers ─────────────────────────────────────────────
-watch([gradeSubjectId, gradeSemester, gradeExamType, gradeAcademicYear], () => loadGrades());
+watch([gradeSubjectId, gradeSemester, gradeAcademicYear], () => fetchExams());
+watch(gradeSelectedExam, () => loadGrades());
 
 onMounted(async () => {
   await loadClass();
-  if (gradeSubjectId.value) await loadGrades();
+  if (gradeSubjectId.value) await fetchExams();
 });
 </script>
 
@@ -607,18 +731,28 @@ onMounted(async () => {
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Exam Type</label>
-                <Select v-model="gradeExamType" :options="EXAM_TYPES" option-label="label" option-value="value" class="w-full sm:w-44" />
+                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Exam</label>
+                <Select v-model="gradeSelectedExam" :options="availableExams" option-label="exam_type" class="w-full sm:w-56" placeholder="Select Exam">
+                  <template #value="slotProps">
+                    <div v-if="slotProps.value" class="flex items-center">
+                      <div>{{ slotProps.value.exam_type }} ({{ slotProps.value.max_grade }})</div>
+                    </div>
+                    <span v-else>
+                      {{ slotProps.placeholder }}
+                    </span>
+                  </template>
+                  <template #option="slotProps">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium">{{ slotProps.option.exam_type }}</span>
+                      <span class="text-surface-400 text-sm">({{ slotProps.option.max_grade }})</span>
+                    </div>
+                  </template>
+                </Select>
               </div>
 
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Academic Year</label>
                 <InputText v-model="gradeAcademicYear" placeholder="e.g. 2024-2025" class="w-full sm:w-36" />
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Max Grade</label>
-                <InputNumber v-model="gradeMaxGrade" :min="1" :max="100" class="w-full sm:w-28" />
               </div>
             </div>
 
@@ -626,80 +760,90 @@ onMounted(async () => {
               <ProgressSpinner style="width: 36px; height: 36px" />
             </div>
 
-            <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
-              <i class="pi pi-users text-4xl mb-2 block"></i>
-              <p>No students in this class.</p>
-            </div>
-
-            <template v-else>
-              <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="bg-surface-50 dark:bg-surface-800/80">
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                      <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
-                        Grade <span class="text-surface-400 font-normal">/ {{ gradeMaxGrade }}</span>
-                      </th>
-                      <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(student, idx) in students"
-                      :key="student.id"
-                      class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
-                    >
-                      <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
-                      <td class="p-3">
-                        <span class="font-medium text-surface-900 dark:text-surface-100">
-                          {{ student.first_name }} {{ student.last_name }}
-                        </span>
-                        <span
-                          v-if="existingGradeMap.has(student.id)"
-                          class="ml-2 text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full align-middle"
-                        >saved</span>
-                      </td>
-                      <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
-                      <td class="p-3">
-                        <div class="flex justify-center">
-                          <InputText
-                            v-model="gradeValues[student.id]"
-                            :placeholder="`0–${gradeMaxGrade}`"
-                            class="w-24 text-center"
-                          />
-                        </div>
-                      </td>
-                      <td class="p-3 text-center text-surface-500 dark:text-surface-400 hidden md:table-cell">
-                        <span v-if="gradeValues[student.id] !== '' && !isNaN(parseFloat(gradeValues[student.id]))">
-                          {{
-                            Math.round((parseFloat(gradeValues[student.id]) / gradeMaxGrade) * 100)
-                          }}%
-                        </span>
-                        <span v-else class="text-surface-300 dark:text-surface-600">—</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div v-if="!gradeSelectedExam" class="text-center py-10 text-surface-400">
+                <i class="pi pi-file text-4xl mb-2 block"></i>
+                <p>Please select an exam to grade.</p>
               </div>
 
-              <!-- Summary + save -->
-              <div class="flex flex-wrap items-center justify-between gap-4 mt-4">
-                <div class="flex gap-4 text-sm text-surface-500 dark:text-surface-400">
-                  <span>
-                    Class avg:
-                    <strong class="text-surface-800 dark:text-surface-200">
-                      {{ gradeAverage !== null ? `${gradeAverage} / ${gradeMaxGrade}` : '—' }}
-                    </strong>
-                  </span>
-                  <span>
-                    Filled: <strong class="text-surface-800 dark:text-surface-200">{{ gradeFilled }} / {{ students.length }}</strong>
-                  </span>
+              <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
+                <i class="pi pi-users text-4xl mb-2 block"></i>
+                <p>No students in this class.</p>
+              </div>
+
+              <template v-else>
+                <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="bg-surface-50 dark:bg-surface-800/80">
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
+                        
+                        <th v-for="ex in gradeSelectedExam.exercises" :key="ex.id" class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
+                          {{ ex.level_name || 'Ex' }} <span class="text-surface-400 font-normal">/ {{ ex.max_note }}</span>
+                        </th>
+                        
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 border-l border-surface-200 dark:border-surface-700">
+                          Total <span class="text-surface-400 font-normal">/ {{ gradeSelectedExam.max_grade }}</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="(student, idx) in students"
+                        :key="student.id"
+                        class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
+                      >
+                        <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
+                        <td class="p-3">
+                          <span class="font-medium text-surface-900 dark:text-surface-100">
+                            {{ student.first_name }} {{ student.last_name }}
+                          </span>
+                          <span
+                            v-if="existingGradeMap.has(Number(student.id))"
+                            class="ml-2 text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full align-middle"
+                          >saved</span>
+                        </td>
+                        <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
+                        
+                        <td v-for="ex in gradeSelectedExam.exercises" :key="ex.id" class="p-3">
+                          <div class="flex justify-center">
+                            <InputNumber
+                              v-if="exerciseValues[student.id]"
+                              v-model="exerciseValues[student.id][ex.id]"
+                              :min="0"
+                              :max="Number(ex.max_note)"
+                              :show-buttons="false"
+                              class="w-20 text-center text-sm"
+                              @change="clampExerciseValue(student.id, ex.id, Number(ex.max_note))"
+                            />
+                          </div>
+                        </td>
+                        
+                        <td class="p-3 text-center font-bold text-surface-700 dark:text-surface-200 border-l border-surface-100 dark:border-surface-700">
+                          {{ calculateStudentTotal(student.id) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                <Button label="Save Grades" icon="pi pi-save" :loading="gradeSaving" @click="saveGrades" />
-              </div>
-            </template>
+
+                <!-- Summary + save -->
+                <div class="flex flex-wrap items-center justify-between gap-4 mt-4">
+                  <div class="flex gap-4 text-sm text-surface-500 dark:text-surface-400">
+                    <span>
+                      Class avg:
+                      <strong class="text-surface-800 dark:text-surface-200">
+                        {{ gradeAverage !== null ? `${gradeAverage} / ${gradeSelectedExam.max_grade}` : '—' }}
+                      </strong>
+                    </span>
+                    <span>
+                      Filled: <strong class="text-surface-800 dark:text-surface-200">{{ gradeFilled }} / {{ students.length }}</strong>
+                    </span>
+                  </div>
+                  <Button label="Save Grades" icon="pi pi-save" :loading="gradeSaving" @click="saveGrades" />
+                </div>
+              </template>
           </div>
         </TabPanel>
       </TabPanels>

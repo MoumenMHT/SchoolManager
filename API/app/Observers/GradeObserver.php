@@ -29,11 +29,16 @@ class GradeObserver
      */
     private function sync(Grade $grade): void
     {
-        if ($grade->student) {
+        // We need the student and the exam to sync averages
+        // Load them if not already loaded
+        $student = $grade->student;
+        $exam = $grade->exam;
+
+        if ($student && $exam) {
             GradingService::synchronizeAverages(
-                $grade->student,
-                $grade->semester,
-                $grade->academic_year
+                $student,
+                $exam->semester,
+                $exam->academic_year
             );
         }
     }
