@@ -331,7 +331,7 @@ const saveGrades = async () => {
   savingGrades.value = true;
   try {
     const grades = filled.map((row) => {
-      const computedGrade = row.exercise_grades?.reduce((sum, eg) => sum + (eg.note || 0), 0) || 0;
+      const computedGrade = (row.exercise_grades as any[])?.reduce((sum: number, eg: any) => sum + (Number(eg.note) || 0), 0) || 0;
       return {
         student_id: row.student.id,
         exam_id: gradeSelectedExam.value.id,
@@ -778,7 +778,7 @@ const getSubjectColor = (index: number | string) => {
         <Column header="Total" style="min-width: 100px; text-align: center" alignFrozen="right" frozen>
           <template #body="{ data }">
             <span class="font-bold text-lg text-primary">
-              {{ data.exercise_grades?.reduce((sum, eg) => sum + (eg.note || 0), 0) || 0 }}
+              {{ (data.exercise_grades as any[])?.reduce((sum: number, eg: any) => sum + (Number(eg.note) || 0), 0) || 0 }}
             </span>
           </template>
         </Column>

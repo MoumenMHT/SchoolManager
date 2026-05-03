@@ -73,7 +73,7 @@ const gradeSaving = ref(false);
 
 const existingGradeMap = ref<Map<number, GradeRecord>>(new Map());
 // Nested dictionary: exerciseValues.value[student_id][exercise_id] = input_string
-const exerciseValues = ref<Record<number, Record<number, number | string>>>({});
+const exerciseValues = ref<Record<number, Record<number, number | null>>>({});
 
 const EXAM_TYPES = [
   { label: 'Évaluation Continue', value: 'evaluation_continue' },
@@ -262,7 +262,7 @@ async function loadGrades() {
     existingGradeMap.value = map;
 
     // Initialize exerciseValues
-    const newVals: Record<number, Record<number, number | string>> = {};
+    const newVals: Record<number, Record<number, number | null>> = {};
     for (const student of students.value) {
       newVals[student.id] = {};
       const exercises = gradeSelectedExam.value.exercises || [];
@@ -304,7 +304,7 @@ function calculateStudentTotal(studentId: number): number {
 function clampExerciseValue(studentId: number, exerciseId: number, maxNote: any) {
   if (!exerciseValues.value[studentId]) return;
   const raw = exerciseValues.value[studentId][exerciseId];
-  if (raw === '' || raw === null || raw === undefined) return;
+  if (raw === null || raw === undefined) return;
   const num = parseFloat(String(raw));
   const max = Number(maxNote);
 
@@ -336,7 +336,7 @@ async function saveGrades() {
 
     for (const ex of exercises) {
       const raw = exerciseValues.value[student.id]?.[ex.id];
-      if (raw !== '' && raw !== null && raw !== undefined) {
+      if (raw !== null && raw !== undefined) {
         const num = parseFloat(String(raw));
         if (!isNaN(num)) {
           exGrades.push({ exam_exercise_id: ex.id, note: num });
@@ -396,7 +396,7 @@ const gradeAverage = computed(() => {
   let count = 0;
   for (const s of students.value) {
     const val = calculateStudentTotal(s.id);
-    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== '' && v !== null && v !== undefined);
+    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== null && v !== undefined);
     if (hasAnyGrade) {
       sum += val;
       count++;
@@ -409,7 +409,7 @@ const gradeAverage = computed(() => {
 const gradeFilled = computed(() => {
   let filled = 0;
   for (const s of students.value) {
-    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== '' && v !== null && v !== undefined);
+    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== null && v !== undefined);
     if (hasAnyGrade) filled++;
   }
   return filled;
