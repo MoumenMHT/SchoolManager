@@ -1,27 +1,31 @@
 <template>
-  <div class="p-4 md:p-6 max-w-7xl mx-auto">
+  <div class="p-4 md:p-8 max-w-7xl mx-auto">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 animate-fade-in">
       <div>
-        <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-1 flex items-center gap-3">
-          <div class="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 p-2 rounded-xl flex items-center justify-center">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-bold uppercase tracking-wider">
+            {{ $t('teacher_exams.subtitle') }}
+          </span>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black text-surface-900 dark:text-surface-0 tracking-tight flex items-center gap-4">
+          <div class="bg-primary-500 text-white p-3 rounded-2xl shadow-lg shadow-primary-500/20">
             <i class="pi pi-file-edit text-2xl"></i>
           </div>
           {{ $t('teacher_exams.title') }}
         </h1>
-        <p class="text-surface-500 dark:text-surface-400">{{ $t('teacher_exams.subtitle') }}</p>
       </div>
     </div>
 
-    <Tabs value="create">
-      <TabList class="mb-4">
-        <Tab value="create">
+    <Tabs value="create" class="premium-tabs">
+      <TabList class="mb-10 gap-4 border-none">
+        <Tab value="create" class="rounded-2xl px-6 py-3 font-black uppercase text-xs tracking-widest transition-premium">
           <div class="flex items-center gap-2">
             <i class="pi pi-plus-circle"></i>
             <span>{{ $t('teacher_exams.create_tab') }}</span>
           </div>
         </Tab>
-        <Tab value="manage" @click="loadExams">
+        <Tab value="manage" @click="loadExams" class="rounded-2xl px-6 py-3 font-black uppercase text-xs tracking-widest transition-premium">
           <div class="flex items-center gap-2">
             <i class="pi pi-list"></i>
             <span>{{ $t('teacher_exams.manage_tab') }}</span>
@@ -29,17 +33,17 @@
         </Tab>
       </TabList>
 
-      <TabPanels>
+      <TabPanels class="bg-transparent p-0">
         <TabPanel value="create">
-          <div v-if="loading" class="flex justify-center py-16">
-            <i class="pi pi-spin pi-spinner text-5xl text-primary-500"></i>
+          <div v-if="loading" class="flex justify-center py-24">
+            <ProgressSpinner style="width: 60px; height: 60px" />
           </div>
 
-          <div v-else class="space-y-6">
+          <div v-else class="space-y-10 animate-fade-in">
             <!-- Step 1: Select Level -->
-            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-sm p-5 md:p-6">
-              <h2 class="text-lg font-bold text-surface-800 dark:text-surface-100 mb-4 flex items-center gap-3">
-                <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-sm">1</span>
+            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2rem] shadow-sm p-8 premium-shadow transition-premium">
+              <h2 class="text-xl font-black text-surface-900 dark:text-surface-0 mb-6 flex items-center gap-4">
+                <span class="bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-lg shadow-primary-500/20">1</span>
                 {{ $t('teacher_exams.step_level') }}
               </h2>
               <Select
@@ -48,163 +52,170 @@
                 optionLabel="label"
                 optionValue="value"
                 :placeholder="$t('teacher_exams.level_placeholder')"
-                class="w-full md:w-80"
+                class="w-full md:w-96 premium-select"
                 @change="onLevelChange"
               />
             </div>
 
             <!-- Step 2: Select Classes -->
-            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-sm p-5 md:p-6" v-if="selectedLevel">
-              <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
-                <h2 class="text-lg font-bold text-surface-800 dark:text-surface-100 flex items-center gap-3">
-                  <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-sm">2</span>
+            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2rem] shadow-sm p-8 premium-shadow transition-premium" v-if="selectedLevel">
+              <div class="flex flex-wrap items-center justify-between mb-8 gap-4">
+                <h2 class="text-xl font-black text-surface-900 dark:text-surface-0 flex items-center gap-4">
+                  <span class="bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-lg shadow-primary-500/20">2</span>
                   {{ $t('teacher_exams.step_classes') }}
                 </h2>
-                <div class="flex items-center bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 p-2 px-3 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" @click="toggleAllClasses">
+                <div class="flex items-center bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 p-3 px-4 rounded-2xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition-premium shadow-sm" @click="toggleAllClasses">
                   <Checkbox :modelValue="isAllClassesSelected" :binary="true" readonly class="pointer-events-none" />
-                  <span class="ml-2 font-bold text-surface-700 dark:text-surface-200 select-none">{{ $t('teacher_exams.select_all') }}</span>
+                  <span class="ml-3 font-black text-surface-700 dark:text-surface-200 uppercase text-xs tracking-widest select-none">{{ $t('teacher_exams.select_all') }}</span>
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div v-for="cls in filteredClasses" :key="cls.id">
                   <div 
-                    class="flex items-center p-3 rounded-xl cursor-pointer transition-all border-2"
-                    :class="selectedClassIds.includes(cls.id) ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-sm' : 'border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900/50 hover:border-primary-300 dark:hover:border-primary-600'"
+                    class="flex items-center p-5 rounded-2xl cursor-pointer transition-premium border-2 relative overflow-hidden group"
+                    :class="selectedClassIds.includes(cls.id) ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-lg shadow-primary-500/10' : 'border-surface-100 dark:border-surface-700 bg-surface-50 dark:bg-surface-900/50 hover:border-primary-300 dark:hover:border-primary-600 shadow-sm'"
                     @click="() => {
                       const idx = selectedClassIds.indexOf(cls.id);
                       if (idx > -1) selectedClassIds.splice(idx, 1);
                       else selectedClassIds.push(cls.id);
                     }"
                   >
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-primary-500/5 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150"></div>
                     <Checkbox v-model="selectedClassIds" :value="cls.id" :inputId="`cls-${cls.id}`" class="pointer-events-none" />
-                    <label class="ml-3 flex-1 cursor-pointer font-bold text-surface-700 dark:text-surface-200 text-lg m-0 select-none">{{ cls.name }}</label>
+                    <label class="ml-4 flex-1 cursor-pointer font-black text-surface-900 dark:text-surface-0 text-xl m-0 select-none tracking-tight">{{ cls.name }}</label>
                   </div>
                 </div>
               </div>
-              <div v-if="!filteredClasses.length" class="p-4 mt-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 font-medium">
-                <i class="pi pi-exclamation-circle text-xl"></i>
+              <div v-if="!filteredClasses.length" class="p-6 mt-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl flex items-center gap-4 font-black uppercase text-xs tracking-widest border border-red-100 dark:border-red-900/30">
+                <i class="pi pi-exclamation-circle text-2xl"></i>
                 {{ $t('teacher_exams.no_classes_found') }}
               </div>
             </div>
 
             <!-- Step 3: Exam Configuration -->
-            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-sm p-5 md:p-6" v-if="selectedClassIds.length">
-              <h2 class="text-lg font-bold text-surface-800 dark:text-surface-100 mb-5 flex items-center gap-3">
-                <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-sm">3</span>
+            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2rem] shadow-sm p-8 premium-shadow transition-premium" v-if="selectedClassIds.length">
+              <h2 class="text-xl font-black text-surface-900 dark:text-surface-0 mb-8 flex items-center gap-4">
+                <span class="bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-lg shadow-primary-500/20">3</span>
                 {{ $t('teacher_exams.step_config') }}
               </h2>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label class="block font-semibold text-surface-700 dark:text-surface-300 mb-2">{{ $t('teacher_exams.subject') }} <span class="text-red-500">*</span></label>
-                  <Select v-model="examSubject" :options="availableSubjects" optionLabel="name" optionValue="id" :placeholder="$t('teacher_exams.subject_placeholder')" class="w-full" />
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="flex flex-col gap-2">
+                  <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_exams.subject') }} <span class="text-red-500">*</span></label>
+                  <Select v-model="examSubject" :options="availableSubjects" optionLabel="name" optionValue="id" :placeholder="$t('teacher_exams.subject_placeholder')" class="w-full premium-select" />
                 </div>
-                <div>
-                  <label class="block font-semibold text-surface-700 dark:text-surface-300 mb-2">{{ $t('teacher_exams.type') }} <span class="text-red-500">*</span></label>
-                  <Select v-model="examType" :options="examTypeOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.type_placeholder')" class="w-full" />
+                <div class="flex flex-col gap-2">
+                  <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_exams.type') }} <span class="text-red-500">*</span></label>
+                  <Select v-model="examType" :options="examTypeOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.type_placeholder')" class="w-full premium-select" />
                 </div>
-                <div>
-                  <label class="block font-semibold text-surface-700 dark:text-surface-300 mb-2">{{ $t('teacher_exams.trimester') }} <span class="text-red-500">*</span></label>
-                  <Select v-model="examSemester" :options="semesterOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.trimester_placeholder')" class="w-full" />
+                <div class="flex flex-col gap-2">
+                  <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_exams.trimester') }} <span class="text-red-500">*</span></label>
+                  <Select v-model="examSemester" :options="semesterOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.trimester_placeholder')" class="w-full premium-select" />
                 </div>
-                <div>
-                  <label class="block font-semibold text-surface-700 dark:text-surface-300 mb-2">{{ $t('teacher_exams.academic_year') }}</label>
-                  <InputText :value="currentAcademicYear" readonly class="w-full bg-surface-100 dark:bg-surface-900 text-surface-600 dark:text-surface-400 font-bold border-none" />
+                <div class="flex flex-col gap-2">
+                  <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_exams.academic_year') }}</label>
+                  <InputText :value="currentAcademicYear" readonly class="w-full premium-input font-black text-surface-400 bg-surface-50 dark:bg-surface-900/50 border-none opacity-60" />
                 </div>
               </div>
             </div>
 
             <!-- Step 4: Exercises Breakdown -->
-            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-sm p-5 md:p-6" v-if="selectedClassIds.length">
-              <div class="flex flex-wrap justify-between items-center mb-5 gap-3">
-                <h2 class="text-lg font-bold text-surface-800 dark:text-surface-100 flex items-center gap-3">
-                  <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-sm">4</span>
+            <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2.5rem] shadow-sm p-8 premium-shadow transition-premium" v-if="selectedClassIds.length">
+              <div class="flex flex-wrap justify-between items-center mb-10 gap-6">
+                <h2 class="text-xl font-black text-surface-900 dark:text-surface-0 flex items-center gap-4">
+                  <span class="bg-primary-500 text-white w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-lg shadow-primary-500/20">4</span>
                   {{ $t('teacher_exams.step_exercises') }}
                 </h2>
-                <Button :label="$t('teacher_exams.add_exercise')" icon="pi pi-plus" outlined @click="addExerciseRow" class="rounded-xl font-bold" />
+                <Button :label="$t('teacher_exams.add_exercise')" icon="pi pi-plus" raised class="rounded-2xl font-black uppercase text-xs tracking-widest px-6 py-3" @click="addExerciseRow" />
               </div>
 
-              <div class="flex flex-col gap-3">
+              <div class="space-y-6">
                 <div v-for="(ex, idx) in examExercises" :key="idx" 
-                     class="flex flex-col sm:flex-row gap-4 items-center bg-surface-50 dark:bg-surface-900/50 p-4 rounded-xl border border-surface-200 dark:border-surface-700 transition-all">
+                     class="flex flex-col md:flex-row gap-6 items-end bg-surface-50 dark:bg-surface-900/40 p-8 rounded-[2rem] border border-surface-200 dark:border-surface-700 transition-premium hover:border-primary-200 dark:hover:border-primary-800 shadow-sm relative group">
                   <div class="flex-1 w-full">
-                    <label class="block mb-2 font-semibold text-sm text-surface-600 dark:text-surface-400">{{ $t('teacher_exams.exercise_name') }}</label>
-                    <InputText v-model="ex.level_name" :placeholder="$t('teacher_exams.exercise_name_placeholder')" class="w-full font-medium" />
+                    <label class="block mb-2 text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_exams.exercise_name') }}</label>
+                    <InputText v-model="ex.level_name" :placeholder="$t('teacher_exams.exercise_name_placeholder')" class="w-full premium-input font-black text-lg tracking-tight" />
                   </div>
-                  <div class="w-full sm:w-48">
-                    <label class="block mb-2 font-semibold text-sm text-surface-600 dark:text-surface-400 text-center">{{ $t('teacher_exams.max_grade') }}</label>
-                    <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full" inputClass="w-full text-center font-bold text-primary-600 dark:text-primary-400 text-lg" showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
+                  <div class="w-full md:w-56">
+                    <label class="block mb-2 text-xs font-black uppercase tracking-widest text-surface-400 ml-1 text-center">{{ $t('teacher_exams.max_grade') }}</label>
+                    <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full" inputClass="w-full text-center font-black text-2xl text-primary-600 dark:text-primary-400 h-14 bg-transparent border-none focus:ring-0" showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
                   </div>
-                  <div class="flex items-center justify-center sm:pt-6">
-                    <Button icon="pi pi-trash" severity="danger" text rounded size="large" @click="removeExerciseRow(idx)" :disabled="examExercises.length <= 1" v-tooltip.top="$t('teacher_exams.remove')" />
+                  <div class="flex items-center justify-center">
+                    <Button icon="pi pi-trash" severity="danger" text raised rounded size="large" class="w-14 h-14 bg-white dark:bg-surface-800 shadow-sm transition-premium hover:shadow-red-500/20" @click="removeExerciseRow(idx)" :disabled="examExercises.length <= 1" />
                   </div>
                 </div>
               </div>
 
-              <div class="mt-6 p-6 rounded-2xl bg-gradient-to-br from-primary-900 to-primary-700 dark:from-primary-900 dark:to-primary-800 text-white flex flex-col md:flex-row justify-between items-center shadow-lg">
-                <div class="flex items-center gap-4">
-                  <div class="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                    <i class="pi pi-chart-line text-3xl text-white"></i>
+              <div class="mt-10 p-10 rounded-[3rem] gradient-card-primary text-white flex flex-col md:flex-row justify-between items-center shadow-2xl shadow-primary-500/30 overflow-hidden relative">
+                <div class="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full -ml-32 -mt-32 transition-transform group-hover:scale-150"></div>
+                
+                <div class="flex items-center gap-6 relative z-10">
+                  <div class="p-5 bg-white/20 backdrop-blur-md rounded-[2rem] border border-white/20">
+                    <i class="pi pi-chart-line text-4xl text-white"></i>
                   </div>
                   <div>
-                    <h4 class="text-white font-bold text-xl m-0">{{ $t('teacher_exams.overall_grade') }}</h4>
-                    <p class="text-sm text-primary-100 m-0 mt-1">{{ $t('teacher_exams.calculated_auto') }}</p>
+                    <h4 class="text-white font-black text-3xl tracking-tight m-0">{{ $t('teacher_exams.overall_grade') }}</h4>
+                    <p class="text-primary-100 font-bold uppercase text-[10px] tracking-[0.2em] m-0 mt-2 opacity-80">{{ $t('teacher_exams.calculated_auto') }}</p>
                   </div>
                 </div>
-                <div class="text-5xl font-bold text-white mt-4 md:mt-0 drop-shadow-md">
-                  {{ examMaxGrade }} <span class="text-xl font-medium text-primary-100">{{ $t('teacher_exams.points') }}</span>
+                <div class="flex items-baseline gap-3 mt-8 md:mt-0 relative z-10">
+                  <span class="text-7xl font-black text-white drop-shadow-2xl">{{ examMaxGrade }}</span>
+                  <span class="text-xl font-black text-primary-100 uppercase tracking-widest opacity-80">{{ $t('teacher_exams.points') }}</span>
                 </div>
               </div>
             </div>
 
             <!-- Submit Action -->
-            <div class="flex justify-end mt-6" v-if="selectedClassIds.length">
-              <Button :label="$t('teacher_exams.submit')" icon="pi pi-check-circle" size="large" :loading="saving" @click="saveExam" class="w-full md:w-auto px-8 py-4 text-lg font-bold rounded-xl shadow-md" />
+            <div class="flex justify-end mt-12" v-if="selectedClassIds.length">
+              <Button :label="$t('teacher_exams.submit')" icon="pi pi-check-circle" size="large" :loading="saving" raised class="w-full md:w-auto px-12 py-5 text-xl font-black uppercase tracking-widest rounded-[2rem] shadow-2xl shadow-primary-500/40" @click="saveExam" />
             </div>
           </div>
         </TabPanel>
 
         <TabPanel value="manage">
-          <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-sm p-5 md:p-6">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <h3 class="text-xl font-bold text-surface-800 dark:text-surface-100 m-0">{{ $t('teacher_exams.exams_list') }}</h3>
-              <div class="flex flex-wrap items-center gap-3">
-                <Select v-model="manageFilters.exam_type" :options="manageTypeOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.type')" class="w-full md:w-48" @change="loadExams" showClear />
-                <Select v-model="manageFilters.semester" :options="manageSemesterOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.trimester')" class="w-full md:w-48" @change="loadExams" showClear />
-                <Button icon="pi pi-refresh" rounded text @click="loadExams" />
+          <div class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2.5rem] shadow-sm p-8 animate-fade-in">
+            <div class="flex flex-wrap items-center justify-between gap-6 mb-8">
+              <h3 class="text-2xl font-black text-surface-900 dark:text-surface-0 tracking-tight m-0">{{ $t('teacher_exams.exams_list') }}</h3>
+              <div class="flex flex-wrap items-center gap-4">
+                <Select v-model="manageFilters.exam_type" :options="manageTypeOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.type')" class="w-full md:w-56 premium-select" @change="loadExams" showClear />
+                <Select v-model="manageFilters.semester" :options="manageSemesterOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.trimester')" class="w-full md:w-56 premium-select" @change="loadExams" showClear />
+                <Button icon="pi pi-refresh" rounded text raised class="bg-white dark:bg-surface-900 w-12 h-12" @click="loadExams" />
               </div>
             </div>
 
             <DataTable :value="exams" :loading="loadingExams" responsiveLayout="scroll" :paginator="true" :rows="10" 
+                       class="premium-table"
                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} exams">
               <template #empty>
-                <div class="text-center py-8">
-                  <i class="pi pi-search text-4xl text-surface-400 mb-3 block"></i>
-                  <p class="text-surface-500">{{ $t('teacher_exams.no_exams_found') }}</p>
+                <div class="text-center py-24 text-surface-400">
+                  <i class="pi pi-search text-6xl opacity-10 mb-6 block"></i>
+                  <p class="text-xl font-black tracking-tight">{{ $t('teacher_exams.no_exams_found') }}</p>
                 </div>
               </template>
-              <Column field="exam_type" :header="$t('teacher_exams.type')">
+              <Column field="exam_type" :header="$t('teacher_exams.type')" class="font-black uppercase text-xs tracking-widest">
                 <template #body="slotProps">
-                  <span class="font-bold">{{ $t(`teacher_class_detail.${slotProps.data.exam_type}`) }}</span>
+                  <span class="text-surface-900 dark:text-surface-0">{{ $t(`teacher_class_detail.${slotProps.data.exam_type}`) }}</span>
                 </template>
               </Column>
-              <Column field="subject.name" :header="$t('teacher_exams.subject')"></Column>
+              <Column field="subject.name" :header="$t('teacher_exams.subject')" class="font-bold"></Column>
               <Column field="semester" :header="$t('teacher_exams.trimester')">
                 <template #body="slotProps">
-                   {{ $t(`grade_analytics.trimester_${slotProps.data.semester.slice(-1)}`) }}
+                   <span class="px-3 py-1 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 text-[10px] font-black uppercase tracking-widest">
+                     {{ $t(`grade_analytics.trimester_${slotProps.data.semester.slice(-1)}`) }}
+                   </span>
                 </template>
               </Column>
               <Column field="max_grade" :header="$t('teacher_exams.max_grade')">
                 <template #body="slotProps">
-                  <Badge :value="slotProps.data.max_grade" severity="info" />
+                  <span class="text-xl font-black text-primary-600 dark:text-primary-400">{{ slotProps.data.max_grade }}</span>
                 </template>
               </Column>
               <Column :header="$t('common.actions')" class="text-center">
                 <template #body="slotProps">
                   <div class="flex items-center justify-center gap-2">
-                    <Button icon="pi pi-pencil" rounded text severity="success" @click="openEditDialog(slotProps.data)" />
-                    <Button icon="pi pi-trash" rounded text severity="danger" @click="confirmDelete(slotProps.data)" />
+                    <Button icon="pi pi-pencil" rounded text raised severity="success" class="bg-white dark:bg-surface-900" @click="openEditDialog(slotProps.data)" />
+                    <Button icon="pi pi-trash" rounded text raised severity="danger" class="bg-white dark:bg-surface-900" @click="confirmDelete(slotProps.data)" />
                   </div>
                 </template>
               </Column>
@@ -215,7 +226,7 @@
     </Tabs>
 
     <!-- Edit Exam Dialog -->
-    <Dialog v-model:visible="editDialogVisible" :header="$t('teacher_exams.edit_exam')" modal class="w-full max-w-4xl" :breakpoints="{'960px': '75vw', '641px': '100vw'}">
+    <Dialog v-model:visible="editDialogVisible" :header="$t('teacher_exams.edit_exam')" modal class="w-full max-w-4xl premium-dialog" :breakpoints="{'960px': '75vw', '641px': '100vw'}">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5 py-2">
         <div>
           <label class="block font-semibold text-surface-700 dark:text-surface-300 mb-2">{{ $t('teacher_exams.type') }} <span class="text-red-500">*</span></label>
@@ -553,6 +564,58 @@ const confirmDelete = (exam: any) => {
 </script>
 
 <style scoped>
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+:deep(.premium-tabs .p-tablist-tab-list) {
+  background: transparent;
+}
+
+:deep(.premium-tabs .p-tab) {
+  color: var(--p-surface-500);
+}
+
+:deep(.premium-tabs .p-tab-active) {
+  background: var(--p-primary-500) !important;
+  color: white !important;
+  box-shadow: 0 10px 15px -3px rgba(var(--p-primary-500-rgb), 0.3);
+}
+
+:deep(.premium-input), :deep(.premium-select) {
+  border-radius: 1rem !important;
+  border: 1px solid var(--p-surface-200);
+  background: var(--p-surface-0);
+  padding: 0.25rem;
+  transition: all 0.2s;
+}
+
+:deep(.dark .premium-input), :deep(.dark .premium-select) {
+  border-color: var(--p-surface-700);
+  background: var(--p-surface-800);
+}
+
+:deep(.premium-input:focus), :deep(.premium-select:focus) {
+  border-color: var(--p-primary-500);
+  box-shadow: 0 0 0 2px rgba(var(--p-primary-500-rgb), 0.1);
+}
+
+.premium-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05);
+}
+.dark .premium-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0,0,0,0.2);
+}
+
+.transition-premium {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 :deep(.p-checkbox.pointer-events-none) {
   pointer-events: none;
 }

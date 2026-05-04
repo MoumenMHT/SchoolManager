@@ -1,0 +1,101 @@
+/* Teacher Platform Shared Styles */
+
+/* Glassmorphism Effect */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-panel {
+    background: rgba(30, 41, 59, 0.7) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Sticky Column for Mobile Tables */
+.sticky-table-container {
+    overflow-x: auto;
+    position: relative;
+}
+
+.sticky-col {
+    position: sticky !important;
+    left: 0;
+    z-index: 20;
+    background-color: inherit;
+    clip-path: inset(0 -15px 0 0); /* Prevent shadow overlap */
+}
+
+.sticky-col-shadow {
+    box-shadow: 10px 0 15px -10px rgba(0, 0, 0, 0.1);
+}
+
+.dark .sticky-col-shadow {
+    box-shadow: 10px 0 15px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* Premium Shadows */
+.premium-shadow {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.premium-shadow-hover:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+}
+
+/* Smooth Transitions */
+.transition-premium {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modern Scrollbar */
+.modern-scroll::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+}
+
+.modern-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modern-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+.dark .modern-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Card Gradients */
+.gradient-card-blue {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.dark .gradient-card-blue {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(30, 58, 138, 0.4) 100%);
+}
+
+.gradient-card-green {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.dark .gradient-card-green {
+    background: linear-gradient(135deg, rgba(20, 83, 45, 0.2) 0%, rgba(20, 83, 45, 0.4) 100%);
+}
+
+.gradient-card-purple {
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+}
+
+.dark .gradient-card-purple {
+    background: linear-gradient(135deg, rgba(88, 28, 135, 0.2) 0%, rgba(88, 28, 135, 0.4) 100%);
+}
+
+.gradient-card-primary {
+    background: linear-gradient(135deg, var(--p-primary-500) 0%, var(--p-primary-700) 100%);
+}

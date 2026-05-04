@@ -589,13 +589,13 @@ const getSubjectColor = (index: number | string) => {
         scrollHeight="400px"
         size="small"
       >
-        <Column header="#" style="width: 50px">
+        <Column header="#" style="width: 50px" frozen>
           <template #body="{ index }">
             <span class="text-surface-500">{{ index + 1 }}</span>
           </template>
         </Column>
 
-        <Column header="Student">
+        <Column header="Student" frozen style="min-width: 150px">
           <template #body="{ data }">
             <div>
               <div class="font-medium">{{ data.student.first_name }} {{ data.student.last_name }}</div>

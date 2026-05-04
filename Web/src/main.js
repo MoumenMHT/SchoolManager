@@ -10,6 +10,7 @@ import i18n from './i18n/index.js';
 
 import '@/assets/tailwind.css';
 import '@/assets/styles.scss';
+import '@/assets/teacher-platform.css';
 
 const app = createApp(App);
 
