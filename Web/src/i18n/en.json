@@ -1020,6 +1020,10 @@
     "devoir": "Homework",
     "composition": "Composition",
     "quiz": "Quiz",
-    "exam": "Exam"
+    "exam": "Exam",
+    "average_label": "Class Average",
+    "filled_label": "Graded Students",
+    "points_short": "pt",
+    "cannot_exceed": "cannot exceed"
   }
 }

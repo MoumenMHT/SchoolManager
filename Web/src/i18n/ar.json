@@ -14,6 +14,7 @@
     "na": "غير متاح",
     "actions": "إجراءات",
     "view": "عرض",
+    "end": "نهاية",
     "error": "خطأ",
     "success": "نجاح",
     "sort_order": "ترتيب",
@@ -490,7 +491,11 @@
     "load_attendance_error": "فشل تحميل الحضور",
     "save_attendance_error": "فشل حفظ الحضور",
     "load_grades_error": "فشل تحميل الدرجات",
-    "save_grades_error": "فشل حفظ الدرجات"
+    "save_grades_error": "فشل حفظ الدرجات",
+    "teacher_fallback": "أستاذ",
+    "unknown_day": "غير معروف",
+    "subject_fallback": "مادة",
+    "no_sessions": "لا توجد حصص"
   },
   "classes": {
     "manage_classes": "إدارة الفصول",
@@ -817,7 +822,7 @@
     "col_rank": "#",
     "search_students": "بحث عن الطلاب...",
     "eval_continue": "التقييم المستمر",
-    "devoir_label": "واجب",
+    "devoir_label": "فرض  ",
     "composition_label": "اختبار",
     "unknown": "غير معروف",
     "prof_prefix": "الأستاذ",
@@ -942,7 +947,11 @@
     "select_subject": "اختر المادة",
     "coefficient": "المعامل",
     "weekly_hours": "الحجم الساعي (ساعات)",
-    "no_subjects_assigned": "لا توجد مواد معينة"
+    "no_subjects_assigned": "لا توجد مواد معينة",
+    "primary": "ابتدائي",
+    "middle": "متوسط",
+    "high": "ثانوي",
+    "college": "جامعي"
   },
   "cycles": {
     "primary": "الابتدائي",
@@ -998,7 +1007,8 @@
     "delete_success": "تم حذف الامتحان بنجاح",
     "delete_error": "فشل في حذف الامتحان",
     "update_success": "تم تحديث الامتحان بنجاح",
-    "no_exams_found": "لم يُعثر على امتحانات"
+    "no_exams_found": "لم يُعثر على امتحانات",
+    "page_report": "عرض {first} إلى {last} من {total} امتحان"
   },
   "teacher_class_detail": {
     "my_classes": "أقسامي",
@@ -1033,7 +1043,9 @@
     "total_col": "المجموع",
     "saved_badge": "تم الحفظ",
     "class_avg": "معدل القسم:",
+    "average_label": "معدل القسم",
     "filled_count": "تم الرصد:",
+    "filled_label": "عدد النقاط المرصودة",
     "save_grades": "حفظ النقاط",
     "warn_select_subject": "يرجى اختيار مادة",
     "attendance_saved": "تم حفظ الحضور",
@@ -1049,6 +1061,8 @@
     "devoir": "فرض",
     "composition": "اختبار",
     "quiz": "اختبار قصير",
-    "exam": "امتحان"
+    "exam": "امتحان",
+    "cannot_exceed": "لا يمكن أن يتجاوز",
+    "points_short": "ن"
   }
 }

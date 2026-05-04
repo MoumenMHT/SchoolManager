@@ -365,7 +365,7 @@ async function saveGrades() {
     for (const ex of exercises) {
       const entry = exGrades.find(e => e.exam_exercise_id === ex.id);
       if (entry && typeof ex.max_note === 'number' && entry.note > ex.max_note) {
-        toast.add({ severity: 'warn', summary: 'Invalid value', detail: `${student.first_name} ${student.last_name}: ${ex.level_name} cannot exceed ${ex.max_note}`, life: 4000 });
+        toast.add({ severity: 'warn', summary: t('common.validation_error'), detail: `${student.first_name} ${student.last_name}: ${ex.level_name} ${t('teacher_class_detail.cannot_exceed')} ${ex.max_note}`, life: 4000 });
         return;
       }
     }
@@ -444,7 +444,7 @@ onMounted(async () => {
       <div v-if="classData" class="flex flex-wrap gap-2 md:justify-end">
         <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
           <i class="pi pi-tag text-primary-500"></i>
-          <span class="text-sm font-black text-surface-700 dark:text-surface-200 uppercase tracking-tighter">{{ classData.level }}</span>
+          <span class="text-sm font-black text-surface-700 dark:text-surface-200 uppercase tracking-tighter">{{ t('levels.' + (classData.level?.toLowerCase() || 'default')) }}</span>
         </div>
         <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
           <i class="pi pi-users text-green-500"></i>
@@ -454,7 +454,7 @@ onMounted(async () => {
     </div>
 
     <!-- Session banner (shown when navigated from Today's Sessions) -->
-    <div v-if="sessionMode && sessionInfo" class="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-primary-600 to-primary-400 rounded-3xl shadow-xl shadow-primary-500/20 text-white animate-fade-in">
+    <div v-if="sessionMode && sessionInfo" class="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-primary-600 to-primary-400 dark:from-primary-700 dark:to-primary-900/60 rounded-3xl shadow-xl shadow-primary-500/20 text-white animate-fade-in border border-primary-500/20">
       <div class="bg-white/20 backdrop-blur-md rounded-2xl p-4">
         <i class="pi pi-clock text-2xl"></i>
       </div>
@@ -524,14 +524,14 @@ onMounted(async () => {
                   <template #value="slotProps">
                     <div v-if="slotProps.value" class="flex items-center gap-2">
                       <span class="font-black uppercase text-xs">{{ $t(`teacher_class_detail.${slotProps.value.exam_type}`) }}</span>
-                      <span class="px-2 py-0.5 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-500 text-[10px] font-bold">{{ slotProps.value.max_grade }} pt</span>
+                      <span class="px-2 py-0.5 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-500 text-[10px] font-bold">{{ slotProps.value.max_grade }} {{ $t('teacher_class_detail.points_short') }}</span>
                     </div>
                     <span v-else>{{ slotProps.placeholder }}</span>
                   </template>
                   <template #option="slotProps">
                     <div class="flex items-center justify-between w-full">
                       <span class="font-black uppercase text-xs">{{ $t(`teacher_class_detail.${slotProps.option.exam_type}`) }}</span>
-                      <span class="text-surface-400 text-[10px] font-bold">{{ slotProps.option.max_grade }} pts</span>
+                      <span class="text-surface-400 text-[10px] font-bold">{{ slotProps.option.max_grade }} {{ $t('teacher_class_detail.points_short') }}</span>
                     </div>
                   </template>
                 </Select>
@@ -665,23 +665,7 @@ onMounted(async () => {
   box-shadow: 0 10px 15px -3px rgba(var(--p-primary-500-rgb), 0.3);
 }
 
-:deep(.premium-input), :deep(.premium-select) {
-  border-radius: 1rem !important;
-  border: 1px solid var(--p-surface-200);
-  background: var(--p-surface-0);
-  padding: 0.25rem;
-  transition: all 0.2s;
-}
 
-:deep(.dark .premium-input), :deep(.dark .premium-select) {
-  border-color: var(--p-surface-700);
-  background: var(--p-surface-800);
-}
-
-:deep(.premium-input:focus), :deep(.premium-select:focus) {
-  border-color: var(--p-primary-500);
-  box-shadow: 0 0 0 2px rgba(var(--p-primary-500-rgb), 0.1);
-}
 
 .sticky-table-container::-webkit-scrollbar {
   height: 6px;
@@ -691,7 +675,7 @@ onMounted(async () => {
   background: rgba(0,0,0,0.1);
   border-radius: 10px;
 }
-.dark .sticky-table-container::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.05);
+.app-dark .sticky-table-container::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
 }
 </style>

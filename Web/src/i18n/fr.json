@@ -1030,6 +1030,10 @@
       "devoir": "Devoir",
       "composition": "Composition",
       "quiz": "Quiz",
-      "exam": "Examen"
+      "exam": "Examen",
+      "average_label": "Moyenne de la classe",
+      "filled_label": "Élèves notés",
+      "points_short": "pt",
+      "cannot_exceed": "ne peut pas dépasser"
     }
   }

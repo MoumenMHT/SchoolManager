@@ -138,7 +138,7 @@
                   </div>
                   <div class="w-full md:w-56">
                     <label class="block mb-2 text-xs font-black uppercase tracking-widest text-surface-400 ml-1 text-center">{{ $t('teacher_exams.max_grade') }}</label>
-                    <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full" inputClass="w-full text-center font-black text-2xl text-primary-600 dark:text-primary-400 h-14 bg-transparent border-none focus:ring-0" showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
+                    <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full premium-input" inputClass="w-full text-center font-black text-2xl text-primary-600 dark:text-primary-400 h-14 bg-transparent border-none focus:ring-0" showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
                   </div>
                   <div class="flex items-center justify-center">
                     <Button icon="pi pi-trash" severity="danger" text raised rounded size="large" class="w-14 h-14 bg-white dark:bg-surface-800 shadow-sm transition-premium hover:shadow-red-500/20" @click="removeExerciseRow(idx)" :disabled="examExercises.length <= 1" />
@@ -146,7 +146,7 @@
                 </div>
               </div>
 
-              <div class="mt-10 p-10 rounded-[3rem] gradient-card-primary text-white flex flex-col md:flex-row justify-between items-center shadow-2xl shadow-primary-500/30 overflow-hidden relative">
+              <div class="mt-10 p-10 rounded-[3rem] bg-gradient-to-br from-primary-600 to-primary-700 dark:from-primary-600/80 dark:to-primary-900/40 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl shadow-primary-500/30 overflow-hidden relative">
                 <div class="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full -ml-32 -mt-32 transition-transform group-hover:scale-150"></div>
                 
                 <div class="flex items-center gap-6 relative z-10">
@@ -177,16 +177,17 @@
             <div class="flex flex-wrap items-center justify-between gap-6 mb-8">
               <h3 class="text-2xl font-black text-surface-900 dark:text-surface-0 tracking-tight m-0">{{ $t('teacher_exams.exams_list') }}</h3>
               <div class="flex flex-wrap items-center gap-4">
+                <Select v-model="manageFilters.class_id" :options="myClasses" optionLabel="name" optionValue="id" :placeholder="$t('teacher_exams.step_classes')" class="w-full md:w-56 premium-select" @change="loadExams" showClear />
                 <Select v-model="manageFilters.exam_type" :options="manageTypeOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.type')" class="w-full md:w-56 premium-select" @change="loadExams" showClear />
                 <Select v-model="manageFilters.semester" :options="manageSemesterOptions" optionLabel="label" optionValue="value" :placeholder="$t('teacher_exams.trimester')" class="w-full md:w-56 premium-select" @change="loadExams" showClear />
-                <Button icon="pi pi-refresh" rounded text raised class="bg-white dark:bg-surface-900 w-12 h-12" @click="loadExams" />
+                <Button icon="pi pi-refresh" rounded text raised class="bg-white dark:bg-surface-800 w-12 h-12" @click="loadExams" />
               </div>
             </div>
 
             <DataTable :value="exams" :loading="loadingExams" responsiveLayout="scroll" :paginator="true" :rows="10" 
                        class="premium-table"
                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                       currentPageReportTemplate="Showing {first} to {last} of {totalRecords} exams">
+                       :currentPageReportTemplate="t('teacher_exams.page_report', { first: '{first}', last: '{last}', total: '{totalRecords}' })">
               <template #empty>
                 <div class="text-center py-24 text-surface-400">
                   <i class="pi pi-search text-6xl opacity-10 mb-6 block"></i>
@@ -199,6 +200,15 @@
                 </template>
               </Column>
               <Column field="subject.name" :header="$t('teacher_exams.subject')" class="font-bold"></Column>
+              <Column :header="$t('teacher_exams.step_classes')">
+                <template #body="slotProps">
+                  <div class="flex flex-wrap gap-1">
+                    <span v-for="cls in slotProps.data.classes" :key="cls.id" class="px-2 py-0.5 rounded bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 text-[10px] font-bold">
+                      {{ cls.name }}
+                    </span>
+                  </div>
+                </template>
+              </Column>
               <Column field="semester" :header="$t('teacher_exams.trimester')">
                 <template #body="slotProps">
                    <span class="px-3 py-1 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 text-[10px] font-black uppercase tracking-widest">
@@ -214,8 +224,8 @@
               <Column :header="$t('common.actions')" class="text-center">
                 <template #body="slotProps">
                   <div class="flex items-center justify-center gap-2">
-                    <Button icon="pi pi-pencil" rounded text raised severity="success" class="bg-white dark:bg-surface-900" @click="openEditDialog(slotProps.data)" />
-                    <Button icon="pi pi-trash" rounded text raised severity="danger" class="bg-white dark:bg-surface-900" @click="confirmDelete(slotProps.data)" />
+                    <Button icon="pi pi-pencil" rounded text raised severity="success" class="bg-white dark:bg-surface-800" @click="openEditDialog(slotProps.data)" />
+                    <Button icon="pi pi-trash" rounded text raised severity="danger" class="bg-white dark:bg-surface-800" @click="confirmDelete(slotProps.data)" />
                   </div>
                 </template>
               </Column>
@@ -230,11 +240,11 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5 py-2">
         <div>
           <label class="block font-semibold text-surface-700 dark:text-surface-300 mb-2">{{ $t('teacher_exams.type') }} <span class="text-red-500">*</span></label>
-          <Select v-model="editExamForm.exam_type" :options="examTypeOptions" optionLabel="label" optionValue="value" class="w-full" />
+          <Select v-model="editExamForm.exam_type" :options="examTypeOptions" optionLabel="label" optionValue="value" class="w-full premium-select" />
         </div>
         <div>
           <label class="block font-semibold text-surface-700 dark:text-surface-300 mb-2">{{ $t('teacher_exams.trimester') }} <span class="text-red-500">*</span></label>
-          <Select v-model="editExamForm.semester" :options="semesterOptions" optionLabel="label" optionValue="value" class="w-full" />
+          <Select v-model="editExamForm.semester" :options="semesterOptions" optionLabel="label" optionValue="value" class="w-full premium-select" />
         </div>
       </div>
 
@@ -247,10 +257,10 @@
           <div v-for="(ex, idx) in editExamForm.exercises" :key="idx" 
                class="flex flex-col sm:flex-row gap-4 items-center bg-surface-50 dark:bg-surface-900/50 p-4 rounded-xl border border-surface-200 dark:border-surface-700">
             <div class="flex-1 w-full">
-              <InputText v-model="ex.level_name" :placeholder="$t('teacher_exams.exercise_name_placeholder')" class="w-full" />
+              <InputText v-model="ex.level_name" :placeholder="$t('teacher_exams.exercise_name_placeholder')" class="w-full premium-input" />
             </div>
             <div class="w-full sm:w-40">
-              <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full" inputClass="text-center font-bold" />
+              <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full premium-input" inputClass="text-center font-bold bg-transparent border-none focus:ring-0" />
             </div>
             <Button icon="pi pi-trash" severity="danger" text rounded @click="removeEditExerciseRow(idx)" :disabled="editExamForm.exercises.length <= 1" />
           </div>
@@ -296,7 +306,8 @@ const loadingExams = ref(false);
 
 const manageFilters = ref({
   exam_type: null,
-  semester: null
+  semester: null,
+  class_id: null
 });
 
 // ─── Form State ────────────────────────────────────────────────────────────────
@@ -414,7 +425,8 @@ const loadExams = async () => {
     const results = await GradeService.getExams({ 
       teacher_id: teacherId.value,
       exam_type: manageFilters.value.exam_type || undefined,
-      semester: manageFilters.value.semester || undefined
+      semester: manageFilters.value.semester || undefined,
+      class_id: manageFilters.value.class_id || undefined
     });
     exams.value = results;
   } catch (err: any) {
@@ -587,28 +599,12 @@ const confirmDelete = (exam: any) => {
   box-shadow: 0 10px 15px -3px rgba(var(--p-primary-500-rgb), 0.3);
 }
 
-:deep(.premium-input), :deep(.premium-select) {
-  border-radius: 1rem !important;
-  border: 1px solid var(--p-surface-200);
-  background: var(--p-surface-0);
-  padding: 0.25rem;
-  transition: all 0.2s;
-}
 
-:deep(.dark .premium-input), :deep(.dark .premium-select) {
-  border-color: var(--p-surface-700);
-  background: var(--p-surface-800);
-}
-
-:deep(.premium-input:focus), :deep(.premium-select:focus) {
-  border-color: var(--p-primary-500);
-  box-shadow: 0 0 0 2px rgba(var(--p-primary-500-rgb), 0.1);
-}
 
 .premium-shadow {
   box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05);
 }
-.dark .premium-shadow {
+.app-dark .premium-shadow {
   box-shadow: 0 4px 20px -2px rgba(0,0,0,0.2);
 }
 

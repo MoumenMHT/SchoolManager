@@ -37,15 +37,15 @@ const teacherName = computed(() => {
   if (teacher.value) {
     return `${teacher.value.first_name} ${teacher.value.last_name}`;
   }
-  return currentUser.value?.username ?? 'Teacher';
+  return currentUser.value?.username ?? t('teacher_portal.teacher_fallback');
 });
 
 const levelColors: Record<string, string> = {
-  default: 'bg-blue-100 text-blue-800',
-  primary: 'bg-green-100 text-green-800',
-  middle: 'bg-yellow-100 text-yellow-800',
-  high: 'bg-purple-100 text-purple-800',
-  college: 'bg-red-100 text-red-800',
+  default: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-500/20',
+  primary: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300 border border-green-500/20',
+  middle: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300 border border-yellow-500/20',
+  high: 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-300 border border-purple-500/20',
+  college: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300 border border-red-500/20',
 };
 
 function getLevelColor(level: string) {
@@ -131,7 +131,7 @@ async function openSchedule() {
     const raw: any[] = (response.data as any)?.data ?? response.data ?? [];
     const grouped: Record<string, any[]> = {};
     for (const slot of raw) {
-      const day = slot.day ?? slot.assignment?.day ?? 'Unknown';
+      const day = slot.day ?? slot.assignment?.day ?? t('teacher_portal.unknown_day');
       const capitalDay = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
       if (!grouped[capitalDay]) grouped[capitalDay] = [];
       grouped[capitalDay].push(slot);
@@ -182,7 +182,7 @@ function formatTime(t: string) {
 }
 
 function getSubjectName(slot: any): string {
-  return slot.assignment?.subject?.name ?? slot.subject?.name ?? 'Subject';
+  return slot.assignment?.subject?.name ?? slot.subject?.name ?? t('teacher_portal.subject_fallback');
 }
 
 function getClassName(slot: any): string {
@@ -223,35 +223,35 @@ onMounted(() => {
 
     <!-- Stats row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-      <div class="gradient-card-blue rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1">
-        <div class="bg-white dark:bg-surface-800 text-blue-600 rounded-2xl p-4 shadow-sm">
+      <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 border border-blue-200/50 dark:border-blue-500/10">
+        <div class="bg-white/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
           <i class="pi pi-building text-3xl"></i>
         </div>
         <div>
-          <div class="text-4xl font-black text-blue-900 dark:text-blue-100">{{ classes.length }}</div>
-          <div class="text-blue-700/70 dark:text-blue-300/70 font-bold uppercase text-xs tracking-widest">{{ t('teacher_portal.classes') }}</div>
+          <div class="text-4xl font-black text-blue-900 dark:text-blue-100 leading-none mb-1">{{ classes.length }}</div>
+          <div class="text-blue-700/70 dark:text-blue-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('teacher_portal.classes') }}</div>
         </div>
       </div>
-      <div class="gradient-card-green rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1">
-        <div class="bg-white dark:bg-surface-800 text-green-600 rounded-2xl p-4 shadow-sm">
+      <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 border border-green-200/50 dark:border-green-500/10">
+        <div class="bg-white/80 dark:bg-green-500/10 text-green-600 dark:text-green-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
           <i class="pi pi-users text-3xl"></i>
         </div>
         <div>
-          <div class="text-4xl font-black text-green-900 dark:text-green-100">
+          <div class="text-4xl font-black text-green-900 dark:text-green-100 leading-none mb-1">
             {{ classes.reduce((s, c) => s + (c.students_count ?? 0), 0) }}
           </div>
-          <div class="text-green-700/70 dark:text-green-300/70 font-bold uppercase text-xs tracking-widest">{{ t('teacher_portal.total_students') }}</div>
+          <div class="text-green-700/70 dark:text-green-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('teacher_portal.total_students') }}</div>
         </div>
       </div>
-      <div class="gradient-card-purple rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 sm:col-span-2 lg:col-span-1">
-        <div class="bg-white dark:bg-surface-800 text-purple-600 rounded-2xl p-4 shadow-sm">
+      <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 sm:col-span-2 lg:col-span-1 border border-purple-200/50 dark:border-purple-500/10">
+        <div class="bg-white/80 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
           <i class="pi pi-book text-3xl"></i>
         </div>
         <div>
-          <div class="text-4xl font-black text-purple-900 dark:text-purple-100">
+          <div class="text-4xl font-black text-purple-900 dark:text-purple-100 leading-none mb-1">
             {{ [...new Set(classes.flatMap(c => (c.subjects ?? []).map((s: any) => s.id)))].length }}
           </div>
-          <div class="text-purple-700/70 dark:text-purple-300/70 font-bold uppercase text-xs tracking-widest">{{ t('teacher_portal.subjects_taught') }}</div>
+          <div class="text-purple-700/70 dark:text-purple-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('teacher_portal.subjects_taught') }}</div>
         </div>
       </div>
     </div>
@@ -265,7 +265,7 @@ onMounted(() => {
           </div>
           <div>
             <h2 class="text-2xl font-black text-surface-900 dark:text-surface-0">{{ t('teacher_portal.todays_sessions') }}</h2>
-            <p class="text-sm text-surface-500 font-medium">{{ todayDayName() }}</p>
+            <p class="text-sm text-surface-500 font-medium">{{ t('common.' + todayDayName().toLowerCase()) }}</p>
           </div>
         </div>
       </div>
@@ -283,7 +283,7 @@ onMounted(() => {
         <div
           v-for="slot in todaysSessions"
           :key="slot.id"
-          class="group flex flex-col justify-between bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-3xl p-6 min-w-[280px] max-w-[320px] shadow-sm hover:shadow-xl hover:border-primary-500/50 transition-premium cursor-pointer snap-start relative overflow-hidden"
+          class="group flex flex-col justify-between bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-3xl p-6 min-w-[280px] max-w-[320px] shadow-sm hover:shadow-xl hover:border-primary-500 transition-premium cursor-pointer snap-start relative overflow-hidden"
           @click="openSessionAttendance(slot)"
         >
           <div class="absolute top-0 right-0 w-24 h-24 bg-primary-500/5 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150"></div>
@@ -337,7 +337,7 @@ onMounted(() => {
         <div
           v-for="cls in classes"
           :key="cls.id"
-          class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2rem] shadow-sm hover:shadow-2xl transition-premium cursor-pointer group relative overflow-hidden"
+          class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2rem] shadow-sm hover:shadow-2xl transition-premium cursor-pointer group relative overflow-hidden hover:border-primary-500/50"
           @click="goToClass(cls)"
         >
           <!-- Background decoration -->
@@ -355,7 +355,7 @@ onMounted(() => {
                 </p>
               </div>
               <span class="text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-tighter shadow-sm" :class="getLevelColor(cls.level)">
-                {{ cls.level }}
+                {{ t('levels.' + (cls.level?.toLowerCase() || 'default')) }}
               </span>
             </div>
 
@@ -501,8 +501,8 @@ onMounted(() => {
   background: rgba(var(--p-primary-500-rgb), 0.1);
   border-radius: 10px;
 }
-.dark .modern-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+.app-dark .modern-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .animate-fade-in {
@@ -522,10 +522,5 @@ onMounted(() => {
 
 :deep(.premium-dialog .p-dialog-header) {
   padding: 2rem;
-  background: var(--p-surface-0);
-}
-
-:deep(.dark .premium-dialog .p-dialog-header) {
-  background: var(--p-surface-800);
 }
 </style>
