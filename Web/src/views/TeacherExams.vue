@@ -138,7 +138,7 @@
                   </div>
                   <div class="w-full md:w-56">
                     <label class="block mb-2 text-xs font-black uppercase tracking-widest text-surface-400 ml-1 text-center">{{ $t('teacher_exams.max_grade') }}</label>
-                    <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full premium-input" inputClass="w-full text-center font-black text-2xl text-primary-600 dark:text-primary-400 h-14 bg-transparent border-none focus:ring-0" showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
+                    <InputNumber v-model="ex.max_note" :min="1" :max="100" :minFractionDigits="0" :maxFractionDigits="2" :step="0.25" class="w-full premium-input" inputClass="w-full text-center font-black text-2xl text-primary-600 dark:text-primary-400 h-14 bg-transparent border-none focus:ring-0" showButtons buttonLayout="horizontal" incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
                   </div>
                   <div class="flex items-center justify-center">
                     <Button icon="pi pi-trash" severity="danger" text raised rounded size="large" class="w-14 h-14 bg-white dark:bg-surface-800 shadow-sm transition-premium hover:shadow-red-500/20" @click="removeExerciseRow(idx)" :disabled="examExercises.length <= 1" />
@@ -260,7 +260,7 @@
               <InputText v-model="ex.level_name" :placeholder="$t('teacher_exams.exercise_name_placeholder')" class="w-full premium-input" />
             </div>
             <div class="w-full sm:w-40">
-              <InputNumber v-model="ex.max_note" :min="1" :max="100" class="w-full premium-input" inputClass="text-center font-bold bg-transparent border-none focus:ring-0" />
+              <InputNumber v-model="ex.max_note" :min="1" :max="100" :minFractionDigits="0" :maxFractionDigits="2" :step="0.25" class="w-full premium-input" inputClass="text-center font-bold bg-transparent border-none focus:ring-0" />
             </div>
             <Button icon="pi pi-trash" severity="danger" text rounded @click="removeEditExerciseRow(idx)" :disabled="editExamForm.exercises.length <= 1" />
           </div>

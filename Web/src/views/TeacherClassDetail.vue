@@ -596,6 +596,8 @@ onMounted(async () => {
                           v-model="exerciseValues[student.id][ex.id]" 
                           @blur="clampExerciseValue(student.id, ex.id, ex.max_note)"
                           :min="0" :max="ex.max_note" :step="0.25"
+                          :minFractionDigits="0"
+                          :maxFractionDigits="2"
                           inputClass="w-20 text-center font-black text-lg bg-transparent border-none focus:ring-0 text-surface-700 dark:text-surface-200"
                           class="mx-auto"
                         />
