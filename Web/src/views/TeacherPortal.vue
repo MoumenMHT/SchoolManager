@@ -290,30 +290,7 @@ onMounted(() => {
               {{ slot.room }}
             </div>
           </div>
-          <div class="mt-3 pt-2 border-t border-surface-100 dark:border-surface-700">
-            <!-- Loading summaries -->
-            <span v-if="!(slot.id in sessionAttMap)" class="text-xs text-surface-400 dark:text-surface-500 flex items-center gap-1">
-              <i class="pi pi-spin pi-spinner text-[10px]"></i> {{ t('teacher_portal.checking') }}
-            </span>
-            <!-- Attendance already marked -->
-            <template v-else-if="sessionAttMap[slot.id].total > 0">
-              <div class="flex items-center gap-1 mb-1">
-                <span class="text-xs text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
-                  <i class="pi pi-check-circle text-[10px]"></i> {{ t('teacher_portal.attendance_marked') }}
-                </span>
-              </div>
-              <div class="flex gap-2 text-[10px]">
-                <span class="text-green-600 dark:text-green-400 font-medium">{{ sessionAttMap[slot.id].present }} {{ t('teacher_portal.present') }}</span>
-                <span v-if="sessionAttMap[slot.id].absent > 0" class="text-red-500 dark:text-red-400 font-medium">{{ sessionAttMap[slot.id].absent }} {{ t('teacher_portal.absent') }}</span>
-                <span v-if="sessionAttMap[slot.id].late > 0" class="text-amber-500 dark:text-amber-400 font-medium">{{ sessionAttMap[slot.id].late }} {{ t('teacher_portal.late') }}</span>
-              </div>
-            </template>
-            <!-- Not yet marked -->
-            <span v-else class="text-xs text-primary-600 dark:text-primary-400 font-medium flex items-center gap-1">
-              <i class="pi pi-check-circle text-[10px]"></i>
-              {{ t('teacher_portal.take_attendance') }}
-            </span>
-          </div>
+
         </div>
       </div>
     </div>

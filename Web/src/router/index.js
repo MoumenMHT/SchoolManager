@@ -268,8 +268,8 @@ router.beforeEach((to, from, next) => {
         // Enforce Subjects and Levels permission
         const allowedSubjectRoles = ['admin', 'secretariat', 'supervisor', 'primary_director', 'cem_director', 'lycee_director'];
         if ((to.path === '/subjects' || to.path === '/levels') && !allowedSubjectRoles.includes(userRole)) {
-             next(roleHome);
-             return;
+            next(roleHome);
+            return;
         }
 
         if (userRole === 'teacher') {

@@ -94,7 +94,6 @@ const model = computed(() => {
 
         sections.push({ label: t('nav.academic', 'Academic'), items: academicItems });
 
-
         peopleItems.push({ label: t('nav.students'), icon: 'pi pi-fw pi-graduation-cap', to: '/students' });
         peopleItems.push({ label: t('nav.parents'), icon: 'pi pi-fw pi-users', to: '/parents' });
         peopleItems.push({ label: t('nav.teachers'), icon: 'pi pi-fw pi-id-card', to: '/teachers' });
@@ -104,7 +103,6 @@ const model = computed(() => {
         }
 
         sections.push({ label: t('nav.people', 'People'), items: peopleItems });
-
 
         if (isAdmin.value) {
             const adminItems = [];
@@ -119,9 +117,7 @@ const model = computed(() => {
         if (isAdmin.value) {
             sections.push({
                 label: t('nav.finance', 'Finance'),
-                items: [
-                    { label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' }
-                ]
+                items: [{ label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' }]
             });
         }
     }

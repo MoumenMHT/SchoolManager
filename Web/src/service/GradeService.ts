@@ -260,6 +260,16 @@ class GradeService {
     return (response.data as any)?.data ?? response.data;
   }
 
+  async updateExam(id: number, data: Partial<CreateExamDTO>): Promise<Exam> {
+    const response = await ApiService.put<Exam>(`/exams/${id}`, data);
+    return (response.data as any)?.data ?? response.data;
+  }
+
+  async deleteExam(id: number): Promise<any> {
+    const response = await ApiService.delete(`/exams/${id}`);
+    return response.data;
+  }
+
   async getExamExerciseAverages(examId: number): Promise<ExerciseAverageRow[]> {
     const response = await ApiService.get<any>(`/exams/${examId}/exercise-averages`);
     const payload = response.data;

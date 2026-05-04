@@ -50,17 +50,17 @@ const sessionInfo = computed(() => {
   if (!sessionMode.value) return null;
   const subject = subjects.value.find((s: any) => s.id === sessionSubjectId.value);
   return {
-    subjectName: subject?.name ?? 'Session',
+    subjectName: subject?.name ?? t('teacher_class_detail.session'),
     date: sessionDate.value ?? attDateStr.value,
   };
 });
 
-const ATTENDANCE_OPTIONS = [
-  { label: 'Present', value: 'present', severity: 'success', icon: 'pi pi-check' },
-  { label: 'Absent', value: 'absent', severity: 'danger', icon: 'pi pi-times' },
-  { label: 'Late', value: 'late', severity: 'warn', icon: 'pi pi-clock' },
-  { label: 'Excused', value: 'excused', severity: 'info', icon: 'pi pi-info-circle' },
-];
+const ATTENDANCE_OPTIONS = computed(() => [
+  { label: t('common.present'), value: 'present', severity: 'success', icon: 'pi pi-check' },
+  { label: t('common.absent'), value: 'absent', severity: 'danger', icon: 'pi pi-times' },
+  { label: t('common.late'), value: 'late', severity: 'warn', icon: 'pi pi-clock' },
+  { label: t('common.excused'), value: 'excused', severity: 'info', icon: 'pi pi-info-circle' },
+]);
 
 // ─── Grades state ─────────────────────────────────────────
 const gradeSubjectId = ref<number | null>(null);
@@ -75,17 +75,17 @@ const existingGradeMap = ref<Map<number, GradeRecord>>(new Map());
 // Nested dictionary: exerciseValues.value[student_id][exercise_id] = input_string
 const exerciseValues = ref<Record<number, Record<number, number | null>>>({});
 
-const EXAM_TYPES = [
-  { label: 'Évaluation Continue', value: 'evaluation_continue' },
-  { label: 'Devoir', value: 'devoir' },
-  { label: 'Composition', value: 'composition' },
-];
+const EXAM_TYPES = computed(() => [
+  { label: t('grade_analytics.eval_continue'), value: 'evaluation_continue' },
+  { label: t('grade_analytics.devoir_label'), value: 'devoir' },
+  { label: t('grade_analytics.composition_label'), value: 'composition' },
+]);
 
-const SEMESTERS = [
-  { label: 'Trimester 1', value: 'Trimester 1' },
-  { label: 'Trimester 2', value: 'Trimester 2' },
-  { label: 'Trimester 3', value: 'Trimester 3' },
-];
+const SEMESTERS = computed(() => [
+  { label: t('grade_analytics.trimester_1'), value: 'Trimester 1' },
+  { label: t('grade_analytics.trimester_2'), value: 'Trimester 2' },
+  { label: t('grade_analytics.trimester_3'), value: 'Trimester 3' },
+]);
 
 function computeAcademicYear(): string {
   const now = new Date();
@@ -175,7 +175,7 @@ async function loadAttendance() {
 
 async function saveAttendance() {
   if (!attSubjectId.value) {
-    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a subject', life: 3000 });
+    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('teacher_class_detail.warn_select_subject'), life: 3000 });
     return;
   }
   attSaving.value = true;
@@ -190,7 +190,7 @@ async function saveAttendance() {
       reason: null,
     }));
     await AttendanceService.saveClassAttendance(entries, existingAttMap.value);
-    toast.add({ severity: 'success', summary: 'Saved', detail: 'Attendance saved', life: 3000 });
+    toast.add({ severity: 'success', summary: t('common.success'), detail: t('teacher_class_detail.attendance_saved'), life: 3000 });
     await loadAttendance();
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.save_attendance_error'), life: 3000 });
@@ -226,7 +226,7 @@ async function fetchExams() {
       gradeSelectedExam.value = availableExams.value[0];
     }
   } catch {
-    toast.add({ severity: 'error', summary: t('common.error'), detail: 'Failed to fetch exams', life: 3000 });
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_class_detail.fetch_exams_error'), life: 3000 });
   }
 }
 
@@ -317,13 +317,13 @@ function clampExerciseValue(studentId: number, exerciseId: number, maxNote: any)
     exerciseValues.value[studentId][exerciseId] = 0;
   } else if (!isNaN(max) && num > max) {
     exerciseValues.value[studentId][exerciseId] = max;
-    toast.add({ severity: 'warn', summary: 'Warning', detail: `Value cannot exceed ${max}`, life: 3000 });
+    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('teacher_class_detail.warn_max_exceeded', { max }), life: 3000 });
   }
 }
 
 async function saveGrades() {
   if (!gradeSelectedExam.value) {
-    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an exam first', life: 3000 });
+    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('teacher_class_detail.warn_select_exam'), life: 3000 });
     return;
   }
   const allGrades: any[] = [];
@@ -374,14 +374,14 @@ async function saveGrades() {
   }
 
   if (allGrades.length === 0) {
-    toast.add({ severity: 'info', summary: 'Nothing to save', detail: 'Enter at least one grade', life: 3000 });
+    toast.add({ severity: 'info', summary: t('teacher_class_detail.nothing_to_save'), detail: t('teacher_class_detail.enter_one_grade'), life: 3000 });
     return;
   }
 
   gradeSaving.value = true;
   try {
     await GradeService.bulkCreateGrades(allGrades);
-    toast.add({ severity: 'success', summary: 'Saved', detail: `${allGrades.length} student grade(s) saved`, life: 3000 });
+    toast.add({ severity: 'success', summary: t('common.success'), detail: t('teacher_class_detail.grades_saved_count', { count: allGrades.length }), life: 3000 });
     await loadGrades();
   } catch (err: any) {
     console.error('Save error:', err);
@@ -431,9 +431,9 @@ onMounted(async () => {
     <div class="flex items-center gap-3 mb-5">
       <Button icon="pi pi-arrow-left" text rounded @click="router.push({ name: 'teacher-portal' })" />
       <div>
-        <div class="text-xs text-surface-400 dark:text-surface-500 font-medium tracking-wide uppercase mb-0.5">My Classes</div>
+        <div class="text-xs text-surface-400 dark:text-surface-500 font-medium tracking-wide uppercase mb-0.5">{{ $t('teacher_class_detail.my_classes') }}</div>
         <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 leading-tight">
-          {{ classData?.name ?? 'Loading...' }}
+          {{ classData?.name ?? $t('teacher_class_detail.loading') }}
         </h1>
       </div>
     </div>
@@ -447,7 +447,7 @@ onMounted(async () => {
         <i class="pi pi-calendar text-xs"></i>{{ classData.academic_year }}
       </span>
       <span class="inline-flex items-center gap-1.5 text-sm bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 px-3 py-1 rounded-full">
-        <i class="pi pi-users text-xs"></i>{{ students.length }} students
+        <i class="pi pi-users text-xs"></i>{{ $t('teacher_class_detail.students_count', { count: students.length }) }}
       </span>
       <span v-for="s in subjects" :key="s.id" class="inline-flex items-center gap-1.5 text-sm bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full">
         <i class="pi pi-book text-xs"></i>{{ s.name }}
@@ -460,13 +460,13 @@ onMounted(async () => {
         <i class="pi pi-clock text-sm"></i>
       </div>
       <div>
-        <div class="text-xs text-primary-500 dark:text-primary-400 font-medium uppercase tracking-wide mb-0.5">Session</div>
+        <div class="text-xs text-primary-500 dark:text-primary-400 font-medium uppercase tracking-wide mb-0.5">{{ $t('teacher_class_detail.session') }}</div>
         <div class="text-sm font-semibold text-primary-800 dark:text-primary-200">
           {{ sessionInfo.subjectName }} &mdash; {{ sessionInfo.date }}
         </div>
       </div>
       <span class="ml-auto text-xs text-primary-500 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded-full">
-        Locked
+        {{ $t('teacher_class_detail.locked') }}
       </span>
     </div>
 
@@ -476,7 +476,7 @@ onMounted(async () => {
 
     <div v-else-if="!classData" class="text-center py-16 text-surface-400">
       <i class="pi pi-exclamation-triangle text-5xl mb-3"></i>
-      <p class="text-lg">Class not found.</p>
+      <p class="text-lg">{{ $t('teacher_class_detail.class_not_found') }}</p>
     </div>
 
     <Tabs v-else v-model:value="activeTab">
@@ -484,13 +484,13 @@ onMounted(async () => {
         <Tab v-if="false" value="0">
           <span class="flex items-center gap-2">
             <i class="pi pi-check-circle"></i>
-            <span>Attendance</span>
+            <span>{{ $t('teacher_class_detail.attendance_tab') }}</span>
           </span>
         </Tab>
         <Tab value="1">
           <span class="flex items-center gap-2">
             <i class="pi pi-star"></i>
-            <span>Grades</span>
+            <span>{{ $t('teacher_class_detail.grades_tab') }}</span>
           </span>
         </Tab>
       </TabList>
@@ -504,20 +504,20 @@ onMounted(async () => {
             <template v-if="sessionMode">
               <div class="flex flex-wrap gap-4 mb-5">
                 <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
+                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('common.time') }}</label>
                   <DatePicker v-model="attDateObj" show-icon :manual-input="false" class="w-full sm:w-48" :disabled="true" />
                 </div>
                 <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Subject</label>
+                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('teacher_class_detail.subject_label') }}</label>
                   <Select
                     v-model="attSubjectId" :options="subjects" option-label="name" option-value="id"
-                    placeholder="Select subject" class="w-full sm:w-56" :disabled="true"
+                    :placeholder="$t('teacher_class_detail.subject_placeholder')" class="w-full sm:w-56" :disabled="true"
                   />
                 </div>
                 <div class="flex items-end gap-2 flex-wrap">
-                  <Button label="All Present" icon="pi pi-check" severity="success" outlined size="small" @click="markAll('present')" />
-                  <Button label="All Absent"  icon="pi pi-times" severity="danger"  outlined size="small" @click="markAll('absent')" />
-                  <Button label="All Late"    icon="pi pi-clock" severity="warn"    outlined size="small" @click="markAll('late')" />
+                  <Button :label="$t('teacher_class_detail.all_present')" icon="pi pi-check" severity="success" outlined size="small" @click="markAll('present')" />
+                  <Button :label="$t('teacher_class_detail.all_absent')"  icon="pi pi-times" severity="danger"  outlined size="small" @click="markAll('absent')" />
+                  <Button :label="$t('teacher_class_detail.all_late')"    icon="pi pi-clock" severity="warn"    outlined size="small" @click="markAll('late')" />
                 </div>
               </div>
 
@@ -526,7 +526,7 @@ onMounted(async () => {
               </div>
               <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
                 <i class="pi pi-users text-4xl mb-2 block"></i>
-                <p>No students in this class.</p>
+                <p>{{ $t('teacher_class_detail.no_students') }}</p>
               </div>
               <template v-else>
                 <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
@@ -534,9 +534,9 @@ onMounted(async () => {
                     <thead>
                       <tr class="bg-surface-50 dark:bg-surface-800/80">
                         <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Status</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">{{ $t('teacher_class_detail.student_col') }}</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ $t('teacher_class_detail.code_col') }}</th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">{{ $t('teacher_class_detail.status_col') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -584,76 +584,76 @@ onMounted(async () => {
                   <div class="flex gap-4 text-sm">
                     <span class="flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
-                      <span class="text-surface-600 dark:text-surface-400">Present: <strong class="text-surface-800 dark:text-surface-200">{{ presentCount }}</strong></span>
+                      <span class="text-surface-600 dark:text-surface-400">{{ $t('teacher_class_detail.present_summary') }} <strong class="text-surface-800 dark:text-surface-200">{{ presentCount }}</strong></span>
                     </span>
                     <span class="flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
-                      <span class="text-surface-600 dark:text-surface-400">Absent: <strong class="text-surface-800 dark:text-surface-200">{{ absentCount }}</strong></span>
+                      <span class="text-surface-600 dark:text-surface-400">{{ $t('teacher_class_detail.absent_summary') }} <strong class="text-surface-800 dark:text-surface-200">{{ absentCount }}</strong></span>
                     </span>
                     <span class="flex items-center gap-1.5">
                       <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                      <span class="text-surface-600 dark:text-surface-400">Late: <strong class="text-surface-800 dark:text-surface-200">{{ lateCount }}</strong></span>
+                      <span class="text-surface-600 dark:text-surface-400">{{ $t('teacher_class_detail.late_summary') }} <strong class="text-surface-800 dark:text-surface-200">{{ lateCount }}</strong></span>
                     </span>
                   </div>
-                  <Button label="Save Attendance" icon="pi pi-save" :loading="attSaving" @click="saveAttendance" />
+                  <Button :label="$t('teacher_class_detail.save_attendance')" icon="pi pi-save" :loading="attSaving" @click="saveAttendance" />
                 </div>
               </template>
             </template>
 
             <!-- ── VIEW MODE: Read-only history ──────────────────── -->
-            <template v-else>
-              <!-- filters -->
-              <div class="flex flex-wrap gap-4 mb-5">
-                <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
-                  <DatePicker v-model="attDateObj" show-icon :manual-input="false" class="w-full sm:w-48" />
-                </div>
-                <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Subject</label>
-                  <Select
-                    v-model="attSubjectId" :options="subjects" option-label="name" option-value="id"
-                    placeholder="All subjects" class="w-full sm:w-56"
-                  />
-                </div>
-              </div>
-
-              <div v-if="attLoading" class="flex justify-center py-8">
-                <ProgressSpinner style="width: 36px; height: 36px" />
-              </div>
-
-              <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
-                <i class="pi pi-users text-4xl mb-2 block"></i>
-                <p>No students in this class.</p>
-              </div>
-
               <template v-else>
-                <!-- summary bar -->
-                <div class="flex flex-wrap gap-4 mb-4 p-3 bg-surface-50 dark:bg-surface-800/60 rounded-xl border border-surface-200 dark:border-surface-700 text-sm">
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
-                    <span class="text-surface-600 dark:text-surface-400">Present: <strong class="text-surface-800 dark:text-surface-200">{{ presentCount }}</strong></span>
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
-                    <span class="text-surface-600 dark:text-surface-400">Absent: <strong class="text-surface-800 dark:text-surface-200">{{ absentCount }}</strong></span>
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                    <span class="text-surface-600 dark:text-surface-400">Late: <strong class="text-surface-800 dark:text-surface-200">{{ lateCount }}</strong></span>
-                  </span>
-                  <span class="ml-auto text-xs text-surface-400 dark:text-surface-500 italic flex items-center gap-1">
-                    <i class="pi pi-eye text-[11px]"></i> Read-only — mark attendance from a session
-                  </span>
+                <!-- filters -->
+                <div class="flex flex-wrap gap-4 mb-5">
+                  <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('common.time') }}</label>
+                    <DatePicker v-model="attDateObj" show-icon :manual-input="false" class="w-full sm:w-48" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('teacher_class_detail.subject_label') }}</label>
+                    <Select
+                      v-model="attSubjectId" :options="subjects" option-label="name" option-value="id"
+                      :placeholder="$t('teacher_class_detail.all_subjects')" class="w-full sm:w-56"
+                    />
+                  </div>
                 </div>
+
+                <div v-if="attLoading" class="flex justify-center py-8">
+                  <ProgressSpinner style="width: 36px; height: 36px" />
+                </div>
+
+                <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
+                  <i class="pi pi-users text-4xl mb-2 block"></i>
+                  <p>{{ $t('teacher_class_detail.no_students') }}</p>
+                </div>
+
+                <template v-else>
+                  <!-- summary bar -->
+                  <div class="flex flex-wrap gap-4 mb-4 p-3 bg-surface-50 dark:bg-surface-800/60 rounded-xl border border-surface-200 dark:border-surface-700 text-sm">
+                    <span class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
+                      <span class="text-surface-600 dark:text-surface-400">{{ $t('teacher_class_detail.present_summary') }} <strong class="text-surface-800 dark:text-surface-200">{{ presentCount }}</strong></span>
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                      <span class="text-surface-600 dark:text-surface-400">{{ $t('teacher_class_detail.absent_summary') }} <strong class="text-surface-800 dark:text-surface-200">{{ absentCount }}</strong></span>
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                      <span class="text-surface-600 dark:text-surface-400">{{ $t('teacher_class_detail.late_summary') }} <strong class="text-surface-800 dark:text-surface-200">{{ lateCount }}</strong></span>
+                    </span>
+                    <span class="ml-auto text-xs text-surface-400 dark:text-surface-500 italic flex items-center gap-1">
+                      <i class="pi pi-eye text-[11px]"></i> {{ $t('teacher_class_detail.read_only_note') }}
+                    </span>
+                  </div>
 
                 <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
                   <table class="w-full text-sm">
                     <thead>
                       <tr class="bg-surface-50 dark:bg-surface-800/80">
                         <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Status</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">{{ $t('teacher_class_detail.student_col') }}</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ $t('teacher_class_detail.code_col') }}</th>
+                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">{{ $t('teacher_class_detail.status_col') }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -684,7 +684,7 @@ onMounted(async () => {
                                   'pi pi-info-circle':  attStatuses[student.id] === 'excused',
                                 }"
                               ></i>
-                              {{ attStatuses[student.id]?.charAt(0).toUpperCase() + attStatuses[student.id]?.slice(1) }}
+                              {{ $t(`common.${attStatuses[student.id]}`) }}
                             </span>
                           </template>
                           <span v-else class="text-surface-300 dark:text-surface-600 text-xs">—</span>
@@ -698,7 +698,7 @@ onMounted(async () => {
                 <div class="mt-4 flex items-center gap-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-xl text-sm">
                   <i class="pi pi-arrow-left text-primary-500 dark:text-primary-400"></i>
                   <span class="text-primary-700 dark:text-primary-300">
-                    To mark attendance, go back and tap a session from <strong>Today's Sessions</strong>.
+                    {{ $t('teacher_class_detail.nudge_session') }}
                   </span>
                 </div>
               </template>
@@ -713,29 +713,29 @@ onMounted(async () => {
             <!-- Controls -->
             <div class="flex flex-wrap gap-4 mb-5">
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Subject</label>
+                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('teacher_class_detail.subject_label') }}</label>
                 <Select
                   v-model="gradeSubjectId"
                   :options="subjects"
                   option-label="name"
                   option-value="id"
-                  placeholder="Select subject"
+                  :placeholder="$t('teacher_class_detail.subject_placeholder')"
                   class="w-full sm:w-56"
                   :disabled="subjects.length <= 1"
                 />
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Trimester</label>
+                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('teacher_class_detail.trimester_label') }}</label>
                 <Select v-model="gradeSemester" :options="SEMESTERS" option-label="label" option-value="value" class="w-full sm:w-44" />
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Exam</label>
-                <Select v-model="gradeSelectedExam" :options="availableExams" option-label="exam_type" class="w-full sm:w-56" placeholder="Select Exam">
+                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('teacher_class_detail.exam_label') }}</label>
+                <Select v-model="gradeSelectedExam" :options="availableExams" option-label="exam_type" class="w-full sm:w-56" :placeholder="$t('teacher_class_detail.exam_placeholder')">
                   <template #value="slotProps">
                     <div v-if="slotProps.value" class="flex items-center">
-                      <div>{{ slotProps.value.exam_type }} ({{ slotProps.value.max_grade }})</div>
+                      <div>{{ $t(`teacher_class_detail.${slotProps.value.exam_type}`) }} ({{ slotProps.value.max_grade }})</div>
                     </div>
                     <span v-else>
                       {{ slotProps.placeholder }}
@@ -743,7 +743,7 @@ onMounted(async () => {
                   </template>
                   <template #option="slotProps">
                     <div class="flex items-center gap-2">
-                      <span class="font-medium">{{ slotProps.option.exam_type }}</span>
+                      <span class="font-medium">{{ $t(`teacher_class_detail.${slotProps.option.exam_type}`) }}</span>
                       <span class="text-surface-400 text-sm">({{ slotProps.option.max_grade }})</span>
                     </div>
                   </template>
@@ -751,8 +751,8 @@ onMounted(async () => {
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Academic Year</label>
-                <InputText v-model="gradeAcademicYear" placeholder="e.g. 2024-2025" class="w-full sm:w-36" />
+                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ $t('teacher_class_detail.academic_year_label') }}</label>
+                <InputText v-model="gradeAcademicYear" :placeholder="$t('teacher_class_detail.academic_year_placeholder')" class="w-full sm:w-36" />
               </div>
             </div>
 
@@ -762,12 +762,12 @@ onMounted(async () => {
 
               <div v-if="!gradeSelectedExam" class="text-center py-10 text-surface-400">
                 <i class="pi pi-file text-4xl mb-2 block"></i>
-                <p>Please select an exam to grade.</p>
+                <p>{{ $t('teacher_class_detail.select_exam_to_grade') }}</p>
               </div>
 
               <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
                 <i class="pi pi-users text-4xl mb-2 block"></i>
-                <p>No students in this class.</p>
+                <p>{{ $t('teacher_class_detail.no_students') }}</p>
               </div>
 
               <template v-else>
@@ -776,15 +776,15 @@ onMounted(async () => {
                     <thead>
                       <tr class="bg-surface-50 dark:bg-surface-800/80">
                         <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">{{ $t('teacher_class_detail.student_col') }}</th>
+                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ $t('teacher_class_detail.code_col') }}</th>
                         
                         <th v-for="ex in gradeSelectedExam.exercises" :key="ex.id" class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
-                          {{ ex.level_name || 'Ex' }} <span class="text-surface-400 font-normal">/ {{ ex.max_note }}</span>
+                          {{ ex.level_name || $t('teacher_class_detail.exercise_fallback') }} <span class="text-surface-400 font-normal">/ {{ ex.max_note }}</span>
                         </th>
                         
                         <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 border-l border-surface-200 dark:border-surface-700">
-                          Total <span class="text-surface-400 font-normal">/ {{ gradeSelectedExam.max_grade }}</span>
+                          {{ $t('teacher_class_detail.total_col') }} <span class="text-surface-400 font-normal">/ {{ gradeSelectedExam.max_grade }}</span>
                         </th>
                       </tr>
                     </thead>
@@ -802,7 +802,7 @@ onMounted(async () => {
                           <span
                             v-if="existingGradeMap.has(Number(student.id))"
                             class="ml-2 text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full align-middle"
-                          >saved</span>
+                          >{{ $t('teacher_class_detail.saved_badge') }}</span>
                         </td>
                         <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
                         
@@ -832,16 +832,16 @@ onMounted(async () => {
                 <div class="flex flex-wrap items-center justify-between gap-4 mt-4">
                   <div class="flex gap-4 text-sm text-surface-500 dark:text-surface-400">
                     <span>
-                      Class avg:
+                      {{ $t('teacher_class_detail.class_avg') }}
                       <strong class="text-surface-800 dark:text-surface-200">
                         {{ gradeAverage !== null ? `${gradeAverage} / ${gradeSelectedExam.max_grade}` : '—' }}
                       </strong>
                     </span>
                     <span>
-                      Filled: <strong class="text-surface-800 dark:text-surface-200">{{ gradeFilled }} / {{ students.length }}</strong>
+                      {{ $t('teacher_class_detail.filled_count') }} <strong class="text-surface-800 dark:text-surface-200">{{ gradeFilled }} / {{ students.length }}</strong>
                     </span>
                   </div>
-                  <Button label="Save Grades" icon="pi pi-save" :loading="gradeSaving" @click="saveGrades" />
+                  <Button :label="$t('teacher_class_detail.save_grades')" icon="pi pi-save" :loading="gradeSaving" @click="saveGrades" />
                 </div>
               </template>
           </div>

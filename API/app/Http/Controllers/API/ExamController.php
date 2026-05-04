@@ -95,6 +95,10 @@ class ExamController extends Controller
             'max_grade'     => 'nullable|numeric|min:0',
             'class_ids'     => 'nullable|array',
             'class_ids.*'   => 'exists:classes,id',
+            'exercises'     => 'nullable|array',
+            'exercises.*.id' => 'nullable|exists:exam_exercises,id',
+            'exercises.*.level_name' => 'required_with:exercises|string|max:255',
+            'exercises.*.max_note'   => 'required_with:exercises|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -105,6 +109,33 @@ class ExamController extends Controller
 
         if ($request->has('class_ids')) {
             $exam->classes()->sync($request->class_ids ?? []);
+        }
+
+        if ($request->has('exercises')) {
+            $exerciseData = $request->input('exercises', []);
+            $keepIds = [];
+
+            foreach ($exerciseData as $ex) {
+                if (isset($ex['id'])) {
+                    // Update existing
+                    $exercise = $exam->exercises()->findOrFail($ex['id']);
+                    $exercise->update([
+                        'level_name' => $ex['level_name'],
+                        'max_note'   => $ex['max_note']
+                    ]);
+                    $keepIds[] = $ex['id'];
+                } else {
+                    // Create new
+                    $newEx = $exam->exercises()->create([
+                        'level_name' => $ex['level_name'],
+                        'max_note'   => $ex['max_note']
+                    ]);
+                    $keepIds[] = $newEx->id;
+                }
+            }
+
+            // Remove exercises that were deleted in the UI
+            $exam->exercises()->whereNotIn('id', $keepIds)->delete();
         }
 
         $exam->load(['subject', 'teacher', 'exercises', 'classes']);
