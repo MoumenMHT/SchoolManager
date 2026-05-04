@@ -165,6 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/subjects/{subject}/statistics', [GradeController::class, 'getSubjectStatistics']);
 
         // Exam management (new arch)
+        Route::get('/exams/types', [\App\Http\Controllers\API\ExamController::class, 'getTypes']);
         Route::get('/exams/{exam}/exercise-averages', [GradeController::class, 'getExamExerciseAverages']);
         Route::apiResource('exams', \App\Http\Controllers\API\ExamController::class);
         

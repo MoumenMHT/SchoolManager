@@ -322,7 +322,8 @@ const examExercises = ref<Array<{ level_name: string; max_note: number }>>([
 
 const examTypeOptions = computed(() => [
   { label: t('grade_analytics.eval_continue'), value: 'evaluation_continue' },
-  { label: t('grade_analytics.devoir_label'), value: 'devoir' },
+  { label: t('grade_analytics.devoir_1_label'), value: 'devoir_1' },
+  { label: t('grade_analytics.devoir_2_label'), value: 'devoir_2' },
   { label: t('grade_analytics.composition_label'), value: 'composition' }
 ]);
 

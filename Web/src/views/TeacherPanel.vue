@@ -71,7 +71,8 @@ const loadingExams = ref(false);
 
 const examTypeOptions = [
   { label: 'Évaluation Continue', value: 'evaluation_continue' },
-  { label: 'Devoir', value: 'devoir' },
+  { label: 'Devoir 1', value: 'devoir_1' },
+  { label: 'Devoir 2', value: 'devoir_2' },
   { label: 'Composition', value: 'composition' },
 ];
 

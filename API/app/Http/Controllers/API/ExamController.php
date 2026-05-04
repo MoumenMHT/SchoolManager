@@ -28,6 +28,32 @@ class ExamController extends Controller
         return response()->json(['success' => true, 'data' => $query->orderByDesc('created_at')->get()]);
     }
 
+    /** GET /api/exams/types */
+    public function getTypes(Request $request)
+    {
+        $query = Exam::query();
+
+        if ($request->filled('semester') && $request->input('semester') !== 'all') {
+            $query->where('semester', $request->input('semester'));
+        }
+        if ($request->filled('academic_year') && $request->input('academic_year') !== 'all') {
+            $query->where('academic_year', $request->input('academic_year'));
+        }
+        if ($request->filled('class_id')) {
+            $query->whereHas('classes', fn($q) => $q->where('classes.id', $request->integer('class_id')));
+        }
+        if ($request->filled('student_id')) {
+            $student = \App\Models\Student::find($request->integer('student_id'));
+            if ($student && $student->class_id) {
+                $query->whereHas('classes', fn($q) => $q->where('classes.id', $student->class_id));
+            }
+        }
+
+        $types = $query->distinct()->pluck('exam_type');
+
+        return response()->json(['success' => true, 'data' => $types]);
+    }
+
     /** POST /api/exams */
     public function store(Request $request)
     {

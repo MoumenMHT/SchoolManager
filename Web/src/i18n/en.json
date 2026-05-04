@@ -687,7 +687,8 @@
     "col_subject_matter": "Subjects",
     "col_coef": "Coef.",
     "col_cc": "Continuous Eval. /20",
-    "col_devoir": "Homework /20",
+    "col_devoir_1": "Homework 1 /20",
+    "col_devoir_2": "Homework 2 /20",
     "col_composition": "Exam /40",
     "col_avg": "Avg. /20",
     "col_weighted": "Weighted Total",
@@ -768,7 +769,11 @@
     "avg_note": "Average Note",
     "easy": "Easy",
     "medium": "Medium",
-    "hard": "Hard"
+    "hard": "Hard",
+    "eval_continue": "Evaluation Continue",
+    "devoir_1_label": "Homework 1",
+    "devoir_2_label": "Homework 2",
+    "composition_label": "Composition"
   },
   "subject_management": {
     "title": "Manage Subjects",
@@ -1017,7 +1022,8 @@
     "academic_year_placeholder": "e.g. 2024-2025",
     "exercise_fallback": "Ex",
     "evaluation_continue": "Evaluation Continue",
-    "devoir": "Homework",
+    "devoir_1": "Homework 1",
+    "devoir_2": "Homework 2",
     "composition": "Composition",
     "quiz": "Quiz",
     "exam": "Exam",

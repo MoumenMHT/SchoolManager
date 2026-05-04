@@ -280,6 +280,16 @@ class GradeService {
     return [];
   }
 
+  async getExamTypes(params?: {
+    semester?: string;
+    academic_year?: string;
+    class_id?: number;
+    student_id?: number;
+  }): Promise<string[]> {
+    const response = await ApiService.get<string[]>('/exams/types', params);
+    return response.data ?? [];
+  }
+
   async getSubjectExerciseAverages(params: {
     academic_year: string;
     subject_id?: number;

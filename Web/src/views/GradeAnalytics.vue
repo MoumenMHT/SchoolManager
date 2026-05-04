@@ -50,6 +50,32 @@ const selectedStudentInfo = computed(() => {
   return allStudents.value.find(s => s.id === selectedStudentId.value) || null;
 });
 
+const bulletinTypeColumns = computed(() => {
+  const subjects = studentReportCardData.value?.data?.subjects || [];
+  if (subjects.length === 0) return [];
+  
+  const ignoredKeys = ['subject', 'teacher', 'coefficient', 'average', 'weighted_average', 'rank', 'appreciation'];
+  const allKeys = new Set<string>();
+  
+  subjects.forEach((sub: any) => {
+    Object.keys(sub).forEach(key => {
+      if (!ignoredKeys.includes(key) && sub[key] !== undefined && sub[key] !== null) {
+        allKeys.add(key);
+      }
+    });
+  });
+  
+  const order = ['evaluation_continue', 'devoir_1', 'devoir_2', 'composition'];
+  return Array.from(allKeys).sort((a, b) => {
+    const idxA = order.indexOf(a);
+    const idxB = order.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+});
+
 const studentAverage = computed(() => {
   if (studentReportCardData.value?.data?.overall_average !== undefined) {
     return round2(Number(studentReportCardData.value.data.overall_average));
@@ -232,9 +258,7 @@ const subjectStudentBreakdown = computed(() => {
     student_name: string;
     class_id: number | null;
     class_name: string;
-    cc: number[];
-    devoir: number[];
-    composition: number[];
+    typeGrades: Record<string, number[]>;
     allNorms: number[];
   }
 
@@ -248,33 +272,37 @@ const subjectStudentBreakdown = computed(() => {
         student_name: g.student_name,
         class_id: g.class_id,
         class_name: g.class_name,
-        cc: [],
-        devoir: [],
-        composition: [],
+        typeGrades: {},
         allNorms: []
       });
     }
     const entry = map.get(sid)!;
     const norm = normalizedGrade(g);
     entry.allNorms.push(norm);
+    
     const et = examType(g);
-    if (et === 'evaluation_continue') entry.cc.push(norm);
-    else if (et === 'devoir') entry.devoir.push(norm);
-    else if (et === 'composition') entry.composition.push(norm);
+    if (!entry.typeGrades[et]) entry.typeGrades[et] = [];
+    entry.typeGrades[et].push(norm);
   });
 
   const avg = (arr: number[]) => arr.length ? round2(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
 
-  return Array.from(map.values()).map(e => ({
-    student_name: e.student_name,
-    class_name: e.class_name,
-    class_id: e.class_id,
-    cc: avg(e.cc),
-    devoir: avg(e.devoir),
-    composition: avg(e.composition),
-    average: avg(e.allNorms),
-    threshold: getClassFailThreshold(e.class_id)
-  })).sort((a, b) => (a.average ?? 99) - (b.average ?? 99));
+  return Array.from(map.values()).map(e => {
+    const row: any = {
+      student_name: e.student_name,
+      class_name: e.class_name,
+      class_id: e.class_id,
+      average: avg(e.allNorms),
+      threshold: getClassFailThreshold(e.class_id)
+    };
+    
+    // Add dynamic averages for each type
+    Object.keys(e.typeGrades).forEach(type => {
+      row[type] = avg(e.typeGrades[type]);
+    });
+    
+    return row;
+  }).sort((a, b) => (a.average ?? 99) - (b.average ?? 99));
 });
 
 const teacherDistributionChartData = computed(() => {
@@ -407,6 +435,28 @@ const selectedSubjectId = ref<number | null>(null);
 const selectedTeacherId = ref<number | null>(null);
 const selectedStudentId = ref<number | null>(null);
 
+const examTypes = ref<string[]>([]);
+
+const loadExamTypes = async () => {
+  try {
+    const types = await GradeService.getExamTypes({
+      semester: selectedSemester.value,
+      academic_year: selectedAcademicYear.value,
+      class_id: selectedClassId.value || undefined,
+      student_id: selectedStudentId.value || undefined
+    });
+    examTypes.value = types;
+    
+    // Reset selected exam type if it's no longer available in the new list
+    if (selectedExamType.value !== 'all' && !types.includes(selectedExamType.value)) {
+      selectedExamType.value = 'all';
+    }
+  } catch (err: any) {
+    console.error('Failed to load exam types', err);
+    examTypes.value = [];
+  }
+};
+
 const selectedTeacherForChart = ref<number | null>(null);
 const selectedSubjectForChart = ref<number | null>(null);
 
@@ -417,12 +467,46 @@ const semesterOptions = computed(() => [
   { label: t('grade_analytics.trimester_3'), value: 'Trimester 3' }
 ]);
 
-const examTypeOptions = computed(() => [
-  { label: t('grade_analytics.all_exam_types'), value: 'all' },
-  { label: t('grade_analytics.eval_continue'), value: 'evaluation_continue' },
-  { label: t('grade_analytics.devoir_label'), value: 'devoir' },
-  { label: t('grade_analytics.composition_label'), value: 'composition' }
-]);
+const examTypeOptions = computed(() => {
+  const options = [
+    { label: t('grade_analytics.all_exam_types'), value: 'all' }
+  ];
+
+  // Use only dynamic types from DB
+  const allTypes = [...new Set(examTypes.value)];
+
+  allTypes.forEach(type => {
+    // Use the formatExamType helper we created earlier
+    const label = formatExamType(type);
+    options.push({ label, value: type });
+  });
+
+  return options;
+});
+
+const formatExamType = (type: string): string => {
+  if (!type) return '';
+  if (type === 'evaluation_continue') return t('grade_analytics.eval_continue');
+  if (type === 'devoir_1') return t('grade_analytics.devoir_1_label');
+  if (type === 'devoir_2') return t('grade_analytics.devoir_2_label');
+  if (type === 'composition') return t('grade_analytics.composition_label');
+  
+  const labelKey = `grade_analytics.${type}_label`;
+  const fallbackLabelKey = `grade_analytics.${type}`;
+  const translated = t(labelKey);
+  if (translated !== labelKey) return translated;
+  const altTranslated = t(fallbackLabelKey);
+  if (altTranslated !== fallbackLabelKey) return altTranslated;
+  
+  return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const formatExamTypeHeader = (type: string): string => {
+  const headerKey = `grade_analytics.col_${type}`;
+  const translated = t(headerKey);
+  if (translated !== headerKey) return translated;
+  return formatExamType(type);
+};
 
 const getCurrentAcademicYear = (): string => {
   const now = new Date();
@@ -906,9 +990,7 @@ const loadStudentReportCard = async () => {
         teacher: any;
         coefficient: number;
         sumAvg: number;       // sum of per-trimester subject averages
-        cc: number[];
-        devoir: number[];
-        composition: number[];
+        typeGrades: Record<string, number[]>;
       }>();
 
       trimesterPayloads.forEach(payload => {
@@ -922,21 +1004,22 @@ const loadStudentReportCard = async () => {
               teacher: sub.teacher,
               coefficient: Number(sub.coefficient) || 1,
               sumAvg: 0,
-              cc: [],
-              devoir: [],
-              composition: [],
+              typeGrades: {},
             });
           }
 
           const entry = subjectMap.get(id)!;
           // Always add to the sum; missing trimesters count as 0 (handled by dividing by 3)
           entry.sumAvg += Number(sub.average || 0);
-          if (sub.evaluation_continue !== '-' && sub.evaluation_continue !== null)
-            entry.cc.push(Number(sub.evaluation_continue));
-          if (sub.devoir !== '-' && sub.devoir !== null)
-            entry.devoir.push(Number(sub.devoir));
-          if (sub.composition !== '-' && sub.composition !== null)
-            entry.composition.push(Number(sub.composition));
+          
+          // Map all keys except subject, teacher, coefficient, average, weighted_average, etc.
+          const ignoredKeys = ['subject', 'teacher', 'coefficient', 'average', 'weighted_average', 'rank', 'appreciation'];
+          Object.keys(sub).forEach(key => {
+            if (!ignoredKeys.includes(key) && sub[key] !== '-' && sub[key] !== null) {
+              if (!entry.typeGrades[key]) entry.typeGrades[key] = [];
+              entry.typeGrades[key].push(Number(sub[key]));
+            }
+          });
         });
       });
 
@@ -945,16 +1028,20 @@ const loadStudentReportCard = async () => {
         const annualAvg = Math.round((entry.sumAvg / 3) * 100) / 100;
         const avg = (arr: number[]) =>
           arr.length ? +(arr.reduce((a, b) => a + b, 0) / 3).toFixed(2) : '-';
-        return {
+          
+        const subRow: any = {
           subject: entry.subject,
           teacher: entry.teacher,
           coefficient: entry.coefficient,
-          evaluation_continue: avg(entry.cc),
-          devoir: avg(entry.devoir),
-          composition: avg(entry.composition),
           average: annualAvg,
           weighted_average: Math.round(annualAvg * entry.coefficient * 100) / 100,
         };
+        
+        Object.keys(entry.typeGrades).forEach(key => {
+          subRow[key] = avg(entry.typeGrades[key]);
+        });
+        
+        return subRow;
       });
 
       // Overall annual average = sum of the 3 trimester overalls / 3
@@ -1063,10 +1150,22 @@ watch([selectedTeacherForChart, selectedSubjectForChart], async () => {
   await loadChartDrilldowns();
 });
 
+watch(
+  [selectedSemester, selectedAcademicYear, selectedClassId, selectedStudentId],
+  () => {
+    loadExamTypes();
+  }
+);
+
 onMounted(async () => {
+  loading.value = true;
   selectedAcademicYear.value = getCurrentAcademicYear();
-  await loadMetadata();
+  await Promise.all([
+    loadMetadata(),
+    loadExamTypes()
+  ]);
   await loadAnalytics();
+  loading.value = false;
 });
 </script>
 
@@ -1222,7 +1321,7 @@ onMounted(async () => {
             <Column field="subject_name" :header="$t('grade_analytics.col_subject')" sortable></Column>
             <Column :header="$t('grade_analytics.col_exam_type')" sortable>
               <template #body="{ data }">
-                <span class="capitalize">{{ data.exam?.exam_type ?? data.exam_type }}</span>
+                <span class="font-medium text-surface-700">{{ formatExamType(data.exam?.exam_type ?? data.exam_type) }}</span>
               </template>
             </Column>
             <Column field="teacher_name" :header="$t('grade_analytics.col_teacher')" sortable></Column>
@@ -1404,9 +1503,10 @@ onMounted(async () => {
                 <tr>
                   <th class="bulletin-th text-left" style="width: 25%;">{{ $t('grade_analytics.col_subject_matter') }}</th>
                   <th class="bulletin-th" style="width: 7%;">{{ $t('grade_analytics.col_coef') }}</th>
-                  <th class="bulletin-th">{{ $t('grade_analytics.col_cc') }}</th>
-                  <th class="bulletin-th">{{ $t('grade_analytics.col_devoir') }}</th>
-                  <th class="bulletin-th">{{ $t('grade_analytics.col_composition') }}</th>
+                  <!-- Dynamic Exam Type Headers -->
+                  <th v-for="type in bulletinTypeColumns" :key="type" class="bulletin-th">
+                    {{ formatExamTypeHeader(type) }}
+                  </th>
                   <th class="bulletin-th bulletin-avg-th">{{ $t('grade_analytics.col_avg') }}</th>
                   <th class="bulletin-th bulletin-total-header">{{ $t('grade_analytics.col_weighted') }}</th>
                 </tr>
@@ -1418,17 +1518,16 @@ onMounted(async () => {
                     <div class="text-xs text-muted-color mt-1" v-if="sub.teacher">{{ $t('grade_analytics.prof_prefix') }} {{ sub.teacher?.last_name }}</div>
                   </td>
                   <td class="bulletin-td font-bold">{{ sub.coefficient }}</td>
-                  <!-- CC /20 -->
-                  <td class="bulletin-td" :class="{ 'bulletin-grade-fail': isFailing(sub.evaluation_continue) }">
-                    {{ sub.evaluation_continue }}
-                  </td>
-                  <!-- Devoir /20 -->
-                  <td class="bulletin-td" :class="{ 'bulletin-grade-fail': isFailing(sub.devoir) }">
-                    {{ sub.devoir }}
-                  </td>
-                  <!-- Composition /40 displayed as /40 raw -->
-                  <td class="bulletin-td" :class="{ 'bulletin-grade-fail': sub.composition !== '-' && Number(sub.composition) * 2 < bulletinFailThreshold * 2 }">
-                    {{ sub.composition !== '-' ? (Number(sub.composition) * 2).toFixed(2) : '-' }}
+                  
+                  <!-- Dynamic Exam Type Grades -->
+                  <td v-for="type in bulletinTypeColumns" :key="type" class="bulletin-td" 
+                      :class="{ 'bulletin-grade-fail': type === 'composition' ? (sub[type] !== '-' && Number(sub[type]) * 2 < bulletinFailThreshold * 2) : isFailing(sub[type]) }">
+                    <template v-if="type === 'composition'">
+                      {{ sub[type] !== '-' ? (Number(sub[type]) * 2).toFixed(2) : '-' }}
+                    </template>
+                    <template v-else>
+                      {{ sub[type] }}
+                    </template>
                   </td>
                   <!-- Average /20 -->
                   <td class="bulletin-td font-bold bulletin-avg-td" :class="{ 'bulletin-grade-fail': isFailing(sub.average) }">
@@ -1993,24 +2092,17 @@ onMounted(async () => {
               </template>
             </Column>
             <Column field="class_name" :header="$t('grade_analytics.class')" sortable />
-            <Column field="cc" :header="$t('grade_analytics.col_cc')" sortable>
+            <!-- Dynamic Exam Type Columns -->
+            <Column 
+              v-for="type in examTypes" 
+              :key="type" 
+              :field="type" 
+              :header="formatExamTypeHeader(type)" 
+              sortable
+            >
               <template #body="{ data }">
-                <span :class="{ 'text-rose-500': data.cc !== null && data.cc < data.threshold }">
-                  {{ data.cc !== null ? data.cc : '—' }}
-                </span>
-              </template>
-            </Column>
-            <Column field="devoir" :header="$t('grade_analytics.col_devoir')" sortable>
-              <template #body="{ data }">
-                <span :class="{ 'text-rose-500': data.devoir !== null && data.devoir < data.threshold }">
-                  {{ data.devoir !== null ? data.devoir : '—' }}
-                </span>
-              </template>
-            </Column>
-            <Column field="composition" :header="$t('grade_analytics.col_composition')" sortable>
-              <template #body="{ data }">
-                <span :class="{ 'text-rose-500': data.composition !== null && data.composition < data.threshold }">
-                  {{ data.composition !== null ? data.composition : '—' }}
+                <span :class="{ 'text-rose-500': data[type] !== null && data[type] < data.threshold }">
+                  {{ data[type] !== null ? data[type] : '—' }}
                 </span>
               </template>
             </Column>
