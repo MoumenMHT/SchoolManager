@@ -928,7 +928,7 @@
       "teacher_weekly_target_reached": "L'objectif hebdomadaire de l'enseignant est atteint."
     },
     "cycles": {
-      "primary": "Primaire",
+      "primaire": "Primaire",
       "cem": "CEM",
       "lycee": "Lycée"
     },

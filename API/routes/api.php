@@ -35,8 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     
-    // Pure Admin Routes
-    Route::middleware('role:admin')->group(function () {
+    // Admin and Secretariat routes for User Management
+    Route::middleware('role:admin,secretariat')->group(function () {
         Route::post('/register', [AuthController::class, 'register']);
         Route::get('/users/with-profile', [UserController::class, 'withProfile']);
         Route::put('/users/{id}/credentials', [UserController::class, 'updateCredentials']);

@@ -286,7 +286,7 @@ router.beforeEach((to, from, next) => {
             }
         } else if (userRole === 'secretariat') {
             // General Secretariat can access parent, teacher, class, student management + dashboard.
-            const allowedPaths = ['/', '/parents', '/teachers', '/classes', '/subjects', '/levels', '/students'];
+            const allowedPaths = ['/', '/parents', '/teachers', '/classes', '/subjects', '/levels', '/students', '/user-management'];
             if (!allowedPaths.includes(to.path) && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
                 next('/');
                 return;

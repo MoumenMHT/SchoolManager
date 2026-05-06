@@ -685,11 +685,11 @@
     "year": "السنة",
     "unfilled_items": "عناصر غير ممتلئة",
     "assignment": "التعيين",
-    "class": "الفصل",
+    "class": "القسم",
     "needed": "مطلوب",
     "placed": "تم وضع",
     "reason": "السبب",
-    "adjust_manually": "ضبط يدوي في الفصول",
+    "adjust_manually": "ضبط يدوي في الاقسام",
     "download_json": "تحميل JSON",
     "recheck_problems": "إعادة فحص المشاكل",
     "no_problems": "لم يتم العثور على مشاكل."
@@ -955,7 +955,7 @@
     "college": "جامعي"
   },
   "cycles": {
-    "primary": "الابتدائي",
+    "primaire": "الابتدائي",
     "cem": "المتوسط",
     "lycee": "الثانوي"
   },

@@ -97,6 +97,8 @@ const model = computed(() => {
         peopleItems.push({ label: t('nav.students'), icon: 'pi pi-fw pi-graduation-cap', to: '/students' });
         peopleItems.push({ label: t('nav.parents'), icon: 'pi pi-fw pi-users', to: '/parents' });
         peopleItems.push({ label: t('nav.teachers'), icon: 'pi pi-fw pi-id-card', to: '/teachers' });
+        peopleItems.push({ label: t('nav.user_management', 'User Management'), icon: 'pi pi-fw pi-key', to: '/user-management' });
+
 
         if (isAdmin.value || isDirector.value) {
             peopleItems.push({ label: t('nav.supervisors'), icon: 'pi pi-fw pi-eye', to: '/supervisors' });
@@ -109,7 +111,6 @@ const model = computed(() => {
             adminItems.push({ label: t('nav.directors', 'Directors'), icon: 'pi pi-fw pi-star', to: '/directors' });
             adminItems.push({ label: t('nav.secretaries', 'Secretariats'), icon: 'pi pi-fw pi-desktop', to: '/secretariats' });
             adminItems.push({ label: t('nav.accountants', 'Accountants'), icon: 'pi pi-fw pi-wallet', to: '/accountants' });
-            adminItems.push({ label: t('nav.user_management', 'User Management'), icon: 'pi pi-fw pi-key', to: '/user-management' });
 
             sections.push({ label: t('nav.administration', 'Administration'), items: adminItems });
         }
