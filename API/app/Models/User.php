@@ -121,7 +121,7 @@ class User extends Authenticatable
 
     public function directorCycle()
     {
-        if ($this->isPrimaryDirector()) return 'primary';
+        if ($this->isPrimaryDirector()) return 'primaire';
         if ($this->isCemDirector()) return 'cem';
         if ($this->isLyceeDirector()) return 'lycee';
         return null;
