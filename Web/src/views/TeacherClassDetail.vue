@@ -50,40 +50,43 @@ const sessionInfo = computed(() => {
   if (!sessionMode.value) return null;
   const subject = subjects.value.find((s: any) => s.id === sessionSubjectId.value);
   return {
-    subjectName: subject?.name ?? 'Session',
+    subjectName: subject?.name ?? t('teacher_class_detail.session'),
     date: sessionDate.value ?? attDateStr.value,
   };
 });
 
-const ATTENDANCE_OPTIONS = [
-  { label: 'Present', value: 'present', severity: 'success', icon: 'pi pi-check' },
-  { label: 'Absent', value: 'absent', severity: 'danger', icon: 'pi pi-times' },
-  { label: 'Late', value: 'late', severity: 'warn', icon: 'pi pi-clock' },
-  { label: 'Excused', value: 'excused', severity: 'info', icon: 'pi pi-info-circle' },
-];
+const ATTENDANCE_OPTIONS = computed(() => [
+  { label: t('common.present'), value: 'present', severity: 'success', icon: 'pi pi-check' },
+  { label: t('common.absent'), value: 'absent', severity: 'danger', icon: 'pi pi-times' },
+  { label: t('common.late'), value: 'late', severity: 'warn', icon: 'pi pi-clock' },
+  { label: t('common.excused'), value: 'excused', severity: 'info', icon: 'pi pi-info-circle' },
+]);
 
 // ─── Grades state ─────────────────────────────────────────
 const gradeSubjectId = ref<number | null>(null);
 const gradeSemester = ref<string>('Trimester 1');
-const gradeExamType = ref<string>('evaluation_continue');
 const gradeAcademicYear = ref<string>(computeAcademicYear());
-const gradeMaxGrade = ref<number>(20);
+const availableExams = ref<any[]>([]);
+const gradeSelectedExam = ref<any>(null);
 const gradeLoading = ref(false);
 const gradeSaving = ref(false);
+
 const existingGradeMap = ref<Map<number, GradeRecord>>(new Map());
-const gradeValues = ref<Record<number, string>>({});
+// Nested dictionary: exerciseValues.value[student_id][exercise_id] = input_string
+const exerciseValues = ref<Record<number, Record<number, number | null>>>({});
 
-const EXAM_TYPES = [
-  { label: 'Évaluation Continue', value: 'evaluation_continue' },
-  { label: 'Devoir', value: 'devoir' },
-  { label: 'Composition', value: 'composition' },
-];
+const EXAM_TYPES = computed(() => [
+  { label: t('grade_analytics.eval_continue'), value: 'evaluation_continue' },
+  { label: t('grade_analytics.devoir_1_label'), value: 'devoir_1' },
+  { label: t('grade_analytics.devoir_2_label'), value: 'devoir_2' },
+  { label: t('grade_analytics.composition_label'), value: 'composition' },
+]);
 
-const SEMESTERS = [
-  { label: 'Trimester 1', value: 'Trimester 1' },
-  { label: 'Trimester 2', value: 'Trimester 2' },
-  { label: 'Trimester 3', value: 'Trimester 3' },
-];
+const SEMESTERS = computed(() => [
+  { label: t('grade_analytics.trimester_1'), value: 'Trimester 1' },
+  { label: t('grade_analytics.trimester_2'), value: 'Trimester 2' },
+  { label: t('grade_analytics.trimester_3'), value: 'Trimester 3' },
+]);
 
 function computeAcademicYear(): string {
   const now = new Date();
@@ -173,7 +176,7 @@ async function loadAttendance() {
 
 async function saveAttendance() {
   if (!attSubjectId.value) {
-    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a subject', life: 3000 });
+    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('teacher_class_detail.warn_select_subject'), life: 3000 });
     return;
   }
   attSaving.value = true;
@@ -188,7 +191,7 @@ async function saveAttendance() {
       reason: null,
     }));
     await AttendanceService.saveClassAttendance(entries, existingAttMap.value);
-    toast.add({ severity: 'success', summary: 'Saved', detail: 'Attendance saved', life: 3000 });
+    toast.add({ severity: 'success', summary: t('common.success'), detail: t('teacher_class_detail.attendance_saved'), life: 3000 });
     await loadAttendance();
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.save_attendance_error'), life: 3000 });
@@ -206,26 +209,81 @@ const absentCount = computed(() => Object.values(attStatuses.value).filter(v => 
 const lateCount = computed(() => Object.values(attStatuses.value).filter(v => v === 'late').length);
 
 // ─── Grades ───────────────────────────────────────────────
-async function loadGrades() {
+async function fetchExams() {
   if (!gradeSubjectId.value) return;
-  gradeLoading.value = true;
+  availableExams.value = [];
+  gradeSelectedExam.value = null;
+  exerciseValues.value = {};
+  existingGradeMap.value = new Map();
   try {
-    const records = await GradeService.getClassGrades(classId.value, {
+    const data = await GradeService.getExams({
+      class_id: classId.value,
       subject_id: gradeSubjectId.value,
       semester: gradeSemester.value,
       academic_year: gradeAcademicYear.value,
     });
-    const filtered = (records as GradeRecord[]).filter((r) => r.exam_type === gradeExamType.value);
+    availableExams.value = data || [];
+    if (availableExams.value.length > 0) {
+      gradeSelectedExam.value = availableExams.value[0];
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_class_detail.fetch_exams_error'), life: 3000 });
+  }
+}
+
+async function loadGrades() {
+  if (!gradeSubjectId.value || !gradeSelectedExam.value) return;
+  gradeLoading.value = true;
+  try {
+    let records: any = await GradeService.getClassGrades(classId.value, {
+      subject_id: gradeSubjectId.value,
+      semester: gradeSemester.value,
+      academic_year: gradeAcademicYear.value,
+    });
+
+    // Normalize possible wrapper shapes:
+    // - API may return { success: true, data: [...] }
+    // - Or { success: true, data: { grades: [...] } }
+    // - Or { grades: [...] }
+    if (!records) records = [];
+    if (records && records.data) {
+      if (Array.isArray(records.data)) records = records.data;
+      else if (records.data.grades && Array.isArray(records.data.grades)) records = records.data.grades;
+    } else if (records && records.grades && Array.isArray(records.grades)) {
+      records = records.grades;
+    }
     const map = new Map<number, GradeRecord>();
-    for (const r of filtered) map.set(r.student_id, r);
+    for (const r of (records as GradeRecord[])) {
+      const recExamId = (r as any).exam_id ?? (r as any).exam?.id ?? null;
+      const studentIdKey = (r as any).student_id ?? (r as any).student?.id ?? null;
+      if (Number(recExamId) == Number(gradeSelectedExam.value.id) && studentIdKey !== null) {
+        map.set(Number(studentIdKey), r);
+      }
+    }
     existingGradeMap.value = map;
 
-    const vals: Record<number, string> = {};
-    for (const s of students.value) {
-      const ex = map.get(s.id);
-      vals[s.id] = ex ? String(ex.grade) : '';
+    // Initialize exerciseValues
+    const newVals: Record<number, Record<number, number | null>> = {};
+    for (const student of students.value) {
+      newVals[student.id] = {};
+      const exercises = gradeSelectedExam.value.exercises || [];
+      const record = map.get(Number(student.id));
+      
+      for (const ex of exercises) {
+        // Default to 0 as requested if no grade exists
+        newVals[student.id][ex.id] = 0;
+        
+        if (record && record.exercise_grades) {
+          const exGrade = (record.exercise_grades || []).find((eg: any) => 
+            Number(eg.exam_exercise_id ?? eg.exam_exercise?.id) == Number(ex.id)
+          );
+          if (exGrade) {
+            newVals[student.id][ex.id] = exGrade.note !== null && exGrade.note !== undefined ? Number(exGrade.note) : 0;
+          }
+        }
+      }
     }
-    gradeValues.value = vals;
+    exerciseValues.value = newVals;
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.load_grades_error'), life: 3000 });
   } finally {
@@ -233,49 +291,101 @@ async function loadGrades() {
   }
 }
 
-async function saveGrades() {
-  if (!gradeSubjectId.value) {
-    toast.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a subject', life: 3000 });
+function calculateStudentTotal(studentId: number): number {
+  if (!gradeSelectedExam.value || Object.keys(exerciseValues.value).length === 0) return 0;
+  const values = exerciseValues.value[studentId] || {};
+  let total = 0;
+  for (const val of Object.values(values)) {
+    const num = parseFloat(String(val));
+    if (!isNaN(num)) total += num;
+  }
+  return total;
+}
+
+function clampExerciseValue(studentId: number, exerciseId: number, maxNote: any) {
+  if (!exerciseValues.value[studentId]) return;
+  const raw = exerciseValues.value[studentId][exerciseId];
+  if (raw === null || raw === undefined) return;
+  const num = parseFloat(String(raw));
+  const max = Number(maxNote);
+
+  if (isNaN(num)) {
+    exerciseValues.value[studentId][exerciseId] = 0;
     return;
   }
-  const toCreate: any[] = [];
-  const toUpdate: Array<{ id: number; data: any }> = [];
 
-  for (const s of students.value) {
-    const raw = gradeValues.value[s.id];
-    if (raw === '' || raw === null || raw === undefined) continue;
-    const num = parseFloat(raw);
-    if (isNaN(num)) continue;
+  if (num < 0) {
+    exerciseValues.value[studentId][exerciseId] = 0;
+  } else if (!isNaN(max) && num > max) {
+    exerciseValues.value[studentId][exerciseId] = max;
+    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('teacher_class_detail.warn_max_exceeded', { max }), life: 3000 });
+  }
+}
 
-    const payload = {
-      student_id: s.id,
-      subject_id: gradeSubjectId.value!,
-      teacher_id: teacherId.value,
-      exam_type: gradeExamType.value,
-      grade: num,
-      max_grade: gradeMaxGrade.value,
-      semester: gradeSemester.value,
-      academic_year: gradeAcademicYear.value,
+async function saveGrades() {
+  if (!gradeSelectedExam.value) {
+    toast.add({ severity: 'warn', summary: t('common.warning'), detail: t('teacher_class_detail.warn_select_exam'), life: 3000 });
+    return;
+  }
+  const allGrades: any[] = [];
+
+  for (const student of students.value) {
+    const exercises = gradeSelectedExam.value.exercises || [];
+    const exGrades: any[] = [];
+    let hasAnyValue = false;
+    let totalGrade = 0;
+
+    for (const ex of exercises) {
+      const raw = exerciseValues.value[student.id]?.[ex.id];
+      if (raw !== null && raw !== undefined) {
+        const num = parseFloat(String(raw));
+        if (!isNaN(num)) {
+          exGrades.push({ exam_exercise_id: ex.id, note: num });
+          totalGrade += num;
+          hasAnyValue = true;
+        }
+      }
+    }
+
+    if (!hasAnyValue) continue;
+
+    const existing = existingGradeMap.value.get(Number(student.id));
+
+    const payload: any = {
+      student_id: student.id,
+      exam_id: gradeSelectedExam.value.id,
+      grade: totalGrade,
+      exercise_grades: exGrades,
     };
 
-    const ex = existingGradeMap.value.get(s.id);
-    ex ? toUpdate.push({ id: ex.id, data: payload }) : toCreate.push(payload);
+    if (existing) {
+      payload.id = existing.id;
+    }
+
+    // Validation: each exercise note must not exceed its max_note
+    for (const ex of exercises) {
+      const entry = exGrades.find(e => e.exam_exercise_id === ex.id);
+      if (entry && typeof ex.max_note === 'number' && entry.note > ex.max_note) {
+        toast.add({ severity: 'warn', summary: t('common.validation_error'), detail: `${student.first_name} ${student.last_name}: ${ex.level_name} ${t('teacher_class_detail.cannot_exceed')} ${ex.max_note}`, life: 4000 });
+        return;
+      }
+    }
+
+    allGrades.push(payload);
   }
 
-  if (toCreate.length === 0 && toUpdate.length === 0) {
-    toast.add({ severity: 'info', summary: 'Nothing to save', detail: 'Enter at least one grade', life: 3000 });
+  if (allGrades.length === 0) {
+    toast.add({ severity: 'info', summary: t('teacher_class_detail.nothing_to_save'), detail: t('teacher_class_detail.enter_one_grade'), life: 3000 });
     return;
   }
 
   gradeSaving.value = true;
   try {
-    const ops: Promise<any>[] = [];
-    if (toCreate.length > 0) ops.push(GradeService.bulkCreateGrades(toCreate));
-    for (const item of toUpdate) ops.push(GradeService.updateGrade(item.id, item.data));
-    await Promise.all(ops);
-    toast.add({ severity: 'success', summary: 'Saved', detail: `${toCreate.length + toUpdate.length} grade(s) saved`, life: 3000 });
+    await GradeService.bulkCreateGrades(allGrades);
+    toast.add({ severity: 'success', summary: t('common.success'), detail: t('teacher_class_detail.grades_saved_count', { count: allGrades.length }), life: 3000 });
     await loadGrades();
-  } catch {
+  } catch (err: any) {
+    console.error('Save error:', err);
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('teacher_portal.save_grades_error'), life: 3000 });
   } finally {
     gradeSaving.value = false;
@@ -283,421 +393,248 @@ async function saveGrades() {
 }
 
 const gradeAverage = computed(() => {
-  const vals = Object.values(gradeValues.value).filter(v => v !== '' && !isNaN(parseFloat(v as string)));
-  if (vals.length === 0) return null;
-  return (vals.reduce((s, v) => s + parseFloat(v as string), 0) / vals.length).toFixed(1);
+  let sum = 0;
+  let count = 0;
+  for (const s of students.value) {
+    const val = calculateStudentTotal(s.id);
+    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== null && v !== undefined);
+    if (hasAnyGrade) {
+      sum += val;
+      count++;
+    }
+  }
+  if (count === 0) return null;
+  return (sum / count).toFixed(1);
 });
 
-const gradeFilled = computed(() =>
-  Object.values(gradeValues.value).filter(v => v !== '' && v !== null && v !== undefined).length
-);
+const gradeFilled = computed(() => {
+  let filled = 0;
+  for (const s of students.value) {
+    const hasAnyGrade = exerciseValues.value[s.id] && Object.values(exerciseValues.value[s.id]).some(v => v !== null && v !== undefined);
+    if (hasAnyGrade) filled++;
+  }
+  return filled;
+});
 
 // ─── Watchers ─────────────────────────────────────────────
-watch([gradeSubjectId, gradeSemester, gradeExamType, gradeAcademicYear], () => loadGrades());
+watch([gradeSubjectId, gradeSemester, gradeAcademicYear], () => fetchExams());
+watch(gradeSelectedExam, () => loadGrades());
 
 onMounted(async () => {
   await loadClass();
-  if (gradeSubjectId.value) await loadGrades();
+  if (gradeSubjectId.value) await fetchExams();
 });
 </script>
 
 <template>
-  <div class="p-4 md:p-6">
+  <div class="p-4 md:p-8 max-w-[1600px] mx-auto">
     <!-- Header -->
-    <div class="flex items-center gap-3 mb-5">
-      <Button icon="pi pi-arrow-left" text rounded @click="router.push({ name: 'teacher-portal' })" />
-      <div>
-        <div class="text-xs text-surface-400 dark:text-surface-500 font-medium tracking-wide uppercase mb-0.5">My Classes</div>
-        <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 leading-tight">
-          {{ classData?.name ?? 'Loading...' }}
+    <div class="flex flex-col md:flex-row md:items-center gap-6 mb-8 animate-fade-in">
+      <Button icon="pi pi-arrow-left" text raised class="rounded-2xl w-12 h-12 bg-white dark:bg-surface-800 shadow-sm" @click="router.push({ name: 'teacher-portal' })" />
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400 dark:text-surface-500">{{ $t('teacher_class_detail.my_classes') }}</span>
+          <span v-if="classData?.academic_year" class="px-2 py-0.5 rounded-md bg-surface-100 dark:bg-surface-800 text-surface-500 text-[10px] font-bold">{{ classData.academic_year }}</span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-black text-surface-900 dark:text-surface-0 tracking-tight">
+          {{ classData?.name ?? $t('teacher_class_detail.loading') }}
         </h1>
       </div>
-    </div>
 
-    <!-- Class info chips -->
-    <div v-if="classData" class="flex flex-wrap gap-3 mb-4">
-      <span v-if="classData.level" class="inline-flex items-center gap-1.5 text-sm bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 px-3 py-1 rounded-full">
-        <i class="pi pi-tag text-xs"></i>{{ classData.level }}
-      </span>
-      <span v-if="classData.academic_year" class="inline-flex items-center gap-1.5 text-sm bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 px-3 py-1 rounded-full">
-        <i class="pi pi-calendar text-xs"></i>{{ classData.academic_year }}
-      </span>
-      <span class="inline-flex items-center gap-1.5 text-sm bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-200 px-3 py-1 rounded-full">
-        <i class="pi pi-users text-xs"></i>{{ students.length }} students
-      </span>
-      <span v-for="s in subjects" :key="s.id" class="inline-flex items-center gap-1.5 text-sm bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full">
-        <i class="pi pi-book text-xs"></i>{{ s.name }}
-      </span>
+      <!-- Class info chips -->
+      <div v-if="classData" class="flex flex-wrap gap-2 md:justify-end">
+        <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
+          <i class="pi pi-tag text-primary-500"></i>
+          <span class="text-sm font-black text-surface-700 dark:text-surface-200 uppercase tracking-tighter">{{ t('levels.' + (classData.level?.toLowerCase() || 'default')) }}</span>
+        </div>
+        <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
+          <i class="pi pi-users text-green-500"></i>
+          <span class="text-sm font-black text-surface-700 dark:text-surface-200">{{ students.length }} <span class="text-[10px] text-surface-400 uppercase ml-0.5 tracking-widest">{{ $t('teacher_portal.students') }}</span></span>
+        </div>
+      </div>
     </div>
 
     <!-- Session banner (shown when navigated from Today's Sessions) -->
-    <div v-if="sessionMode && sessionInfo" class="flex items-center gap-3 mb-5 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-xl">
-      <div class="bg-primary-500 text-white rounded-lg p-2">
-        <i class="pi pi-clock text-sm"></i>
+    <div v-if="sessionMode && sessionInfo" class="flex items-center gap-4 mb-8 p-6 bg-gradient-to-r from-primary-600 to-primary-400 dark:from-primary-700 dark:to-primary-900/60 rounded-3xl shadow-xl shadow-primary-500/20 text-white animate-fade-in border border-primary-500/20">
+      <div class="bg-white/20 backdrop-blur-md rounded-2xl p-4">
+        <i class="pi pi-clock text-2xl"></i>
       </div>
-      <div>
-        <div class="text-xs text-primary-500 dark:text-primary-400 font-medium uppercase tracking-wide mb-0.5">Session</div>
-        <div class="text-sm font-semibold text-primary-800 dark:text-primary-200">
-          {{ sessionInfo.subjectName }} &mdash; {{ sessionInfo.date }}
+      <div class="flex-1">
+        <div class="text-[10px] font-black uppercase tracking-[0.2em] text-primary-100 mb-1">{{ $t('teacher_class_detail.session') }}</div>
+        <div class="text-xl font-black">
+          {{ sessionInfo.subjectName }} <span class="mx-2 opacity-50">|</span> {{ sessionInfo.date }}
         </div>
       </div>
-      <span class="ml-auto text-xs text-primary-500 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/40 px-2 py-0.5 rounded-full">
-        Locked
-      </span>
+      <div class="hidden sm:flex px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 items-center gap-2">
+        <i class="pi pi-lock text-xs"></i>
+        <span class="text-xs font-black uppercase tracking-widest">{{ $t('teacher_class_detail.locked') }}</span>
+      </div>
     </div>
 
-    <div v-if="classLoading" class="flex justify-center py-16">
-      <ProgressSpinner style="width: 48px; height: 48px" />
+    <div v-if="classLoading" class="flex justify-center py-24">
+      <ProgressSpinner style="width: 60px; height: 60px" />
     </div>
 
-    <div v-else-if="!classData" class="text-center py-16 text-surface-400">
-      <i class="pi pi-exclamation-triangle text-5xl mb-3"></i>
-      <p class="text-lg">Class not found.</p>
+    <div v-else-if="!classData" class="flex flex-col items-center justify-center py-24 text-surface-400 bg-surface-50 dark:bg-surface-800/40 rounded-[2.5rem] border-2 border-dashed border-surface-200 dark:border-surface-700">
+      <i class="pi pi-exclamation-triangle text-6xl mb-6 opacity-20"></i>
+      <p class="text-xl font-black tracking-tight">{{ $t('teacher_class_detail.class_not_found') }}</p>
     </div>
 
-    <Tabs v-else v-model:value="activeTab">
-      <TabList>
-        <Tab v-if="false" value="0">
-          <span class="flex items-center gap-2">
-            <i class="pi pi-check-circle"></i>
-            <span>Attendance</span>
-          </span>
+    <Tabs v-else v-model:value="activeTab" class="premium-tabs">
+      <TabList class="gap-4 border-none mb-8">
+        <Tab v-if="false" value="0" class="rounded-2xl px-6 py-3 font-black uppercase text-xs tracking-widest transition-premium">
+          <div class="flex items-center gap-3">
+            <i class="pi pi-check-circle text-lg"></i>
+            <span>{{ $t('teacher_class_detail.attendance_tab') }}</span>
+          </div>
         </Tab>
-        <Tab value="1">
-          <span class="flex items-center gap-2">
-            <i class="pi pi-star"></i>
-            <span>Grades</span>
-          </span>
+        <Tab value="1" class="rounded-2xl px-6 py-3 font-black uppercase text-xs tracking-widest transition-premium">
+          <div class="flex items-center gap-3">
+            <i class="pi pi-star text-lg"></i>
+            <span>{{ $t('teacher_class_detail.grades_tab') }}</span>
+          </div>
         </Tab>
       </TabList>
 
-      <TabPanels>
-        <!-- ═══════════ ATTENDANCE ═══════════ -->
-        <TabPanel v-if="false" value="0">
-          <div class="pt-4">
-
-            <!-- ── SESSION MODE: Marking form ────────────────────── -->
-            <template v-if="sessionMode">
-              <div class="flex flex-wrap gap-4 mb-5">
-                <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
-                  <DatePicker v-model="attDateObj" show-icon :manual-input="false" class="w-full sm:w-48" :disabled="true" />
-                </div>
-                <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Subject</label>
-                  <Select
-                    v-model="attSubjectId" :options="subjects" option-label="name" option-value="id"
-                    placeholder="Select subject" class="w-full sm:w-56" :disabled="true"
-                  />
-                </div>
-                <div class="flex items-end gap-2 flex-wrap">
-                  <Button label="All Present" icon="pi pi-check" severity="success" outlined size="small" @click="markAll('present')" />
-                  <Button label="All Absent"  icon="pi pi-times" severity="danger"  outlined size="small" @click="markAll('absent')" />
-                  <Button label="All Late"    icon="pi pi-clock" severity="warn"    outlined size="small" @click="markAll('late')" />
-                </div>
-              </div>
-
-              <div v-if="attLoading" class="flex justify-center py-8">
-                <ProgressSpinner style="width: 36px; height: 36px" />
-              </div>
-              <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
-                <i class="pi pi-users text-4xl mb-2 block"></i>
-                <p>No students in this class.</p>
-              </div>
-              <template v-else>
-                <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-                  <table class="w-full text-sm">
-                    <thead>
-                      <tr class="bg-surface-50 dark:bg-surface-800/80">
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        v-for="(student, idx) in students" :key="student.id"
-                        class="border-t border-surface-100 dark:border-surface-700 transition-colors"
-                        :class="{
-                          'bg-red-50/50 dark:bg-red-900/10':   attStatuses[student.id] === 'absent',
-                          'bg-amber-50/50 dark:bg-amber-900/10': attStatuses[student.id] === 'late',
-                          'bg-blue-50/50 dark:bg-blue-900/10': attStatuses[student.id] === 'excused',
-                          'hover:bg-green-50/30 dark:hover:bg-green-900/5': attStatuses[student.id] === 'present',
-                        }"
-                      >
-                        <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
-                        <td class="p-3 font-medium text-surface-900 dark:text-surface-100">{{ student.first_name }} {{ student.last_name }}</td>
-                        <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
-                        <td class="p-3">
-                          
-                        <div class="flex justify-center gap-1.5 flex-wrap">
-                          <button
-                            v-for="opt in ATTENDANCE_OPTIONS"
-                            :key="opt.value"
-                            v-show="opt.value !== 'excused' || attStatuses[student.id] === 'excused'"
-                            class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
-                            :class="attStatuses[student.id] === opt.value
-                              ? opt.value === 'present'  ? 'bg-green-500 border-green-500 text-white'
-                              : opt.value === 'absent'   ? 'bg-red-500 border-red-500 text-white'
-                              : opt.value === 'late'     ? 'bg-amber-500 border-amber-500 text-white'
-                              : opt.value === 'excused'  ? 'bg-blue-500 border-blue-500 text-white'
-                              : ''
-                              : 'bg-transparent border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:border-surface-400'"
-                            @click="attStatuses[student.id] = opt.value as any"
-                          >
-                            <i :class="opt.icon" class="text-[10px]"></i>
-                            {{ opt.label }}
-                          </button>
-                        </div>
-                          
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="flex flex-wrap items-center justify-between gap-4 mt-4">
-                  <div class="flex gap-4 text-sm">
-                    <span class="flex items-center gap-1.5">
-                      <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
-                      <span class="text-surface-600 dark:text-surface-400">Present: <strong class="text-surface-800 dark:text-surface-200">{{ presentCount }}</strong></span>
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                      <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
-                      <span class="text-surface-600 dark:text-surface-400">Absent: <strong class="text-surface-800 dark:text-surface-200">{{ absentCount }}</strong></span>
-                    </span>
-                    <span class="flex items-center gap-1.5">
-                      <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                      <span class="text-surface-600 dark:text-surface-400">Late: <strong class="text-surface-800 dark:text-surface-200">{{ lateCount }}</strong></span>
-                    </span>
-                  </div>
-                  <Button label="Save Attendance" icon="pi pi-save" :loading="attSaving" @click="saveAttendance" />
-                </div>
-              </template>
-            </template>
-
-            <!-- ── VIEW MODE: Read-only history ──────────────────── -->
-            <template v-else>
-              <!-- filters -->
-              <div class="flex flex-wrap gap-4 mb-5">
-                <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
-                  <DatePicker v-model="attDateObj" show-icon :manual-input="false" class="w-full sm:w-48" />
-                </div>
-                <div class="flex flex-col gap-1">
-                  <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Subject</label>
-                  <Select
-                    v-model="attSubjectId" :options="subjects" option-label="name" option-value="id"
-                    placeholder="All subjects" class="w-full sm:w-56"
-                  />
-                </div>
-              </div>
-
-              <div v-if="attLoading" class="flex justify-center py-8">
-                <ProgressSpinner style="width: 36px; height: 36px" />
-              </div>
-
-              <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
-                <i class="pi pi-users text-4xl mb-2 block"></i>
-                <p>No students in this class.</p>
-              </div>
-
-              <template v-else>
-                <!-- summary bar -->
-                <div class="flex flex-wrap gap-4 mb-4 p-3 bg-surface-50 dark:bg-surface-800/60 rounded-xl border border-surface-200 dark:border-surface-700 text-sm">
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
-                    <span class="text-surface-600 dark:text-surface-400">Present: <strong class="text-surface-800 dark:text-surface-200">{{ presentCount }}</strong></span>
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
-                    <span class="text-surface-600 dark:text-surface-400">Absent: <strong class="text-surface-800 dark:text-surface-200">{{ absentCount }}</strong></span>
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                    <span class="text-surface-600 dark:text-surface-400">Late: <strong class="text-surface-800 dark:text-surface-200">{{ lateCount }}</strong></span>
-                  </span>
-                  <span class="ml-auto text-xs text-surface-400 dark:text-surface-500 italic flex items-center gap-1">
-                    <i class="pi pi-eye text-[11px]"></i> Read-only — mark attendance from a session
-                  </span>
-                </div>
-
-                <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-                  <table class="w-full text-sm">
-                    <thead>
-                      <tr class="bg-surface-50 dark:bg-surface-800/80">
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                        <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                        <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        v-for="(student, idx) in students" :key="student.id"
-                        class="border-t border-surface-100 dark:border-surface-700"
-                      >
-                        <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
-                        <td class="p-3 font-medium text-surface-900 dark:text-surface-100">{{ student.first_name }} {{ student.last_name }}</td>
-                        <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
-                        <td class="p-3 text-center">
-                          <template v-if="existingAttMap.has(student.id)">
-                            <span
-                              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-                              :class="{
-                                'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300': attStatuses[student.id] === 'present',
-                                'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300':         attStatuses[student.id] === 'absent',
-                                'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300': attStatuses[student.id] === 'late',
-                                'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300':     attStatuses[student.id] === 'excused',
-                              }"
-                            >
-                              <i
-                                class="text-[10px]"
-                                :class="{
-                                  'pi pi-check':        attStatuses[student.id] === 'present',
-                                  'pi pi-times':        attStatuses[student.id] === 'absent',
-                                  'pi pi-clock':        attStatuses[student.id] === 'late',
-                                  'pi pi-info-circle':  attStatuses[student.id] === 'excused',
-                                }"
-                              ></i>
-                              {{ attStatuses[student.id]?.charAt(0).toUpperCase() + attStatuses[student.id]?.slice(1) }}
-                            </span>
-                          </template>
-                          <span v-else class="text-surface-300 dark:text-surface-600 text-xs">—</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- nudge to use sessions -->
-                <div class="mt-4 flex items-center gap-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-xl text-sm">
-                  <i class="pi pi-arrow-left text-primary-500 dark:text-primary-400"></i>
-                  <span class="text-primary-700 dark:text-primary-300">
-                    To mark attendance, go back and tap a session from <strong>Today's Sessions</strong>.
-                  </span>
-                </div>
-              </template>
-            </template>
-
-          </div>
-        </TabPanel>
-
+      <TabPanels class="bg-transparent p-0">
         <!-- ═══════════ GRADES ═══════════ -->
         <TabPanel value="1">
-          <div class="pt-4">
+          <div class="animate-fade-in">
             <!-- Controls -->
-            <div class="flex flex-wrap gap-4 mb-5">
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Subject</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div class="flex flex-col gap-2">
+                <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_class_detail.subject_label') }}</label>
                 <Select
                   v-model="gradeSubjectId"
                   :options="subjects"
                   option-label="name"
                   option-value="id"
-                  placeholder="Select subject"
-                  class="w-full sm:w-56"
+                  class="w-full premium-select"
                   :disabled="subjects.length <= 1"
                 />
               </div>
 
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Trimester</label>
-                <Select v-model="gradeSemester" :options="SEMESTERS" option-label="label" option-value="value" class="w-full sm:w-44" />
+              <div class="flex flex-col gap-2">
+                <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_class_detail.trimester_label') }}</label>
+                <Select v-model="gradeSemester" :options="SEMESTERS" option-label="label" option-value="value" class="w-full premium-select" />
               </div>
 
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Exam Type</label>
-                <Select v-model="gradeExamType" :options="EXAM_TYPES" option-label="label" option-value="value" class="w-full sm:w-44" />
+              <div class="flex flex-col gap-2">
+                <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_class_detail.exam_label') }}</label>
+                <Select v-model="gradeSelectedExam" :options="availableExams" class="w-full premium-select" :placeholder="$t('teacher_class_detail.exam_placeholder')">
+                  <template #value="slotProps">
+                    <div v-if="slotProps.value" class="flex items-center gap-2">
+                      <span class="font-black uppercase text-xs">{{ $t(`teacher_class_detail.${slotProps.value.exam_type}`) }}</span>
+                      <span class="px-2 py-0.5 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-500 text-[10px] font-bold">{{ slotProps.value.max_grade }} {{ $t('teacher_class_detail.points_short') }}</span>
+                    </div>
+                    <span v-else>{{ slotProps.placeholder }}</span>
+                  </template>
+                  <template #option="slotProps">
+                    <div class="flex items-center justify-between w-full">
+                      <span class="font-black uppercase text-xs">{{ $t(`teacher_class_detail.${slotProps.option.exam_type}`) }}</span>
+                      <span class="text-surface-400 text-[10px] font-bold">{{ slotProps.option.max_grade }} {{ $t('teacher_class_detail.points_short') }}</span>
+                    </div>
+                  </template>
+                </Select>
               </div>
 
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Academic Year</label>
-                <InputText v-model="gradeAcademicYear" placeholder="e.g. 2024-2025" class="w-full sm:w-36" />
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <label class="text-sm font-medium text-surface-700 dark:text-surface-200">Max Grade</label>
-                <InputNumber v-model="gradeMaxGrade" :min="1" :max="100" class="w-full sm:w-28" />
+              <div class="flex flex-col gap-2">
+                <label class="text-xs font-black uppercase tracking-widest text-surface-400 ml-1">{{ $t('teacher_class_detail.academic_year_label') }}</label>
+                <InputText v-model="gradeAcademicYear" class="w-full premium-input font-bold" />
               </div>
             </div>
 
-            <div v-if="gradeLoading" class="flex justify-center py-8">
-              <ProgressSpinner style="width: 36px; height: 36px" />
+            <div v-if="gradeLoading" class="flex justify-center py-20">
+              <ProgressSpinner style="width: 40px; height: 40px" />
             </div>
 
-            <div v-else-if="students.length === 0" class="text-center py-10 text-surface-400">
-              <i class="pi pi-users text-4xl mb-2 block"></i>
-              <p>No students in this class.</p>
+            <div v-else-if="!gradeSelectedExam" class="flex flex-col items-center justify-center py-24 text-surface-400 bg-surface-50 dark:bg-surface-800/40 rounded-[2.5rem] border-2 border-dashed border-surface-200 dark:border-surface-700">
+               <i class="pi pi-file-edit text-6xl mb-6 opacity-20"></i>
+               <p class="text-xl font-black tracking-tight">{{ $t('teacher_class_detail.select_exam_to_grade') }}</p>
             </div>
 
             <template v-else>
-              <div class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-                <table class="w-full text-sm">
+              <div class="sticky-table-container rounded-3xl border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 shadow-sm modern-scroll mb-8">
+                <table class="w-full text-sm border-collapse">
                   <thead>
-                    <tr class="bg-surface-50 dark:bg-surface-800/80">
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 w-10">#</th>
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">Student</th>
-                      <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400 hidden sm:table-cell">Code</th>
-                      <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400">
-                        Grade <span class="text-surface-400 font-normal">/ {{ gradeMaxGrade }}</span>
+                    <tr class="bg-surface-50 dark:bg-surface-900 border-b border-surface-200 dark:border-surface-700">
+                      <th class="p-4 text-center w-12 text-surface-400 sticky left-0 z-20 bg-surface-50 dark:bg-surface-900 border-r border-surface-200 dark:border-surface-700">#</th>
+                      <th class="text-left p-4 font-black uppercase text-[10px] tracking-widest text-surface-500 sticky left-12 z-20 bg-surface-50 dark:bg-surface-900 min-w-[200px] border-r-2 border-surface-200 dark:border-surface-700 sticky-col-shadow">
+                        {{ $t('teacher_class_detail.student_col') }}
                       </th>
-                      <th class="text-center p-3 font-semibold text-surface-500 dark:text-surface-400 hidden md:table-cell">%</th>
+                      
+                      <th v-for="ex in gradeSelectedExam.exercises" :key="ex.id" class="text-center p-4 font-black uppercase text-[10px] tracking-[0.2em] text-surface-500 border-l border-surface-100 dark:border-surface-700 min-w-[120px]">
+                        <div class="flex flex-col">
+                          <span>{{ ex.level_name || $t('teacher_class_detail.exercise_fallback') }}</span>
+                          <span class="text-primary-500 opacity-60">/ {{ ex.max_note }}</span>
+                        </div>
+                      </th>
+                      
+                      <th class="text-center p-4 font-black uppercase text-[10px] tracking-[0.2em] text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/20 border-l-2 border-primary-100 dark:border-primary-800 sticky right-0 z-20 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
+                        <div class="flex flex-col">
+                          <span>{{ $t('teacher_class_detail.total_col') }}</span>
+                          <span>/ {{ gradeSelectedExam.max_grade }}</span>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       v-for="(student, idx) in students"
                       :key="student.id"
-                      class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
+                      class="border-b border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-900/30 transition-colors"
                     >
-                      <td class="p-3 text-surface-400 text-xs">{{ idx + 1 }}</td>
-                      <td class="p-3">
-                        <span class="font-medium text-surface-900 dark:text-surface-100">
-                          {{ student.first_name }} {{ student.last_name }}
-                        </span>
-                        <span
-                          v-if="existingGradeMap.has(student.id)"
-                          class="ml-2 text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full align-middle"
-                        >saved</span>
+                      <td class="p-4 text-center text-surface-400 font-bold text-xs sticky left-0 z-10 bg-white dark:bg-surface-800 border-r border-surface-100 dark:border-surface-700">{{ idx + 1 }}</td>
+                      <td class="p-4 font-black text-surface-900 dark:text-surface-0 sticky left-12 z-10 bg-white dark:bg-surface-800 border-r-2 border-surface-200 dark:border-surface-700 sticky-col-shadow">
+                         <div class="flex flex-col">
+                           <span>{{ student.first_name }} {{ student.last_name }}</span>
+                           <span class="text-[10px] text-surface-400 font-bold uppercase tracking-tighter">{{ student.code || '#' + student.id }}</span>
+                         </div>
                       </td>
-                      <td class="p-3 font-mono text-xs text-surface-500 dark:text-surface-400 hidden sm:table-cell">{{ student.code }}</td>
-                      <td class="p-3">
-                        <div class="flex justify-center">
-                          <InputText
-                            v-model="gradeValues[student.id]"
-                            :placeholder="`0–${gradeMaxGrade}`"
-                            class="w-24 text-center"
-                          />
-                        </div>
+                      
+                      <td v-for="ex in gradeSelectedExam.exercises" :key="ex.id" class="p-3 text-center border-l border-surface-50 dark:border-surface-700">
+                        <InputNumber 
+                          v-model="exerciseValues[student.id][ex.id]" 
+                          @blur="clampExerciseValue(student.id, ex.id, ex.max_note)"
+                          :min="0" :max="ex.max_note" :step="0.25"
+                          :minFractionDigits="0"
+                          :maxFractionDigits="2"
+                          inputClass="w-20 text-center font-black text-lg bg-transparent border-none focus:ring-0 text-surface-700 dark:text-surface-200"
+                          class="mx-auto"
+                        />
                       </td>
-                      <td class="p-3 text-center text-surface-500 dark:text-surface-400 hidden md:table-cell">
-                        <span v-if="gradeValues[student.id] !== '' && !isNaN(parseFloat(gradeValues[student.id]))">
-                          {{
-                            Math.round((parseFloat(gradeValues[student.id]) / gradeMaxGrade) * 100)
-                          }}%
-                        </span>
-                        <span v-else class="text-surface-300 dark:text-surface-600">—</span>
+
+                      <td class="p-4 text-center font-black text-xl text-primary-600 dark:text-primary-400 bg-primary-50/30 dark:bg-primary-900/10 sticky right-0 z-10 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                        {{ calculateStudentTotal(student.id) }}
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              <!-- Summary + save -->
-              <div class="flex flex-wrap items-center justify-between gap-4 mt-4">
-                <div class="flex gap-4 text-sm text-surface-500 dark:text-surface-400">
-                  <span>
-                    Class avg:
-                    <strong class="text-surface-800 dark:text-surface-200">
-                      {{ gradeAverage !== null ? `${gradeAverage} / ${gradeMaxGrade}` : '—' }}
-                    </strong>
-                  </span>
-                  <span>
-                    Filled: <strong class="text-surface-800 dark:text-surface-200">{{ gradeFilled }} / {{ students.length }}</strong>
-                  </span>
+              <!-- Summary bar & Save -->
+              <div class="flex flex-col lg:flex-row items-center justify-between gap-8 p-8 glass-panel rounded-[2.5rem] shadow-xl">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-8 w-full lg:w-auto">
+                  <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase text-surface-400 tracking-widest mb-1">{{ $t('teacher_class_detail.average_label') }}</span>
+                    <span class="text-3xl font-black text-primary-600">{{ gradeAverage || '—' }}</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase text-surface-400 tracking-widest mb-1">{{ $t('teacher_class_detail.filled_label') }}</span>
+                    <div class="flex items-end gap-2">
+                      <span class="text-3xl font-black text-surface-700 dark:text-surface-200">{{ gradeFilled }}</span>
+                      <span class="text-sm font-bold text-surface-400 mb-1">/ {{ students.length }}</span>
+                    </div>
+                  </div>
                 </div>
-                <Button label="Save Grades" icon="pi pi-save" :loading="gradeSaving" @click="saveGrades" />
+                <Button 
+                  :label="$t('teacher_class_detail.save_grades')" 
+                  icon="pi pi-check-circle" 
+                  :loading="gradeSaving" 
+                  raised
+                  class="w-full lg:w-auto rounded-2xl px-12 py-5 font-black uppercase tracking-widest shadow-xl shadow-primary-500/30 text-lg"
+                  @click="saveGrades" 
+                />
               </div>
             </template>
           </div>
@@ -706,3 +643,42 @@ onMounted(async () => {
     </Tabs>
   </div>
 </template>
+
+<style scoped>
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+:deep(.premium-tabs .p-tablist-tab-list) {
+  background: transparent;
+}
+
+:deep(.premium-tabs .p-tab) {
+  color: var(--p-surface-500);
+}
+
+:deep(.premium-tabs .p-tab-active) {
+  background: var(--p-primary-500) !important;
+  color: white !important;
+  box-shadow: 0 10px 15px -3px rgba(var(--p-primary-500-rgb), 0.3);
+}
+
+
+
+.sticky-table-container::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.sticky-table-container::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.1);
+  border-radius: 10px;
+}
+.app-dark .sticky-table-container::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+}
+</style>

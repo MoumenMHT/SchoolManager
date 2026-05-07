@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import GradeService, { type GradeRecord, type GradeAnalyticsOverview } from '@/service/GradeService';
+import { useI18n } from 'vue-i18n';
+import GradeService, {
+  type GradeRecord, type GradeAnalyticsOverview, type ExerciseAverageRow, type SubjectExerciseAverageRow,
+  examType, maxGrade, semester as getSemester, academicYr, subjectId, teacherId,
+  subjectName as getSubjectNameHelper, teacherName as getTeacherNameHelper, normalizeGrade
+} from '@/service/GradeService';
 import TeacherService, { type Teacher } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
 import ClassesService, { type SchoolClass } from '@/service/ClassesService';
@@ -30,6 +35,8 @@ const studentRankingsFilters = ref({
   global: { value: null, matchMode: 'contains' }
 });
 
+const { t } = useI18n();
+
 const loading = ref(false);
 const error = ref<string | null>(null);
 
@@ -41,6 +48,32 @@ const studentGradesLoading = ref(false);
 const selectedStudentInfo = computed(() => {
   if (!selectedStudentId.value) return null;
   return allStudents.value.find(s => s.id === selectedStudentId.value) || null;
+});
+
+const bulletinTypeColumns = computed(() => {
+  const subjects = studentReportCardData.value?.data?.subjects || [];
+  if (subjects.length === 0) return [];
+  
+  const ignoredKeys = ['subject', 'teacher', 'coefficient', 'average', 'weighted_average', 'rank', 'appreciation'];
+  const allKeys = new Set<string>();
+  
+  subjects.forEach((sub: any) => {
+    Object.keys(sub).forEach(key => {
+      if (!ignoredKeys.includes(key) && sub[key] !== undefined && sub[key] !== null) {
+        allKeys.add(key);
+      }
+    });
+  });
+  
+  const order = ['evaluation_continue', 'devoir_1', 'devoir_2', 'composition'];
+  return Array.from(allKeys).sort((a, b) => {
+    const idxA = order.indexOf(a);
+    const idxB = order.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
 });
 
 const studentAverage = computed(() => {
@@ -85,7 +118,7 @@ const studentRadarChartData = computed(() => {
     labels,
     datasets: [
       {
-        label: 'Student Subject Average / 20',
+        label: t('grade_analytics.student_subject_average'),
         backgroundColor: 'rgba(59, 130, 246, 0.2)',
         borderColor: 'rgba(59, 130, 246, 1)',
         pointBackgroundColor: 'rgba(59, 130, 246, 1)',
@@ -181,10 +214,11 @@ const classTeacherBreakdown = computed(() => {
   }>();
 
   classGrades.value.forEach(g => {
-    const key = g.teacher_id != null ? String(g.teacher_id) : (g.teacher_name || 'unknown');
+    const tid = teacherId(g);
+    const key = tid ? String(tid) : ((g as any).teacher_name || t('grade_analytics.unknown'));
     if (!map.has(key)) {
       map.set(key, {
-        teacher_name: g.teacher_name || 'Unknown',
+        teacher_name: getTeacherName(g) || t('grade_analytics.unknown'),
         subjects: new Set(),
         sum: 0,
         count: 0,
@@ -192,7 +226,8 @@ const classTeacherBreakdown = computed(() => {
       });
     }
     const entry = map.get(key)!;
-    if (g.subject_name) entry.subjects.add(g.subject_name);
+    const sname = getSubjectName(g);
+    if (sname) entry.subjects.add(sname);
     const norm = normalizedGrade(g);
     entry.sum += norm;
     entry.count += 1;
@@ -223,9 +258,7 @@ const subjectStudentBreakdown = computed(() => {
     student_name: string;
     class_id: number | null;
     class_name: string;
-    cc: number[];
-    devoir: number[];
-    composition: number[];
+    typeGrades: Record<string, number[]>;
     allNorms: number[];
   }
 
@@ -239,32 +272,37 @@ const subjectStudentBreakdown = computed(() => {
         student_name: g.student_name,
         class_id: g.class_id,
         class_name: g.class_name,
-        cc: [],
-        devoir: [],
-        composition: [],
+        typeGrades: {},
         allNorms: []
       });
     }
     const entry = map.get(sid)!;
     const norm = normalizedGrade(g);
     entry.allNorms.push(norm);
-    if (g.exam_type === 'evaluation_continue') entry.cc.push(norm);
-    else if (g.exam_type === 'devoir') entry.devoir.push(norm);
-    else if (g.exam_type === 'composition') entry.composition.push(norm);
+    
+    const et = examType(g);
+    if (!entry.typeGrades[et]) entry.typeGrades[et] = [];
+    entry.typeGrades[et].push(norm);
   });
 
   const avg = (arr: number[]) => arr.length ? round2(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
 
-  return Array.from(map.values()).map(e => ({
-    student_name: e.student_name,
-    class_name: e.class_name,
-    class_id: e.class_id,
-    cc: avg(e.cc),
-    devoir: avg(e.devoir),
-    composition: avg(e.composition),
-    average: avg(e.allNorms),
-    threshold: getClassFailThreshold(e.class_id)
-  })).sort((a, b) => (a.average ?? 99) - (b.average ?? 99));
+  return Array.from(map.values()).map(e => {
+    const row: any = {
+      student_name: e.student_name,
+      class_name: e.class_name,
+      class_id: e.class_id,
+      average: avg(e.allNorms),
+      threshold: getClassFailThreshold(e.class_id)
+    };
+    
+    // Add dynamic averages for each type
+    Object.keys(e.typeGrades).forEach(type => {
+      row[type] = avg(e.typeGrades[type]);
+    });
+    
+    return row;
+  }).sort((a, b) => (a.average ?? 99) - (b.average ?? 99));
 });
 
 const teacherDistributionChartData = computed(() => {
@@ -321,6 +359,74 @@ const subjectDrilldownRows = ref<AggregatedRow[]>([]);
 const subjectGrades = ref<EnrichedGrade[]>([]);
 const subjectGradesLoading = ref(false);
 
+// Exercise analytics — shown when a specific exam is drillable
+const exerciseAverages = ref<ExerciseAverageRow[]>([]);
+const exerciseAveragesLoading = ref(false);
+const selectedExamIdForExercises = ref<number | null>(null);
+
+const loadExerciseAverages = async (examId: number) => {
+  selectedExamIdForExercises.value = examId;
+  exerciseAveragesLoading.value = true;
+  try {
+    const classAverages = await GradeService.getExamExerciseAverages(examId);
+    
+    // Find the exam row from studentGrades
+    const examRow = studentGrades.value.find((g: any) => g.exam_id === examId);
+    const studentExerciseGrades = examRow?.exercise_grades || [];
+
+    // Map over classAverages and inject the student's note
+    exerciseAverages.value = classAverages.map((avg: any) => {
+      const studentEg = studentExerciseGrades.find((eg: any) => eg.exam_exercise_id === avg.exercise_id);
+      return {
+        ...avg,
+        student_note: studentEg ? studentEg.note : null
+      };
+    });
+  } catch (e) {
+    exerciseAverages.value = [];
+  } finally {
+    exerciseAveragesLoading.value = false;
+  }
+};
+
+// Global Subject Exercise Analytics (Subject Breakdown View)
+const subjectExerciseAverages = ref<SubjectExerciseAverageRow[]>([]);
+const subjectExerciseLoading = ref(false);
+
+const exerciseAnalyticsDatasetLabel = computed(() => {
+  return selectedClassId.value ? t('grade_analytics.class_avg_20') : t('grade_analytics.avg_note');
+});
+
+const showExerciseAnalytics = computed(() => {
+  return selectedSemester.value !== 'all' && selectedExamType.value !== 'all';
+});
+
+const loadSubjectExerciseAverages = async () => {
+  if (
+    selectedStudentId.value ||
+    (!selectedClassId.value && !selectedSubjectId.value && !selectedTeacherId.value) ||
+    (selectedClassId.value && !selectedSubjectId.value && !selectedTeacherId.value)
+  ) {
+    subjectExerciseAverages.value = [];
+    return;
+  }
+  subjectExerciseLoading.value = true;
+  try {
+    subjectExerciseAverages.value = await GradeService.getSubjectExerciseAverages({
+      subject_id: selectedSubjectId.value || undefined,
+      class_id: selectedClassId.value || undefined,
+      academic_year: selectedAcademicYear.value,
+      semester: selectedSemester.value,
+      exam_type: selectedExamType.value,
+      teacher_id: selectedTeacherId.value || undefined
+    });
+  } catch (err: any) {
+    console.error('Failed to load subject exercise averages', err);
+  } finally {
+    subjectExerciseLoading.value = false;
+  }
+};
+
 const selectedAcademicYear = ref<string>('');
 const selectedSemester = ref<string>('all');
 const selectedExamType = ref<string>('all');
@@ -329,22 +435,78 @@ const selectedSubjectId = ref<number | null>(null);
 const selectedTeacherId = ref<number | null>(null);
 const selectedStudentId = ref<number | null>(null);
 
+const examTypes = ref<string[]>([]);
+
+const loadExamTypes = async () => {
+  try {
+    const types = await GradeService.getExamTypes({
+      semester: selectedSemester.value,
+      academic_year: selectedAcademicYear.value,
+      class_id: selectedClassId.value || undefined,
+      student_id: selectedStudentId.value || undefined
+    });
+    examTypes.value = types;
+    
+    // Reset selected exam type if it's no longer available in the new list
+    if (selectedExamType.value !== 'all' && !types.includes(selectedExamType.value)) {
+      selectedExamType.value = 'all';
+    }
+  } catch (err: any) {
+    console.error('Failed to load exam types', err);
+    examTypes.value = [];
+  }
+};
+
 const selectedTeacherForChart = ref<number | null>(null);
 const selectedSubjectForChart = ref<number | null>(null);
 
-const semesterOptions = [
-  { label: 'All Trimesters', value: 'all' },
-  { label: 'Trimester 1', value: 'Trimester 1' },
-  { label: 'Trimester 2', value: 'Trimester 2' },
-  { label: 'Trimester 3', value: 'Trimester 3' }
-];
+const semesterOptions = computed(() => [
+  { label: t('grade_analytics.all_trimesters'), value: 'all' },
+  { label: t('grade_analytics.trimester_1'), value: 'Trimester 1' },
+  { label: t('grade_analytics.trimester_2'), value: 'Trimester 2' },
+  { label: t('grade_analytics.trimester_3'), value: 'Trimester 3' }
+]);
 
-const examTypeOptions = [
-  { label: 'All Exam Types', value: 'all' },
-  { label: 'Évaluation Continue', value: 'evaluation_continue' },
-  { label: 'Devoir', value: 'devoir' },
-  { label: 'Composition', value: 'composition' }
-];
+const examTypeOptions = computed(() => {
+  const options = [
+    { label: t('grade_analytics.all_exam_types'), value: 'all' }
+  ];
+
+  // Use only dynamic types from DB
+  const allTypes = [...new Set(examTypes.value)];
+
+  allTypes.forEach(type => {
+    // Use the formatExamType helper we created earlier
+    const label = formatExamType(type);
+    options.push({ label, value: type });
+  });
+
+  return options;
+});
+
+const formatExamType = (type: string): string => {
+  if (!type) return '';
+  if (type === 'evaluation_continue') return t('grade_analytics.eval_continue');
+  if (type === 'devoir_1') return t('grade_analytics.devoir_1_label');
+  if (type === 'devoir_2') return t('grade_analytics.devoir_2_label');
+  if (type === 'composition') return t('grade_analytics.composition_label');
+  
+  const labelKey = `grade_analytics.${type}_label`;
+  const fallbackLabelKey = `grade_analytics.${type}`;
+  const translated = t(labelKey);
+  if (translated !== labelKey) return translated;
+  const altTranslated = t(fallbackLabelKey);
+  if (altTranslated !== fallbackLabelKey) return altTranslated;
+  
+  return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const formatExamTypeHeader = (type: string): string => {
+  const headerKey = `grade_analytics.col_${type}`;
+  const translated = t(headerKey);
+  if (translated !== headerKey) return translated;
+  return formatExamType(type);
+};
 
 const getCurrentAcademicYear = (): string => {
   const now = new Date();
@@ -354,21 +516,20 @@ const getCurrentAcademicYear = (): string => {
 
 const academicYearOptions = computed(() => {
   const years = new Set<string>();
+  // academic_year is now on exam relation
   allGrades.value.forEach((grade) => {
-    if (grade.academic_year) years.add(grade.academic_year);
+    const yr = academicYr(grade);
+    if (yr) years.add(yr);
   });
-
+  // Always include current year even if no grades loaded yet
+  if (selectedAcademicYear.value) years.add(selectedAcademicYear.value);
   const sorted = Array.from(years).sort().reverse();
-  if (selectedAcademicYear.value && !sorted.includes(selectedAcademicYear.value)) {
-    sorted.unshift(selectedAcademicYear.value);
-  }
-
   return sorted.map((year) => ({ label: year, value: year }));
 });
 
 const classOptions = computed(() => {
   return [
-    { label: 'All Classes', value: null as number | null },
+    { label: t('grade_analytics.all_classes'), value: null as number | null },
     ...allClasses.value.map((classItem) => ({
       label: classItem.name,
       value: classItem.id
@@ -378,7 +539,7 @@ const classOptions = computed(() => {
 
 const teacherOptions = computed(() => {
   return [
-    { label: 'All Teachers', value: null as number | null },
+    { label: t('grade_analytics.all_teachers'), value: null as number | null },
     ...allTeachers.value.map((teacher) => ({
       label: `${teacher.first_name} ${teacher.last_name}`,
       value: teacher.id
@@ -388,7 +549,7 @@ const teacherOptions = computed(() => {
 
 const subjectOptions = computed(() => {
   return [
-    { label: 'All Subjects', value: null as number | null },
+    { label: t('grade_analytics.all_subjects'), value: null as number | null },
     ...allSubjects.value.map((subject) => ({
       label: subject.name,
       value: subject.id
@@ -402,7 +563,7 @@ const studentOptions = computed(() => {
     : allStudents.value;
 
   return [
-    { label: 'All Students', value: null as number | null },
+    { label: t('grade_analytics.all_students'), value: null as number | null },
     ...filtered
       .map((student) => ({
         label: `${student.first_name} ${student.last_name}`.trim(),
@@ -412,38 +573,36 @@ const studentOptions = computed(() => {
   ];
 });
 
-const normalizedGrade = (grade: GradeRecord): number => {
-  const value = Number(grade.grade ?? 0);
-  const max = Number(grade.max_grade ?? 0);
-  if (max <= 0) return Math.max(0, Math.min(20, value));
-  return (value / max) * 20;
-};
+// normalizedGrade — delegates to the service helper which reads exam.max_grade
+const normalizedGrade = (grade: GradeRecord): number => normalizeGrade(grade);
 
 const round2 = (value: number): number => Number(value.toFixed(2));
 
 const getTeacherName = (grade: GradeRecord): string => {
-  if (grade.teacher?.first_name || grade.teacher?.last_name) {
-    return `${grade.teacher?.first_name ?? ''} ${grade.teacher?.last_name ?? ''}`.trim();
-  }
-
-  const teacher = allTeachers.value.find((item) => item.id === grade.teacher_id);
+  // Try exam.teacher first, then fall back to top-level teacher, then allTeachers list
+  const fromExam = getTeacherNameHelper(grade);
+  if (fromExam) return fromExam;
+  const tid = teacherId(grade);
+  const teacher = allTeachers.value.find((item) => item.id === tid);
   if (teacher) return `${teacher.first_name} ${teacher.last_name}`;
-  return `Teacher #${grade.teacher_id}`;
+  return tid ? `${t('grade_analytics.teacher_id_prefix')}${tid}` : '';
 };
 
 const getSubjectName = (grade: GradeRecord): string => {
-  if (grade.subject?.name) return grade.subject.name;
-  const subject = allSubjects.value.find((item) => item.id === grade.subject_id);
-  return subject?.name || `Subject #${grade.subject_id}`;
+  const fromExam = getSubjectNameHelper(grade);
+  if (fromExam) return fromExam;
+  const sid = subjectId(grade);
+  const subject = allSubjects.value.find((item) => item.id === sid);
+  return subject?.name || (sid ? `${t('grade_analytics.subject_id_prefix')}${sid}` : '');
 };
 
 const getClassInfo = (grade: GradeRecord): { class_id: number | null; class_name: string } => {
   const classId = grade.student?.class_id ?? null;
-  if (!classId) return { class_id: null, class_name: 'Unknown Class' };
+  if (!classId) return { class_id: null, class_name: t('grade_analytics.unknown') };
   const classItem = allClasses.value.find((item) => item.id === classId);
   return {
     class_id: classId,
-    class_name: classItem?.name || `Class #${classId}`
+    class_name: classItem?.name || `${t('grade_analytics.class_id_prefix')}${classId}`
   };
 };
 
@@ -551,7 +710,7 @@ const subjectAverageChartData = computed(() => ({
   labels: subjectAggregates.value.slice(0, 12).map((item) => item.label),
   datasets: [
     {
-      label: 'Average Grade /20',
+      label: t('grade_analytics.avg_grade_20'),
       data: subjectAggregates.value.slice(0, 12).map((item) => item.average),
       backgroundColor: 'rgba(59, 130, 246, 0.7)',
       borderColor: 'rgba(59, 130, 246, 1)',
@@ -565,7 +724,7 @@ const classAverageChartData = computed(() => ({
   labels: classAggregates.value.map((item) => item.label),
   datasets: [
     {
-      label: 'Average Grade /20',
+      label: t('grade_analytics.avg_grade_20'),
       data: classAggregates.value.map((item) => item.average),
       backgroundColor: 'rgba(16, 185, 129, 0.7)',
       borderColor: 'rgba(16, 185, 129, 1)',
@@ -579,7 +738,7 @@ const teacherChartData = computed(() => ({
   labels: teacherChartRows.value.map((item) => item.label),
   datasets: [
     {
-      label: selectedTeacherForChart.value ? 'Subject Average /20' : 'Teacher Average /20',
+      label: selectedTeacherForChart.value ? t('grade_analytics.subject_avg_20') : t('grade_analytics.teacher_avg_20'),
       data: teacherChartRows.value.map((item) => item.average),
       backgroundColor: 'rgba(249, 115, 22, 0.7)',
       borderColor: 'rgba(249, 115, 22, 1)',
@@ -593,7 +752,7 @@ const subjectDrilldownChartData = computed(() => ({
   labels: subjectChartRows.value.map((item) => item.label),
   datasets: [
     {
-      label: selectedSubjectForChart.value ? 'Class Average /20' : 'Grade Count',
+      label: selectedSubjectForChart.value ? t('grade_analytics.class_avg_20') : t('grade_analytics.grade_count'),
       data: selectedSubjectForChart.value
         ? subjectChartRows.value.map((item) => item.average)
         : subjectChartRows.value.map((item) => item.count),
@@ -604,6 +763,47 @@ const subjectDrilldownChartData = computed(() => ({
     }
   ]
 }));
+
+const subjectExerciseRadarData = computed(() => {
+  const labels = subjectExerciseAverages.value.map(e => `${e.level_name} (/${e.max_note})`);
+  const data = subjectExerciseAverages.value.map(e => e.avg_note);
+  
+  return {
+    labels,
+    datasets: [
+      {
+        label: exerciseAnalyticsDatasetLabel.value,
+        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+        borderColor: 'rgba(139, 92, 246, 1)',
+        pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgba(139, 92, 246, 1)',
+        data
+      }
+    ]
+  };
+});
+
+const subjectExerciseBarData = computed(() => {
+  const labels = subjectExerciseAverages.value.map(e => `${e.level_name} (/${e.max_note})`);
+  const data = subjectExerciseAverages.value.map(e => e.avg_note);
+  const percentages = subjectExerciseAverages.value.map(e => e.max_note > 0 ? (e.avg_note / e.max_note) * 100 : 0);
+  
+  return {
+    labels,
+    datasets: [
+      {
+        label: exerciseAnalyticsDatasetLabel.value,
+        data,
+        backgroundColor: percentages.map(val => val >= 70 ? 'rgba(16, 185, 129, 0.7)' : val >= 40 ? 'rgba(245, 158, 11, 0.7)' : 'rgba(244, 63, 94, 0.7)'),
+        borderColor: percentages.map(val => val >= 70 ? 'rgba(16, 185, 129, 1)' : val >= 40 ? 'rgba(245, 158, 11, 1)' : 'rgba(244, 63, 94, 1)'),
+        borderWidth: 1,
+        borderRadius: 6
+      }
+    ]
+  };
+});
 
 // Tune grade chart Y-axis from one place.
 const gradeAxisMin = 1;
@@ -790,9 +990,7 @@ const loadStudentReportCard = async () => {
         teacher: any;
         coefficient: number;
         sumAvg: number;       // sum of per-trimester subject averages
-        cc: number[];
-        devoir: number[];
-        composition: number[];
+        typeGrades: Record<string, number[]>;
       }>();
 
       trimesterPayloads.forEach(payload => {
@@ -806,21 +1004,22 @@ const loadStudentReportCard = async () => {
               teacher: sub.teacher,
               coefficient: Number(sub.coefficient) || 1,
               sumAvg: 0,
-              cc: [],
-              devoir: [],
-              composition: [],
+              typeGrades: {},
             });
           }
 
           const entry = subjectMap.get(id)!;
           // Always add to the sum; missing trimesters count as 0 (handled by dividing by 3)
           entry.sumAvg += Number(sub.average || 0);
-          if (sub.evaluation_continue !== '-' && sub.evaluation_continue !== null)
-            entry.cc.push(Number(sub.evaluation_continue));
-          if (sub.devoir !== '-' && sub.devoir !== null)
-            entry.devoir.push(Number(sub.devoir));
-          if (sub.composition !== '-' && sub.composition !== null)
-            entry.composition.push(Number(sub.composition));
+          
+          // Map all keys except subject, teacher, coefficient, average, weighted_average, etc.
+          const ignoredKeys = ['subject', 'teacher', 'coefficient', 'average', 'weighted_average', 'rank', 'appreciation'];
+          Object.keys(sub).forEach(key => {
+            if (!ignoredKeys.includes(key) && sub[key] !== '-' && sub[key] !== null) {
+              if (!entry.typeGrades[key]) entry.typeGrades[key] = [];
+              entry.typeGrades[key].push(Number(sub[key]));
+            }
+          });
         });
       });
 
@@ -829,16 +1028,20 @@ const loadStudentReportCard = async () => {
         const annualAvg = Math.round((entry.sumAvg / 3) * 100) / 100;
         const avg = (arr: number[]) =>
           arr.length ? +(arr.reduce((a, b) => a + b, 0) / 3).toFixed(2) : '-';
-        return {
+          
+        const subRow: any = {
           subject: entry.subject,
           teacher: entry.teacher,
           coefficient: entry.coefficient,
-          evaluation_continue: avg(entry.cc),
-          devoir: avg(entry.devoir),
-          composition: avg(entry.composition),
           average: annualAvg,
           weighted_average: Math.round(annualAvg * entry.coefficient * 100) / 100,
         };
+        
+        Object.keys(entry.typeGrades).forEach(key => {
+          subRow[key] = avg(entry.typeGrades[key]);
+        });
+        
+        return subRow;
       });
 
       // Overall annual average = sum of the 3 trimester overalls / 3
@@ -906,9 +1109,10 @@ const loadAnalytics = async () => {
     await loadStudentGrades();
     await loadClassGrades();
     await loadSubjectGrades();
+    await loadSubjectExerciseAverages();
     await loadStudentReportCard();
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to load grade analytics data.';
+    error.value = err.response?.data?.message || t('grade_analytics.failed_load_analytics');
   } finally {
     loading.value = false;
   }
@@ -946,10 +1150,22 @@ watch([selectedTeacherForChart, selectedSubjectForChart], async () => {
   await loadChartDrilldowns();
 });
 
+watch(
+  [selectedSemester, selectedAcademicYear, selectedClassId, selectedStudentId],
+  () => {
+    loadExamTypes();
+  }
+);
+
 onMounted(async () => {
+  loading.value = true;
   selectedAcademicYear.value = getCurrentAcademicYear();
-  await loadMetadata();
+  await Promise.all([
+    loadMetadata(),
+    loadExamTypes()
+  ]);
   await loadAnalytics();
+  loading.value = false;
 });
 </script>
 
@@ -1095,17 +1311,25 @@ onMounted(async () => {
             <h5 class="m-0">{{ $t('grade_analytics.detailed_grades_log') }}</h5>
             <span class="text-sm text-muted-color">{{ $t('grade_analytics.highlighting_low') }}</span>
           </div>
-          <DataTable :value="studentGrades" :loading="studentGradesLoading" size="small" stripedRows paginator :rows="10">
+          <DataTable
+            :value="studentGrades" :loading="studentGradesLoading"
+            size="small" stripedRows paginator :rows="10"
+            :rowClass="(data: any) => data.exam_id === selectedExamIdForExercises ? 'bg-violet-50 ring-1 ring-violet-300' : ''"
+            @row-click="(e: any) => { if (e.data?.exam_id) loadExerciseAverages(e.data.exam_id) }"
+            class="cursor-pointer"
+          >
             <Column field="subject_name" :header="$t('grade_analytics.col_subject')" sortable></Column>
-            <Column field="exam_type" :header="$t('grade_analytics.col_exam_type')" sortable>
+            <Column :header="$t('grade_analytics.col_exam_type')" sortable>
               <template #body="{ data }">
-                <span class="capitalize">{{ data.exam_type }}</span>
+                <span class="font-medium text-surface-700">{{ formatExamType(data.exam?.exam_type ?? data.exam_type) }}</span>
               </template>
             </Column>
             <Column field="teacher_name" :header="$t('grade_analytics.col_teacher')" sortable></Column>
             <Column :header="$t('grade_analytics.col_grade_max')" sortable sortField="normalized_grade">
               <template #body="{ data }">
-                <div class="font-semibold">{{ Number(data.grade).toFixed(2) }} / {{ data.max_grade }}</div>
+                <div class="font-semibold">
+                  {{ Number(data.grade).toFixed(2) }} / {{ data.exam?.max_grade ?? data.max_grade }}
+                </div>
               </template>
             </Column>
             <Column :header="$t('grade_analytics.col_status')" sortable sortField="normalized_grade">
@@ -1115,10 +1339,119 @@ onMounted(async () => {
                 <Tag v-else severity="info" :value="$t('grade_analytics.passing')" rounded />
               </template>
             </Column>
+            <!-- Exercise breakdown per row -->
+            <Column :header="$t('grade_analytics.col_exercises')" style="min-width:180px">
+              <template #body="{ data }">
+                <div v-if="data.exercise_grades?.length" class="flex flex-wrap gap-1">
+                  <span
+                    v-for="eg in data.exercise_grades"
+                    :key="eg.id"
+                    class="text-xs px-2 py-0.5 rounded-full bg-surface-100"
+                  >
+                    {{ eg.exercise?.level_name }}: <strong>{{ eg.note }}</strong>/{{ eg.exercise?.max_note }}
+                  </span>
+                </div>
+                <span v-else class="text-xs text-muted-color">—</span>
+              </template>
+            </Column>
             <template #empty>
               <div class="text-center py-4 text-muted-color">{{ $t('grade_analytics.no_grades') }}</div>
             </template>
           </DataTable>
+        </div>
+      </div>
+
+      <!-- ── Exercise Analytics Drilldown ─────────────────────────────────── -->
+      <div class="col-span-12" v-if="selectedStudentId">
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h5 class="m-0"><i class="pi pi-list-check mr-2 text-violet-500"></i>{{ $t('grade_analytics.exercise_analytics_title') }}</h5>
+              <p class="text-sm text-muted-color mt-1 mb-0">{{ $t('grade_analytics.exercise_analytics_subtitle') }}</p>
+            </div>
+            <span v-if="exerciseAverages.length" class="text-xs text-muted-color">
+              {{ exerciseAverages.length }} {{ $t('grade_analytics.exercises_count') }}
+            </span>
+          </div>
+
+          <div v-if="!selectedExamIdForExercises" class="text-center py-8 text-muted-color">
+            <i class="pi pi-info-circle text-2xl mb-2 block"></i>
+            {{ $t('grade_analytics.exercise_select_hint') }}
+          </div>
+
+          <div v-else-if="exerciseAveragesLoading" class="text-center py-8">
+            <i class="pi pi-spin pi-spinner text-2xl"></i>
+          </div>
+
+          <template v-else-if="exerciseAverages.length">
+            <!-- Mini bar chart of exercise averages -->
+            <div class="chart-wrap mb-4" style="height:180px">
+              <Chart type="bar" :data="{
+                labels: exerciseAverages.map((e: any) => e.level_name),
+                datasets: [
+                  {
+                    label: $t('grade_analytics.col_student_note'),
+                    data: exerciseAverages.map((e: any) => e.student_note !== null ? e.student_note : 0),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1, borderRadius: 6
+                  },
+                  {
+                    label: $t('grade_analytics.avg_note'),
+                    data: exerciseAverages.map((e: any) => e.avg_note),
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1, borderRadius: 6
+                  }
+                ]
+              }" :options="{
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true } },
+                scales: { y: { beginAtZero: true } }
+              }" />
+            </div>
+
+            <!-- Exercise table -->
+            <DataTable :value="exerciseAverages" size="small" stripedRows>
+              <Column field="level_name" :header="t('grade_analytics.col_exercise_name')" />
+              <Column field="max_note" :header="t('grade_analytics.col_max_note')" />
+              <Column :header="t('grade_analytics.avg_note')">
+                <template #body="{ data }">
+                  <span class="font-bold text-blue-600">{{ data.student_note !== null ? data.student_note : '—' }}</span>
+                </template>
+              </Column>
+              <Column :header="$t('grade_analytics.col_avg_note')">
+                <template #body="{ data }">
+                  <span class="font-bold text-violet-600">{{ data.avg_note }}</span>
+                </template>
+              </Column>
+              <Column :header="$t('grade_analytics.col_pass_rate_ex')">
+                <template #body="{ data }">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
+                      <div class="h-1.5 rounded-full" :style="`width:${data.pass_rate}%;background:${data.pass_rate >= 50 ? '#10b981' : '#ef4444'}`"></div>
+                    </div>
+                    <span class="text-xs font-semibold">{{ data.pass_rate }}%</span>
+                  </div>
+                </template>
+              </Column>
+              <Column :header="$t('grade_analytics.col_difficulty')">
+                <template #body="{ data }">
+                  <Tag
+                    :severity="data.pass_rate >= 70 ? 'success' : data.pass_rate >= 40 ? 'warn' : 'danger'"
+                    :value="data.pass_rate >= 70 ? $t('grade_analytics.easy') : data.pass_rate >= 40 ? $t('grade_analytics.medium') : $t('grade_analytics.hard')"
+                    rounded
+                  />
+                </template>
+              </Column>
+            </DataTable>
+          </template>
+
+          <!-- No exercises for this exam -->
+          <div v-else-if="selectedExamIdForExercises" class="text-center py-6 text-muted-color">
+            <i class="pi pi-inbox text-2xl mb-2 block"></i>
+            {{ $t('grade_analytics.no_exercises') }}
+          </div>
         </div>
       </div>
 
@@ -1156,7 +1489,7 @@ onMounted(async () => {
                 <span class="text-muted-color mr-2">{{ $t('grade_analytics.bulletin_student') }} :</span>
                 <span class="text-lg text-primary font-bold">{{ studentReportCardData.data?.student?.first_name }} {{ studentReportCardData.data?.student?.last_name }}</span>
               </p>
-              <p><span class="text-muted-color mr-2">{{ $t('grade_analytics.bulletin_class') }} :</span> {{ studentReportCardData.data?.student?.class?.name || 'N/A' }}</p>
+              <p><span class="text-muted-color mr-2">{{ $t('grade_analytics.bulletin_class') }} :</span> {{ studentReportCardData.data?.student?.class?.name || $t('grade_analytics.unknown') }}</p>
             </div>
             <div class="text-right">
               <p class="mb-2"><span class="text-muted-color mr-2">{{ $t('grade_analytics.bulletin_year') }} :</span> {{ studentReportCardData.data?.academic_year }}</p>
@@ -1170,9 +1503,10 @@ onMounted(async () => {
                 <tr>
                   <th class="bulletin-th text-left" style="width: 25%;">{{ $t('grade_analytics.col_subject_matter') }}</th>
                   <th class="bulletin-th" style="width: 7%;">{{ $t('grade_analytics.col_coef') }}</th>
-                  <th class="bulletin-th">{{ $t('grade_analytics.col_cc') }}</th>
-                  <th class="bulletin-th">{{ $t('grade_analytics.col_devoir') }}</th>
-                  <th class="bulletin-th">{{ $t('grade_analytics.col_composition') }}</th>
+                  <!-- Dynamic Exam Type Headers -->
+                  <th v-for="type in bulletinTypeColumns" :key="type" class="bulletin-th">
+                    {{ formatExamTypeHeader(type) }}
+                  </th>
                   <th class="bulletin-th bulletin-avg-th">{{ $t('grade_analytics.col_avg') }}</th>
                   <th class="bulletin-th bulletin-total-header">{{ $t('grade_analytics.col_weighted') }}</th>
                 </tr>
@@ -1180,21 +1514,20 @@ onMounted(async () => {
               <tbody>
                 <tr v-for="(sub, index) in studentReportCardData.data?.subjects || []" :key="index" class="bulletin-row">
                   <td class="bulletin-td text-left">
-                    <div class="font-bold">{{ sub.subject?.name || 'Unknown' }}</div>
-                    <div class="text-xs text-muted-color mt-1" v-if="sub.teacher">Prof. {{ sub.teacher?.last_name }}</div>
+                    <div class="font-bold">{{ sub.subject?.name || $t('grade_analytics.unknown') }}</div>
+                    <div class="text-xs text-muted-color mt-1" v-if="sub.teacher">{{ $t('grade_analytics.prof_prefix') }} {{ sub.teacher?.last_name }}</div>
                   </td>
                   <td class="bulletin-td font-bold">{{ sub.coefficient }}</td>
-                  <!-- CC /20 -->
-                  <td class="bulletin-td" :class="{ 'bulletin-grade-fail': isFailing(sub.evaluation_continue) }">
-                    {{ sub.evaluation_continue }}
-                  </td>
-                  <!-- Devoir /20 -->
-                  <td class="bulletin-td" :class="{ 'bulletin-grade-fail': isFailing(sub.devoir) }">
-                    {{ sub.devoir }}
-                  </td>
-                  <!-- Composition /40 displayed as /40 raw -->
-                  <td class="bulletin-td" :class="{ 'bulletin-grade-fail': sub.composition !== '-' && Number(sub.composition) * 2 < bulletinFailThreshold * 2 }">
-                    {{ sub.composition !== '-' ? (Number(sub.composition) * 2).toFixed(2) : '-' }}
+                  
+                  <!-- Dynamic Exam Type Grades -->
+                  <td v-for="type in bulletinTypeColumns" :key="type" class="bulletin-td" 
+                      :class="{ 'bulletin-grade-fail': type === 'composition' ? (sub[type] !== '-' && Number(sub[type]) * 2 < bulletinFailThreshold * 2) : isFailing(sub[type]) }">
+                    <template v-if="type === 'composition'">
+                      {{ sub[type] !== '-' ? (Number(sub[type]) * 2).toFixed(2) : '-' }}
+                    </template>
+                    <template v-else>
+                      {{ sub[type] }}
+                    </template>
                   </td>
                   <!-- Average /20 -->
                   <td class="bulletin-td font-bold bulletin-avg-td" :class="{ 'bulletin-grade-fail': isFailing(sub.average) }">
@@ -1234,7 +1567,7 @@ onMounted(async () => {
       </div>
     </template>
 
-    <template v-else-if="!loading && selectedClassId && selectedClassInfo && !selectedStudentId && !selectedTeacherId && !selectedSubjectId">
+    <template v-else-if="!loading && selectedClassId && selectedClassInfo && !selectedStudentId">
       <!-- CLASS BREAKDOWN VIEW -->
       <div class="col-span-12">
         <div class="card bg-green-50 border-green-200">
@@ -1244,16 +1577,21 @@ onMounted(async () => {
             </div>
             <div>
               <h2 class="text-2xl font-bold m-0 text-green-900">{{ selectedClassInfo.name }}</h2>
-              <p class="text-green-700 m-0 mt-1">Class Profile Breakdown</p>
+              <p class="text-green-700 m-0 mt-1">{{ $t('grade_analytics.class_profile') }}</p>
+              <p v-if="selectedSubjectInfo || selectedTeacherInfo" class="text-green-700/80 m-0 mt-1 text-sm">
+                <span v-if="selectedSubjectInfo">{{ selectedSubjectInfo.name }}</span>
+                <span v-if="selectedSubjectInfo && selectedTeacherInfo"> · </span>
+                <span v-if="selectedTeacherInfo">{{ $t('grade_analytics.prof_prefix') }} {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</span>
+              </p>
             </div>
             <div class="ml-auto flex gap-4 text-center">
               <div>
-                <p class="text-sm font-semibold text-green-700 uppercase m-0">Class Average</p>
+                <p class="text-sm font-semibold text-green-700 uppercase m-0">{{ $t('grade_analytics.class_average') }}</p>
                 <p class="text-2xl font-bold text-green-900 m-0 mt-1">{{ stats.average }} / 20</p>
               </div>
               <div class="w-px bg-green-200"></div>
               <div>
-                <p class="text-sm font-semibold text-green-700 uppercase m-0">Pass Rate</p>
+                <p class="text-sm font-semibold text-green-700 uppercase m-0">{{ $t('grade_analytics.pass_rate') }}</p>
                 <p class="text-2xl font-bold text-green-900 m-0 mt-1">{{ stats.passRate }}%</p>
               </div>
             </div>
@@ -1264,10 +1602,10 @@ onMounted(async () => {
       <!-- Top and Bottom Students -->
        <div class="col-span-12 lg:col-span-6">
         <div class="card">
-          <h5 class="mb-3 text-emerald-600 border-b pb-2"><i class="pi pi-star mr-2"></i> Top 5 Students</h5>
+          <h5 class="mb-3 text-emerald-600 border-b pb-2"><i class="pi pi-star mr-2"></i> {{ $t('grade_analytics.top_students') }}</h5>
           <DataTable :value="classTopStudents" :loading="classGradesLoading" size="small" stripedRows>
-            <Column field="student_name" header="Student" />
-            <Column header="Average" sortable sortField="average">
+            <Column field="student_name" :header="$t('grade_analytics.student')" />
+            <Column :header="$t('grade_analytics.average')" sortable sortField="average">
                <template #body="{ data }">
                  <span class="font-bold text-emerald-600">{{ data.average }}</span>
                </template>
@@ -1278,18 +1616,18 @@ onMounted(async () => {
 
       <div class="col-span-12 lg:col-span-6">
         <div class="card">
-          <h5 class="mb-3 text-rose-600 border-b pb-2"><i class="pi pi-exclamation-triangle mr-2"></i> Needs Attention</h5>
+          <h5 class="mb-3 text-rose-600 border-b pb-2"><i class="pi pi-exclamation-triangle mr-2"></i> {{ $t('grade_analytics.needs_attention') }}</h5>
           <DataTable :value="classBottomStudents" :loading="classGradesLoading" size="small" stripedRows>
-            <Column field="student_name" header="Student" />
-            <Column header="Average" sortable sortField="average">
+            <Column field="student_name" :header="$t('grade_analytics.student')" />
+            <Column :header="$t('grade_analytics.average')" sortable sortField="average">
                <template #body="{ data }">
                  <span class="font-bold" :class="{'text-rose-600': data.average < 10}">{{ data.average }}</span>
                </template>
             </Column>
-            <Column header="Status">
+            <Column :header="$t('grade_analytics.col_status')">
                <template #body="{ data }">
-                  <Tag v-if="data.average < 10" severity="danger" value="Failing" />
-                  <Tag v-else severity="warning" value="At Risk" />
+                  <Tag v-if="data.average < 10" severity="danger" :value="$t('grade_analytics.failing_status')" />
+                  <Tag v-else severity="warning" :value="$t('grade_analytics.at_risk')" />
                </template>
             </Column>
           </DataTable>
@@ -1300,7 +1638,7 @@ onMounted(async () => {
       <div class="col-span-12 xl:col-span-6">
         <div class="card chart-card">
           <div class="flex justify-between items-center mb-3">
-             <h5 class="m-0">Subject Averages</h5>
+             <h5 class="m-0">{{ $t('grade_analytics.subject_averages') }}</h5>
           </div>
           <div class="chart-wrap">
             <Chart type="bar" :data="subjectAverageChartData" :options="baseChartOptions" />
@@ -1312,31 +1650,95 @@ onMounted(async () => {
       <div class="col-span-12 xl:col-span-6">
          <div class="card chart-card">
           <div class="flex justify-between items-center mb-3">
-            <h5 class="m-0">Teacher Impact</h5>
+            <h5 class="m-0">{{ $t('grade_analytics.teacher_impact') }}</h5>
           </div>
           <DataTable :value="classTeacherBreakdown" size="small" stripedRows>
-            <Column field="teacher_name" header="Teacher" />
-            <Column field="subjects" header="Subject(s)" />
-            <Column field="average" header="Avg /20" />
-            <Column field="passRate" header="Pass Rate %" />
+            <Column field="teacher_name" :header="$t('grade_analytics.teacher')" />
+            <Column field="subjects" :header="$t('grade_analytics.col_subject_lbl')" />
+            <Column field="average" :header="$t('grade_analytics.col_avg_20')" />
+            <Column field="passRate" :header="$t('grade_analytics.col_pass_pct')" />
           </DataTable>
         </div>
       </div>
 
+      <div v-if="(selectedSubjectId || selectedTeacherId) && showExerciseAnalytics" class="col-span-12">
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h5 class="m-0"><i class="pi pi-compass mr-2 text-violet-500"></i>{{ $t('grade_analytics.exercise_analytics_title') }}</h5>
+              <p class="text-sm text-muted-color mt-1 mb-0">
+                {{ selectedClassInfo.name }}
+                <span v-if="selectedSubjectInfo"> · {{ selectedSubjectInfo.name }}</span>
+                <span v-if="selectedTeacherInfo"> · {{ $t('grade_analytics.prof_prefix') }} {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</span>
+              </p>
+            </div>
+            <span v-if="subjectExerciseAverages.length" class="text-xs text-muted-color">
+              {{ subjectExerciseAverages.length }} {{ $t('grade_analytics.exercises_count') }}
+            </span>
+          </div>
+
+          <div v-if="subjectExerciseLoading" class="text-center py-8">
+            <i class="pi pi-spin pi-spinner text-2xl"></i>
+          </div>
+
+          <template v-else-if="subjectExerciseAverages.length">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+              <div class="chart-wrap" style="height:250px">
+                <Chart type="radar" :data="subjectExerciseRadarData" :options="{ responsive: true, maintainAspectRatio: false, scales: { r: { min: 0 } } }" />
+              </div>
+              <div class="chart-wrap" style="height:250px">
+                <Chart type="bar" :data="subjectExerciseBarData" :options="{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }" />
+              </div>
+            </div>
+
+            <DataTable :value="subjectExerciseAverages" size="small" stripedRows>
+              <Column field="level_name" :header="t('grade_analytics.col_exercise_name')" />
+              <Column field="records_count" :header="t('grade_analytics.col_records')" />
+              <Column :header="t('grade_analytics.avg_note')">
+                <template #body="{ data }">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
+                      <div class="h-1.5 rounded-full" :style="`width:${data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0}%;background:${(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? '#10b981' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? '#f59e0b' : '#ef4444'}`"></div>
+                    </div>
+                    <span class="text-xs font-semibold" :class="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? 'text-emerald-600' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? 'text-amber-500' : 'text-rose-600'">
+                      {{ data.avg_note }} / {{ data.max_note }}
+                    </span>
+                  </div>
+                </template>
+              </Column>
+              <Column :header="t('grade_analytics.col_difficulty')">
+                <template #body="{ data }">
+                  <Tag
+                    :severity="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? 'success' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? 'warn' : 'danger'"
+                    :value="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? t('grade_analytics.easy') : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? t('grade_analytics.medium') : t('grade_analytics.hard')"
+                    rounded
+                  />
+                </template>
+              </Column>
+            </DataTable>
+          </template>
+
+          <div v-else class="text-center py-6 text-muted-color">
+            <i class="pi pi-inbox text-2xl mb-2 block"></i>
+            {{ t('grade_analytics.no_exercises') }}
+          </div>
+        </div>
+      </div>
+
       <!-- Full Class Student Rankings table -->
-      <div class="col-span-12">
+      <div v-if="showExerciseAnalytics" class="col-span-12">
         <div class="card">
           <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h5 class="m-0">
               <i class="pi pi-users mr-2 text-primary"></i>
-              Class Student Rankings — Best to Worst
+              {{ $t('grade_analytics.class_student_rankings') }}
             </h5>
             <div class="flex gap-4 items-center">
               <IconField>
                 <InputIcon class="pi pi-search" />
-                <InputText v-model="studentRankingsFilters['global'].value" placeholder="Search students..." />
+                <InputText v-model="studentRankingsFilters['global'].value" :placeholder="t('grade_analytics.search_students')" />
               </IconField>
-              <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} students</span>
+              <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} {{ t('common.students') }}</span>
             </div>
           </div>
           <DataTable
@@ -1349,7 +1751,7 @@ onMounted(async () => {
             v-model:filters="studentRankingsFilters"
             :globalFilterFields="['student_name', 'class_name', 'best_subject']"
           >
-            <Column header="#" style="width: 3rem">
+            <Column :header="t('grade_analytics.col_rank')" style="width: 3rem">
               <template #body="{ index }">
                 <span
                   class="font-bold"
@@ -1359,7 +1761,7 @@ onMounted(async () => {
                 </span>
               </template>
             </Column>
-            <Column field="student_name" header="Student" sortable>
+            <Column field="student_name" :header="t('grade_analytics.student')" sortable>
               <template #body="{ data, index }">
                 <div class="flex items-center gap-2">
                   <i v-if="index === 0" class="pi pi-trophy text-amber-500"></i>
@@ -1367,11 +1769,11 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column field="class_name" header="Class" sortable />
-            <Column field="average" header="Overall Avg /20" sortable>
+            <Column field="class_name" :header="t('grade_analytics.class')" sortable />
+            <Column field="average" :header="t('grade_analytics.overall_average')" sortable>
               <template #body="{ data }">
                 <div
-                  class="font-bold px-2 py-1 rounded text-center inline-block min-w-12"
+                  class="font-bold px-2 py-1 rounded  text-center inline-block min-w-12"
                   :class="data.average >= 16 ? 'bg-emerald-100 text-emerald-700'
                     : data.average >= getClassFailThreshold(data.class_id || selectedClassId) ? 'bg-blue-50 text-blue-700'
                     : 'bg-rose-100 text-rose-700'"
@@ -1380,8 +1782,8 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column field="best_subject" header="Best Subject" sortable />
-            <Column field="best_subject_avg" header="Best Avg /20" sortable>
+            <Column field="best_subject" :header="t('grade_analytics.best_subject')" sortable />
+            <Column field="best_subject_avg" :header="t('grade_analytics.best_average')" sortable>
               <template #body="{ data }">
                 <span v-if="data.best_subject_avg !== null" class="font-semibold text-emerald-600">
                   {{ data.best_subject_avg }}
@@ -1389,7 +1791,7 @@ onMounted(async () => {
                 <span v-else class="text-muted-color">—</span>
               </template>
             </Column>
-            <Column field="passRate" header="Pass Rate %" sortable>
+            <Column field="passRate" :header="t('grade_analytics.pass_rate')" sortable>
               <template #body="{ data }">
                 <div class="flex items-center gap-2">
                   <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
@@ -1404,7 +1806,7 @@ onMounted(async () => {
               </template>
             </Column>
             <template #empty>
-              <div class="text-center py-4 text-muted-color">No student data available.</div>
+              <div class="text-center py-4 text-muted-color">{{ t('common.no_data_available') }}</div>
             </template>
           </DataTable>
         </div>
@@ -1420,17 +1822,17 @@ onMounted(async () => {
               {{ selectedTeacherInfo.first_name.charAt(0) }}{{ selectedTeacherInfo.last_name.charAt(0) }}
             </div>
             <div>
-              <h2 class="text-2xl font-bold m-0 text-orange-900">Prof. {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</h2>
-              <p class="text-orange-700 m-0 mt-1">Teacher Analytics Profile</p>
+              <h2 class="text-2xl font-bold m-0 text-orange-900">{{ $t('grade_analytics.prof_prefix') }} {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</h2>
+              <p class="text-orange-700 m-0 mt-1">{{ $t('grade_analytics.teacher_analytics_profile') }}</p>
             </div>
             <div class="ml-auto flex gap-4 text-center">
               <div>
-                <p class="text-sm font-semibold text-orange-700 uppercase m-0">Given Average</p>
+                <p class="text-sm font-semibold text-orange-700 uppercase m-0">{{ $t('grade_analytics.average') }}</p>
                 <p class="text-2xl font-bold text-orange-900 m-0 mt-1">{{ stats.average }} / 20</p>
               </div>
               <div class="w-px bg-orange-200"></div>
               <div>
-                <p class="text-sm font-semibold text-orange-700 uppercase m-0">Given Grades</p>
+                <p class="text-sm font-semibold text-orange-700 uppercase m-0">{{ $t('grade_analytics.stat_records') }}</p>
                 <p class="text-2xl font-bold text-orange-900 m-0 mt-1">{{ stats.records }}</p>
               </div>
             </div>
@@ -1440,7 +1842,7 @@ onMounted(async () => {
 
       <div class="col-span-12 xl:col-span-4">
         <div class="card chart-card">
-          <h5 class="mb-3">Grade Distribution</h5>
+          <h5 class="mb-3">{{ $t('grade_analytics.grade_distribution') }}</h5>
           <div class="chart-wrap">
             <Chart type="doughnut" :data="teacherDistributionChartData" :options="teacherPieOptions" />
           </div>
@@ -1449,25 +1851,96 @@ onMounted(async () => {
 
       <div class="col-span-12 xl:col-span-8">
         <div class="card chart-card">
-          <h5 class="mb-3">Class Performance Matrix</h5>
+          <h5 class="mb-3">{{ $t('grade_analytics.class_performance_matrix') }}</h5>
           <DataTable :value="classAggregates" size="small" stripedRows paginator :rows="10">
-            <Column field="label" header="Class" sortable></Column>
-            <Column field="average" header="Avg Grade /20" sortable></Column>
-            <Column field="passRate" header="Pass Rate %" sortable></Column>
-            <Column field="stdDev" header="Variance (Dev)" sortable></Column>
-            <Column header="Status">
+            <Column field="label" :header="$t('grade_analytics.class')" sortable></Column>
+            <Column field="average" :header="$t('grade_analytics.col_avg_20')" sortable></Column>
+            <Column field="passRate" :header="$t('grade_analytics.col_pass_pct')" sortable></Column>
+            <Column field="stdDev" :header="$t('grade_analytics.col_std_dev')" sortable></Column>
+            <Column :header="$t('grade_analytics.col_status')">
               <template #body="{ data }">
-                <Tag v-if="data.average < 10" severity="danger" value="Poor" />
-                <Tag v-else-if="data.average >= 14" severity="success" value="Excellent" />
-                <Tag v-else severity="info" value="Average" />
+                <Tag v-if="data.average < 10" severity="danger" :value="$t('grade_analytics.poor_status')" />
+                <Tag v-else-if="data.average >= 14" severity="success" :value="$t('grade_analytics.excellent')" />
+                <Tag v-else severity="info" :value="$t('grade_analytics.average_status')" />
               </template>
             </Column>
           </DataTable>
         </div>
       </div>
+
+      <!-- Subject Exercise Analytics Drilldown (Teacher View) -->
+      <div class="col-span-12">
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h5 class="m-0"><i class="pi pi-compass mr-2 text-violet-500"></i>{{ $t('grade_analytics.exercise_analytics_title') }}</h5>
+              <p class="text-sm text-muted-color mt-1 mb-0">{{ $t('grade_analytics.exercise_analytics_subtitle') }}</p>
+            </div>
+            <span v-if="subjectExerciseAverages.length" class="text-xs text-muted-color">
+              {{ subjectExerciseAverages.length }} {{ t('grade_analytics.exercises_count') }}
+            </span>
+          </div>
+
+          <div v-if="subjectExerciseLoading" class="text-center py-8">
+            <i class="pi pi-spin pi-spinner text-2xl"></i>
+          </div>
+
+          <template v-else-if="subjectExerciseAverages.length">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+              <!-- Radar Chart -->
+              <div class="chart-wrap" style="height:250px">
+                <Chart type="radar" :data="subjectExerciseRadarData" :options="{
+                  responsive: true, maintainAspectRatio: false,
+                  scales: { r: { min: 0 } }
+                }" />
+              </div>
+              <!-- Bar Chart -->
+              <div class="chart-wrap" style="height:250px">
+                <Chart type="bar" :data="subjectExerciseBarData" :options="{
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: { y: { min: 0 } }
+                }" />
+              </div>
+            </div>
+
+            <!-- Exercise table -->
+            <DataTable :value="subjectExerciseAverages" size="small" stripedRows>
+              <Column field="level_name" :header="t('grade_analytics.col_exercise_name')" />
+              <Column field="records_count" :header="t('grade_analytics.col_records')" />
+              <Column :header="t('grade_analytics.avg_note')">
+                <template #body="{ data }">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
+                      <div class="h-1.5 rounded-full" :style="`width:${data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0}%;background:${(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? '#10b981' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? '#f59e0b' : '#ef4444'}`"></div>
+                    </div>
+                    <span class="text-xs font-semibold" :class="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? 'text-emerald-600' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? 'text-amber-500' : 'text-rose-600'">
+                      {{ data.avg_note }} / {{ data.max_note }}
+                    </span>
+                  </div>
+                </template>
+              </Column>
+              <Column :header="t('grade_analytics.col_difficulty')">
+                <template #body="{ data }">
+                  <Tag
+                    :severity="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? 'success' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? 'warn' : 'danger'"
+                    :value="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? t('grade_analytics.easy') : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? t('grade_analytics.medium') : t('grade_analytics.hard')"
+                    rounded
+                  />
+                </template>
+              </Column>
+            </DataTable>
+          </template>
+
+          <div v-else class="text-center py-6 text-muted-color">
+            <i class="pi pi-inbox text-2xl mb-2 block"></i>
+            {{ $t('grade_analytics.no_exercises') }}
+          </div>
+        </div>
+      </div>
     </template>
 
-    <template v-else-if="!loading && selectedSubjectId && selectedSubjectInfo && !selectedStudentId && !selectedClassId && !selectedTeacherId">
+    <template v-else-if="!loading && selectedSubjectId && selectedSubjectInfo && !selectedStudentId && !selectedClassId">
       <!-- SUBJECT BREAKDOWN VIEW -->
       <div class="col-span-12">
         <div class="card bg-purple-50 border-purple-200">
@@ -1477,16 +1950,16 @@ onMounted(async () => {
             </div>
             <div>
               <h2 class="text-2xl font-bold m-0 text-purple-900">{{ selectedSubjectInfo.name }}</h2>
-              <p class="text-purple-700 m-0 mt-1">Subject Analytics Profile</p>
+              <p class="text-purple-700 m-0 mt-1">{{ $t('grade_analytics.subject_analytics_profile') }}</p>
             </div>
             <div class="ml-auto flex gap-4 text-center">
               <div>
-                <p class="text-sm font-semibold text-purple-700 uppercase m-0">Global Average</p>
+                <p class="text-sm font-semibold text-purple-700 uppercase m-0">{{ $t('grade_analytics.overall_average') }}</p>
                 <p class="text-2xl font-bold text-purple-900 m-0 mt-1">{{ stats.average }} / 20</p>
               </div>
               <div class="w-px bg-purple-200"></div>
               <div>
-                <p class="text-sm font-semibold text-purple-700 uppercase m-0">Overall Pass Rate</p>
+                <p class="text-sm font-semibold text-purple-700 uppercase m-0">{{ $t('grade_analytics.pass_rate') }}</p>
                 <p class="text-2xl font-bold text-purple-900 m-0 mt-1">{{ stats.passRate }}%</p>
               </div>
             </div>
@@ -1497,7 +1970,7 @@ onMounted(async () => {
       <div class="col-span-12 xl:col-span-6">
         <div class="card chart-card">
           <div class="flex justify-between items-center mb-3">
-             <h5 class="m-0">Class Comparison</h5>
+             <h5 class="m-0">{{ $t('grade_analytics.chart_avg_by_class') }}</h5>
           </div>
           <div class="chart-wrap">
             <Chart type="bar" :data="classAverageChartData" :options="baseChartOptions" />
@@ -1508,25 +1981,96 @@ onMounted(async () => {
       <div class="col-span-12 xl:col-span-6">
          <div class="card chart-card">
           <div class="flex justify-between items-center mb-3">
-            <h5 class="m-0">Teacher Comparison</h5>
+            <h5 class="m-0">{{ $t('grade_analytics.chart_teacher_perf') }}</h5>
           </div>
           <DataTable :value="teacherAggregates" size="small" stripedRows paginator :rows="10">
-            <Column field="label" header="Teacher" sortable />
-            <Column field="average" header="Avg /20" sortable />
-            <Column field="passRate" header="Pass Rate %" sortable />
+            <Column field="label" :header="$t('grade_analytics.teacher')" sortable />
+            <Column field="average" :header="$t('grade_analytics.col_avg_20')" sortable />
+            <Column field="passRate" :header="$t('grade_analytics.col_pass_pct')" sortable />
           </DataTable>
         </div>
       </div>
 
+      <!-- Subject Exercise Analytics Drilldown -->
+      <div v-if="showExerciseAnalytics" class="col-span-12">
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h5 class="m-0"><i class="pi pi-compass mr-2 text-violet-500"></i>{{ $t('grade_analytics.exercise_analytics_title') }}</h5>
+              <p class="text-sm text-muted-color mt-1 mb-0">{{ $t('grade_analytics.exercise_analytics_subtitle') }}</p>
+            </div>
+            <span v-if="subjectExerciseAverages.length" class="text-xs text-muted-color">
+              {{ subjectExerciseAverages.length }} {{ t('grade_analytics.exercises_count') }}
+            </span>
+          </div>
+
+          <div v-if="subjectExerciseLoading" class="text-center py-8">
+            <i class="pi pi-spin pi-spinner text-2xl"></i>
+          </div>
+
+          <template v-else-if="subjectExerciseAverages.length">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+              <!-- Radar Chart -->
+              <div class="chart-wrap" style="height:250px">
+                <Chart type="radar" :data="subjectExerciseRadarData" :options="{
+                  responsive: true, maintainAspectRatio: false,
+                  scales: { r: { min: 0 } }
+                }" />
+              </div>
+              <!-- Bar Chart -->
+              <div class="chart-wrap" style="height:250px">
+                <Chart type="bar" :data="subjectExerciseBarData" :options="{
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: { y: { min: 0 } }
+                }" />
+              </div>
+            </div>
+
+            <!-- Exercise table -->
+            <DataTable :value="subjectExerciseAverages" size="small" stripedRows>
+              <Column field="level_name" :header="t('grade_analytics.col_exercise_name')" />
+              <Column field="records_count" :header="t('grade_analytics.col_records')" />
+              <Column :header="t('grade_analytics.avg_note')">
+                <template #body="{ data }">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
+                      <div class="h-1.5 rounded-full" :style="`width:${data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0}%;background:${(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? '#10b981' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? '#f59e0b' : '#ef4444'}`"></div>
+                    </div>
+                    <span class="text-xs font-semibold" :class="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? 'text-emerald-600' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? 'text-amber-500' : 'text-rose-600'">
+                      {{ data.avg_note }} / {{ data.max_note }}
+                    </span>
+                  </div>
+                </template>
+              </Column>
+              <Column :header="t('grade_analytics.col_difficulty')">
+                <template #body="{ data }">
+                  <Tag
+                    :severity="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? 'success' : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? 'warn' : 'danger'"
+                    :value="(data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 70 ? t('grade_analytics.easy') : (data.max_note > 0 ? (data.avg_note / data.max_note) * 100 : 0) >= 40 ? t('grade_analytics.medium') : t('grade_analytics.hard')"
+                    rounded
+                  />
+                </template>
+              </Column>
+            </DataTable>
+          </template>
+
+          <div v-else class="text-center py-6 text-muted-color">
+            <i class="pi pi-inbox text-2xl mb-2 block"></i>
+            {{ t('grade_analytics.no_exercises') }}
+          </div>
+        </div>
+      </div>
+
       <!-- Students Needing Work for this Subject -->
-      <div class="col-span-12">
+      <div class="col-span-12" v-if="selectedSemester === 'all'">
         <div class="card">
           <div class="flex justify-between items-center mb-4">
             <h5 class="m-0">
               <i class="pi pi-exclamation-triangle mr-2 text-rose-500"></i>
-              Students — Ranked Worst to Best
+              {{ $t('grade_analytics.students_ranked') }}
             </h5>
-            <span class="text-sm text-muted-color">Red = below passing threshold for their cycle</span>
+            <span class="text-sm text-muted-color">{{ $t('grade_analytics.below_passing_threshold') }}</span>
           </div>
           <DataTable
             :value="subjectStudentBreakdown"
@@ -1537,7 +2081,7 @@ onMounted(async () => {
             :rows="15"
             :rowClass="(row: any) => row.average !== null && row.average < row.threshold ? 'subject-student-fail' : ''"
           >
-            <Column field="student_name" header="Student" sortable>
+            <Column field="student_name" :header="$t('grade_analytics.student')" sortable>
               <template #body="{ data }">
                 <div class="flex items-center gap-2">
                   <i v-if="data.average !== null && data.average < data.threshold" class="pi pi-exclamation-triangle text-rose-500 text-xs"></i>
@@ -1547,29 +2091,22 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column field="class_name" header="Class" sortable />
-            <Column field="cc" header="CC /20" sortable>
+            <Column field="class_name" :header="$t('grade_analytics.class')" sortable />
+            <!-- Dynamic Exam Type Columns -->
+            <Column 
+              v-for="type in examTypes" 
+              :key="type" 
+              :field="type" 
+              :header="formatExamTypeHeader(type)" 
+              sortable
+            >
               <template #body="{ data }">
-                <span :class="{ 'text-rose-500': data.cc !== null && data.cc < data.threshold }">
-                  {{ data.cc !== null ? data.cc : '—' }}
+                <span :class="{ 'text-rose-500': data[type] !== null && data[type] < data.threshold }">
+                  {{ data[type] !== null ? data[type] : '—' }}
                 </span>
               </template>
             </Column>
-            <Column field="devoir" header="Devoir /20" sortable>
-              <template #body="{ data }">
-                <span :class="{ 'text-rose-500': data.devoir !== null && data.devoir < data.threshold }">
-                  {{ data.devoir !== null ? data.devoir : '—' }}
-                </span>
-              </template>
-            </Column>
-            <Column field="composition" header="Composition /20" sortable>
-              <template #body="{ data }">
-                <span :class="{ 'text-rose-500': data.composition !== null && data.composition < data.threshold }">
-                  {{ data.composition !== null ? data.composition : '—' }}
-                </span>
-              </template>
-            </Column>
-            <Column field="average" header="Average /20" sortable>
+            <Column field="average" :header="$t('grade_analytics.col_avg_20')" sortable>
               <template #body="{ data }">
                 <div
                   class="font-bold px-2 py-1 rounded text-center"
@@ -1581,31 +2118,31 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column header="Status">
+            <Column :header="t('grade_analytics.col_status')">
               <template #body="{ data }">
                 <Tag
                   v-if="data.average !== null && data.average < data.threshold"
                   severity="danger"
-                  value="Needs Work"
+                  :value="t('grade_analytics.needs_work')"
                   rounded
                 />
                 <Tag
                   v-else-if="data.average !== null && data.average >= 16"
                   severity="success"
-                  value="Excellent"
+                  :value="t('grade_analytics.excellent')"
                   rounded
                 />
                 <Tag
                   v-else-if="data.average !== null"
                   severity="info"
-                  value="Passing"
+                  :value="t('grade_analytics.passing')"
                   rounded
                 />
                 <span v-else class="text-muted-color text-sm">—</span>
               </template>
             </Column>
             <template #empty>
-              <div class="text-center py-4 text-muted-color">No grade data for this subject.</div>
+              <div class="text-center py-4 text-muted-color">{{ $t('grade_analytics.no_grade_data') }}</div>
             </template>
           </DataTable>
         </div>
@@ -1649,7 +2186,7 @@ onMounted(async () => {
         <div class="card chart-card">
           <div class="flex justify-between items-center mb-3">
             <h5 class="m-0">{{ $t('grade_analytics.chart_avg_by_subject') }}</h5>
-            <Tag :value="`${subjectAggregates.length} subjects`" severity="info" />
+            <Tag :value="`${subjectAggregates.length} ${$t('grade_analytics.subjects_count')}`" severity="info" />
           </div>
           <div class="chart-wrap">
             <Chart type="bar" :data="subjectAverageChartData" :options="baseChartOptions" />
@@ -1661,7 +2198,7 @@ onMounted(async () => {
         <div class="card chart-card">
           <div class="flex justify-between items-center mb-3">
             <h5 class="m-0">{{ $t('grade_analytics.chart_avg_by_class') }}</h5>
-            <Tag :value="`${classAggregates.length} classes`" severity="success" />
+            <Tag :value="`${classAggregates.length} ${$t('grade_analytics.classes_count')}`" severity="success" />
           </div>
           <div class="chart-wrap">
             <Chart type="bar" :data="classAverageChartData" :options="baseChartOptions" />
@@ -1763,14 +2300,14 @@ onMounted(async () => {
           <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h5 class="m-0">
               <i class="pi pi-users mr-2 text-primary"></i>
-              Student Rankings — Best to Worst
+              {{$t('grade_analytics.class_student_rankings') }}
             </h5>
             <div class="flex gap-4 items-center">
               <IconField>
                 <InputIcon class="pi pi-search" />
-                <InputText v-model="studentRankingsFilters['global'].value" placeholder="Search students..." />
+                <InputText v-model="studentRankingsFilters['global'].value" :placeholder="t('grade_analytics.search_students')" />
               </IconField>
-              <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} students</span>
+              <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} {{ t('common.students') }}</span>
             </div>
           </div>
           <DataTable
@@ -1782,8 +2319,8 @@ onMounted(async () => {
             :loading="loading"
             v-model:filters="studentRankingsFilters"
             :globalFilterFields="['student_name', 'class_name', 'best_subject']"
-          >
-            <Column header="#" style="width: 3rem">
+          > 
+            <Column :header="t('grade_analytics.col_rank')" style="width: 3rem">
               <template #body="{ index }">
                 <span
                   class="font-bold"
@@ -1793,7 +2330,7 @@ onMounted(async () => {
                 </span>
               </template>
             </Column>
-            <Column field="student_name" header="Student" sortable>
+            <Column field="student_name" :header=" $t('grade_analytics.student') " sortable>
               <template #body="{ data, index }">
                 <div class="flex items-center gap-2">
                   <i v-if="index === 0" class="pi pi-trophy text-amber-500"></i>
@@ -1801,8 +2338,8 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column field="class_name" header="Class" sortable />
-            <Column field="average" header="Overall Avg /20" sortable>
+            <Column field="class_name" :header=" $t('common.class') " sortable />
+            <Column field="average" :header=" $t('grade_analytics.overall_average') " sortable>
               <template #body="{ data }">
                 <div
                   class="font-bold px-2 py-1 rounded text-center inline-block min-w-12"
@@ -1814,8 +2351,8 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column field="best_subject" header="Best Subject" sortable />
-            <Column field="best_subject_avg" header="Best Avg /20" sortable>
+            <Column field="best_subject" :header=" $t('grade_analytics.best_subject') " sortable />
+            <Column field="best_subject_avg" :header=" $t('grade_analytics.best_average') " sortable>
               <template #body="{ data }">
                 <span v-if="data.best_subject_avg !== null" class="font-semibold text-emerald-600">
                   {{ data.best_subject_avg }}
@@ -1823,7 +2360,7 @@ onMounted(async () => {
                 <span v-else class="text-muted-color">—</span>
               </template>
             </Column>
-            <Column field="passRate" header="Pass Rate %" sortable>
+            <Column field="passRate" :header=" $t('grade_analytics.pass_rate') " sortable>
               <template #body="{ data }">
                 <div class="flex items-center gap-2">
                   <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
@@ -1838,7 +2375,7 @@ onMounted(async () => {
               </template>
             </Column>
             <template #empty>
-              <div class="text-center py-4 text-muted-color">No student data available.</div>
+              <div class="text-center py-4 text-muted-color">{{ $t('grade_analytics.no_students') }}</div>
             </template>
           </DataTable>
         </div>

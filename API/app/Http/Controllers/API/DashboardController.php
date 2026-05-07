@@ -111,7 +111,9 @@ class DashboardController extends Controller
             : 0;
 
         // Average grades (current academic year)
-        $gradeQuery = Grade::where('academic_year', $academicYear);
+        $gradeQuery = Grade::whereHas('exam', function ($q) use ($academicYear) {
+            $q->where('academic_year', $academicYear);
+        });
         if ($isDirector) {
              $gradeQuery->whereHas('student.class.levelProfile', function ($q) use ($directorCycle) {
                  $q->where('cycle', $directorCycle);

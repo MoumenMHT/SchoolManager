@@ -11,8 +11,8 @@ const toast = useToast();
 const { t } = useI18n();
 
 // Form fields
-const username = ref('admin');
-const password = ref('password123');
+const username = ref('');
+const password = ref('');
 const rememberMe = ref(false);
 
 // State management
@@ -180,15 +180,16 @@ const handleKeyPress = (event: KeyboardEvent) => {
                             icon="pi pi-sign-in"
                         />
 
-                        <!-- Demo Credentials -->
+                        <!-- Demo Credentials
                         <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-border border border-blue-200 dark:border-blue-800">
                             <div class="text-sm text-blue-900 dark:text-blue-100 font-semibold mb-2">{{ t('login.demo_credentials') }}</div>
                             <div class="text-xs text-blue-700 dark:text-blue-300">
                                 <div class="mb-1"><strong>{{ t('login.admin') }}:</strong> admin / password123</div>
                                 <div class="mb-1"><strong>{{ t('login.teacher') }}:</strong> teacher / password123</div>
                                 <div><strong>{{ t('login.parent') }}:</strong> parent / password123</div>
-                            </div>
+                            </div> 
                         </div>
+                        -->
                     </div>
                 </div>
             </div>

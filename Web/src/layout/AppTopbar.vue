@@ -45,7 +45,7 @@ const changeLocale = (code) => {
     locale.value = code;
 };
 
-const currentLocale = computed(() => SUPPORTED_LOCALES.find(l => l.code === locale.value) || SUPPORTED_LOCALES[0]);
+const currentLocale = computed(() => SUPPORTED_LOCALES.find((l) => l.code === locale.value) || SUPPORTED_LOCALES[0]);
 </script>
 
 <template>

@@ -37,15 +37,15 @@ const teacherName = computed(() => {
   if (teacher.value) {
     return `${teacher.value.first_name} ${teacher.value.last_name}`;
   }
-  return currentUser.value?.username ?? 'Teacher';
+  return currentUser.value?.username ?? t('teacher_portal.teacher_fallback');
 });
 
 const levelColors: Record<string, string> = {
-  default: 'bg-blue-100 text-blue-800',
-  primary: 'bg-green-100 text-green-800',
-  middle: 'bg-yellow-100 text-yellow-800',
-  high: 'bg-purple-100 text-purple-800',
-  college: 'bg-red-100 text-red-800',
+  default: 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-500/20',
+  primary: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300 border border-green-500/20',
+  middle: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300 border border-yellow-500/20',
+  high: 'bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-300 border border-purple-500/20',
+  college: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300 border border-red-500/20',
 };
 
 function getLevelColor(level: string) {
@@ -131,7 +131,7 @@ async function openSchedule() {
     const raw: any[] = (response.data as any)?.data ?? response.data ?? [];
     const grouped: Record<string, any[]> = {};
     for (const slot of raw) {
-      const day = slot.day ?? slot.assignment?.day ?? 'Unknown';
+      const day = slot.day ?? slot.assignment?.day ?? t('teacher_portal.unknown_day');
       const capitalDay = day.charAt(0).toUpperCase() + day.slice(1).toLowerCase();
       if (!grouped[capitalDay]) grouped[capitalDay] = [];
       grouped[capitalDay].push(slot);
@@ -182,7 +182,7 @@ function formatTime(t: string) {
 }
 
 function getSubjectName(slot: any): string {
-  return slot.assignment?.subject?.name ?? slot.subject?.name ?? 'Subject';
+  return slot.assignment?.subject?.name ?? slot.subject?.name ?? t('teacher_portal.subject_fallback');
 }
 
 function getClassName(slot: any): string {
@@ -196,190 +196,198 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 md:p-6">
+  <div class="p-4 md:p-8 max-w-[1600px] mx-auto">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-1">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+      <div class="animate-fade-in">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-bold uppercase tracking-wider">
+            {{ t('teacher_portal.subtitle') }}
+          </span>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black text-surface-900 dark:text-surface-0 tracking-tight">
           {{ t('teacher_portal.title', { name: teacherName }) }}
         </h1>
-        <p class="text-surface-500 dark:text-surface-400">{{ t('teacher_portal.subtitle') }}</p>
       </div>
-      <Button
-        :label="t('teacher_portal.my_schedule')"
-        icon="pi pi-calendar"
-        severity="secondary"
-        outlined
-        @click="openSchedule"
-      />
+      <div class="flex items-center gap-3">
+        <Button
+          :label="t('teacher_portal.my_schedule')"
+          icon="pi pi-calendar"
+          severity="primary"
+          raised
+          class="rounded-xl px-6 py-3 font-bold shadow-lg shadow-primary-500/20"
+          @click="openSchedule"
+        />
+      </div>
     </div>
 
     <!-- Stats row -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 flex items-center gap-3">
-        <div class="bg-blue-500 text-white rounded-lg p-2">
-          <i class="pi pi-building text-xl"></i>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+      <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 border border-blue-200/50 dark:border-blue-500/10">
+        <div class="bg-white/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+          <i class="pi pi-building text-3xl"></i>
         </div>
         <div>
-          <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ classes.length }}</div>
-          <div class="text-sm text-blue-600 dark:text-blue-400">{{ t('teacher_portal.classes') }}</div>
+          <div class="text-4xl font-black text-blue-900 dark:text-blue-100 leading-none mb-1">{{ classes.length }}</div>
+          <div class="text-blue-700/70 dark:text-blue-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('teacher_portal.classes') }}</div>
         </div>
       </div>
-      <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 flex items-center gap-3">
-        <div class="bg-green-500 text-white rounded-lg p-2">
-          <i class="pi pi-users text-xl"></i>
+      <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 border border-green-200/50 dark:border-green-500/10">
+        <div class="bg-white/80 dark:bg-green-500/10 text-green-600 dark:text-green-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+          <i class="pi pi-users text-3xl"></i>
         </div>
         <div>
-          <div class="text-2xl font-bold text-green-700 dark:text-green-300">
+          <div class="text-4xl font-black text-green-900 dark:text-green-100 leading-none mb-1">
             {{ classes.reduce((s, c) => s + (c.students_count ?? 0), 0) }}
           </div>
-          <div class="text-sm text-green-600 dark:text-green-400">{{ t('teacher_portal.total_students') }}</div>
+          <div class="text-green-700/70 dark:text-green-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('teacher_portal.total_students') }}</div>
         </div>
       </div>
-      <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 flex items-center gap-3">
-        <div class="bg-purple-500 text-white rounded-lg p-2">
-          <i class="pi pi-book text-xl"></i>
+      <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 sm:col-span-2 lg:col-span-1 border border-purple-200/50 dark:border-purple-500/10">
+        <div class="bg-white/80 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+          <i class="pi pi-book text-3xl"></i>
         </div>
         <div>
-          <div class="text-2xl font-bold text-purple-700 dark:text-purple-300">
+          <div class="text-4xl font-black text-purple-900 dark:text-purple-100 leading-none mb-1">
             {{ [...new Set(classes.flatMap(c => (c.subjects ?? []).map((s: any) => s.id)))].length }}
           </div>
-          <div class="text-sm text-purple-600 dark:text-purple-400">{{ t('teacher_portal.subjects_taught') }}</div>
+          <div class="text-purple-700/70 dark:text-purple-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('teacher_portal.subjects_taught') }}</div>
         </div>
       </div>
     </div>
 
     <!-- Today's Sessions -->
-    <div class="mb-6">
-      <div class="flex items-center gap-2 mb-3">
-        <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">{{ t('teacher_portal.todays_sessions') }}</h2>
-        <span class="text-xs text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-700 px-2 py-0.5 rounded-full">
-          {{ todayDayName() }}
-        </span>
+    <div class="mb-12">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center text-surface-600 dark:text-surface-400">
+            <i class="pi pi-clock text-xl"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-black text-surface-900 dark:text-surface-0">{{ t('teacher_portal.todays_sessions') }}</h2>
+            <p class="text-sm text-surface-500 font-medium">{{ t('common.' + todayDayName().toLowerCase()) }}</p>
+          </div>
+        </div>
       </div>
 
-      <div v-if="sessionsLoading" class="flex gap-3">
-        <div v-for="n in 3" :key="n" class="h-24 w-52 bg-surface-100 dark:bg-surface-700 rounded-xl animate-pulse"></div>
+      <div v-if="sessionsLoading" class="flex gap-4 overflow-x-auto pb-4 modern-scroll">
+        <div v-for="n in 3" :key="n" class="h-40 min-w-[280px] bg-surface-100 dark:bg-surface-800 rounded-3xl animate-pulse"></div>
       </div>
 
-      <div v-else-if="todaysSessions.length === 0" class="flex items-center gap-3 p-4 bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 text-surface-400">
-        <i class="pi pi-calendar-times text-xl"></i>
-        <span class="text-sm">{{ t('teacher_portal.no_sessions_today') }}</span>
+      <div v-else-if="todaysSessions.length === 0" class="flex flex-col items-center justify-center py-12 bg-surface-50 dark:bg-surface-800/40 rounded-3xl border-2 border-dashed border-surface-200 dark:border-surface-700 text-surface-400">
+        <i class="pi pi-calendar-times text-4xl mb-4 opacity-20"></i>
+        <span class="font-bold tracking-wide">{{ t('teacher_portal.no_sessions_today') }}</span>
       </div>
 
-      <div v-else class="flex flex-wrap gap-3">
+      <div v-else class="flex gap-6 overflow-x-auto pb-6 modern-scroll snap-x">
         <div
           v-for="slot in todaysSessions"
           :key="slot.id"
-          class="group flex flex-col justify-between bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl p-4 min-w-48 max-w-56 shadow-sm hover:shadow-md hover:border-primary-400 dark:hover:border-primary-500 transition-all cursor-pointer"
+          class="group flex flex-col justify-between bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-3xl p-6 min-w-[280px] max-w-[320px] shadow-sm hover:shadow-xl hover:border-primary-500 transition-premium cursor-pointer snap-start relative overflow-hidden"
           @click="openSessionAttendance(slot)"
         >
-          <div>
-            <div class="text-sm font-bold text-surface-900 dark:text-surface-0 mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-primary-500/5 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150"></div>
+          
+          <div class="relative z-10">
+            <div class="flex items-start justify-between mb-4">
+              <span class="px-3 py-1 rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-black uppercase tracking-wider">
+                {{ formatTime(slot.start_time) }}
+              </span>
+              <div v-if="slot.room" class="flex items-center gap-1 text-xs text-surface-400 font-medium">
+                <i class="pi pi-map-marker"></i>
+                {{ slot.room }}
+              </div>
+            </div>
+            
+            <h3 class="text-xl font-black text-surface-900 dark:text-surface-0 mb-1 group-hover:text-primary-600 transition-colors">
               {{ getSubjectName(slot) }}
-            </div>
-            <div class="text-xs text-surface-500 dark:text-surface-400 mb-2">
-              {{ getClassName(slot) }}
-            </div>
-            <div class="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 font-medium">
-              <i class="pi pi-clock text-[10px]"></i>
-              {{ formatTime(slot.start_time) }} – {{ formatTime(slot.end_time) }}
-            </div>
-            <div v-if="slot.room" class="flex items-center gap-1 text-xs text-surface-400 dark:text-surface-500 mt-0.5">
-              <i class="pi pi-map-marker text-[10px]"></i>
-              {{ slot.room }}
-            </div>
+            </h3>
+            <p class="text-surface-500 font-bold mb-4">{{ getClassName(slot) }}</p>
           </div>
-          <div class="mt-3 pt-2 border-t border-surface-100 dark:border-surface-700">
-            <!-- Loading summaries -->
-            <span v-if="!(slot.id in sessionAttMap)" class="text-xs text-surface-400 dark:text-surface-500 flex items-center gap-1">
-              <i class="pi pi-spin pi-spinner text-[10px]"></i> {{ t('teacher_portal.checking') }}
-            </span>
-            <!-- Attendance already marked -->
-            <template v-else-if="sessionAttMap[slot.id].total > 0">
-              <div class="flex items-center gap-1 mb-1">
-                <span class="text-xs text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
-                  <i class="pi pi-check-circle text-[10px]"></i> {{ t('teacher_portal.attendance_marked') }}
-                </span>
-              </div>
-              <div class="flex gap-2 text-[10px]">
-                <span class="text-green-600 dark:text-green-400 font-medium">{{ sessionAttMap[slot.id].present }} {{ t('teacher_portal.present') }}</span>
-                <span v-if="sessionAttMap[slot.id].absent > 0" class="text-red-500 dark:text-red-400 font-medium">{{ sessionAttMap[slot.id].absent }} {{ t('teacher_portal.absent') }}</span>
-                <span v-if="sessionAttMap[slot.id].late > 0" class="text-amber-500 dark:text-amber-400 font-medium">{{ sessionAttMap[slot.id].late }} {{ t('teacher_portal.late') }}</span>
-              </div>
-            </template>
-            <!-- Not yet marked -->
-            <span v-else class="text-xs text-primary-600 dark:text-primary-400 font-medium flex items-center gap-1">
-              <i class="pi pi-check-circle text-[10px]"></i>
-              {{ t('teacher_portal.take_attendance') }}
-            </span>
+
+          <div class="relative z-10 flex items-center justify-between pt-4 border-t border-surface-100 dark:border-surface-700">
+            <div class="text-xs text-surface-400 font-bold">
+              {{ formatTime(slot.end_time) }} {{ t('common.end') }}
+            </div>
+            <i class="pi pi-arrow-right text-primary-500 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0"></i>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Classes grid -->
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-xl font-semibold text-surface-800 dark:text-surface-100">{{ t('teacher_portal.my_classes') }}</h2>
-    </div>
+    <div class="mb-6">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-10 h-10 rounded-xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center text-surface-600 dark:text-surface-400">
+          <i class="pi pi-th-large text-xl"></i>
+        </div>
+        <h2 class="text-2xl font-black text-surface-900 dark:text-surface-0">{{ t('teacher_portal.my_classes') }}</h2>
+      </div>
 
-    <div v-if="loading" class="flex justify-center py-16">
-      <ProgressSpinner style="width: 48px; height: 48px" />
-    </div>
+      <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div v-for="n in 6" :key="n" class="h-64 bg-surface-100 dark:bg-surface-800 rounded-3xl animate-pulse"></div>
+      </div>
 
-    <div v-else-if="classes.length === 0" class="flex flex-col items-center py-16 text-surface-400">
-      <i class="pi pi-building text-5xl mb-3"></i>
-      <p class="text-lg">{{ t('teacher_portal.no_classes') }}</p>
-    </div>
+      <div v-else-if="classes.length === 0" class="flex flex-col items-center justify-center py-24 text-surface-400">
+        <i class="pi pi-building text-6xl mb-6 opacity-20"></i>
+        <p class="text-xl font-bold">{{ t('teacher_portal.no_classes') }}</p>
+      </div>
 
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div
-        v-for="cls in classes"
-        :key="cls.id"
-        class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-        @click="goToClass(cls)"
-      >
-        <div class="p-5">
-          <!-- Class name & level badge -->
-          <div class="flex items-start justify-between mb-3">
-            <h3 class="text-lg font-bold text-surface-900 dark:text-surface-0 group-hover:text-primary-600 transition-colors">
-              {{ cls.name }}
-            </h3>
-            <span class="text-xs font-semibold px-2 py-1 rounded-full" :class="getLevelColor(cls.level)">
-              {{ cls.level }}
-            </span>
-          </div>
-
-          <!-- Academic year -->
-          <p v-if="cls.academic_year" class="text-sm text-surface-500 dark:text-surface-400 mb-3">
-            <i class="pi pi-calendar-plus mr-1"></i>{{ cls.academic_year }}
-          </p>
-
-          <!-- Subjects taught -->
-          <div v-if="cls.subjects && cls.subjects.length > 0" class="flex flex-wrap gap-1 mb-4">
-            <span
-              v-for="subject in cls.subjects"
-              :key="subject.id"
-              class="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full"
-            >
-              {{ subject.name }}
-            </span>
-          </div>
-
-          <!-- Divider -->
-          <div class="border-t border-surface-100 dark:border-surface-700 pt-3 flex items-center justify-between">
-            <div class="flex items-center gap-1 text-surface-600 dark:text-surface-300 text-sm">
-              <i class="pi pi-users text-xs"></i>
-              <span>{{ cls.students_count ?? (cls.students?.length ?? 0) }} {{ t('teacher_portal.students') }}</span>
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div
+          v-for="cls in classes"
+          :key="cls.id"
+          class="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-[2rem] shadow-sm hover:shadow-2xl transition-premium cursor-pointer group relative overflow-hidden hover:border-primary-500/50"
+          @click="goToClass(cls)"
+        >
+          <!-- Background decoration -->
+          <div class="absolute -top-10 -right-10 w-32 h-32 bg-surface-50 dark:bg-surface-900 rounded-full transition-transform group-hover:scale-150 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/10"></div>
+          
+          <div class="p-8 relative z-10">
+            <!-- Class name & level badge -->
+            <div class="flex items-start justify-between mb-6">
+              <div>
+                <h3 class="text-2xl font-black text-surface-900 dark:text-surface-0 group-hover:text-primary-600 transition-colors leading-tight mb-1">
+                  {{ cls.name }}
+                </h3>
+                <p v-if="cls.academic_year" class="text-xs font-bold text-surface-400 uppercase tracking-widest">
+                  {{ cls.academic_year }}
+                </p>
+              </div>
+              <span class="text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-tighter shadow-sm" :class="getLevelColor(cls.level)">
+                {{ t('levels.' + (cls.level?.toLowerCase() || 'default')) }}
+              </span>
             </div>
-            <div class="flex gap-2">
 
+            <!-- Subjects taught -->
+            <div v-if="cls.subjects && cls.subjects.length > 0" class="flex flex-wrap gap-2 mb-8">
+              <span
+                v-for="subject in cls.subjects"
+                :key="subject.id"
+                class="text-[11px] font-bold bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 px-3 py-1 rounded-lg"
+              >
+                {{ subject.name }}
+              </span>
+            </div>
+
+            <!-- Footer Stats -->
+            <div class="flex items-center justify-between pt-6 border-t border-surface-100 dark:border-surface-700">
+              <div class="flex items-center gap-3">
+                <div class="flex -space-x-2">
+                   <div v-for="i in 3" :key="i" class="w-8 h-8 rounded-full border-2 border-white dark:border-surface-800 bg-surface-200 dark:bg-surface-700 flex items-center justify-center text-[10px] font-bold text-surface-500">
+                     <i class="pi pi-user"></i>
+                   </div>
+                </div>
+                <span class="text-sm font-black text-surface-700 dark:text-surface-200">
+                  {{ cls.students_count ?? (cls.students?.length ?? 0) }} <span class="text-surface-400 font-bold ml-1 uppercase text-[10px] tracking-widest">{{ t('teacher_portal.students') }}</span>
+                </span>
+              </div>
               <Button
-                icon="pi pi-star"
+                icon="pi pi-chart-bar"
                 size="small"
-                :label="t('teacher_portal.grades')"
                 text
-                severity="info"
+                severity="primary"
+                class="rounded-xl font-black uppercase text-[11px] tracking-wider"
                 @click.stop="router.push({ name: 'teacher-class', params: { classId: cls.id }, query: { tab: 'grades' } })"
               />
             </div>
@@ -392,64 +400,127 @@ onMounted(() => {
     <Dialog
       v-model:visible="scheduleDialog"
       :header="t('teacher_portal.my_weekly_schedule')"
-      :style="{ width: '90vw', maxWidth: '1100px' }"
+      :style="{ width: '95vw', maxWidth: '1200px' }"
       :modal="true"
       :closable="true"
+      class="premium-dialog"
+      contentClass="modern-scroll"
     >
-      <div v-if="scheduleLoading" class="flex justify-center py-10">
-        <ProgressSpinner style="width: 40px; height: 40px" />
+      <div v-if="scheduleLoading" class="flex justify-center py-20">
+        <ProgressSpinner style="width: 50px; height: 50px" />
       </div>
 
-      <div v-else-if="Object.keys(scheduleByDay).length === 0" class="flex flex-col items-center py-10 text-surface-400">
-        <i class="pi pi-calendar text-4xl mb-2"></i>
-        <p>{{ t('teacher_portal.no_schedule') }}</p>
+      <div v-else-if="Object.keys(scheduleByDay).length === 0" class="flex flex-col items-center py-20 text-surface-400">
+        <i class="pi pi-calendar text-6xl mb-6 opacity-20"></i>
+        <p class="font-bold text-xl">{{ t('teacher_portal.no_schedule') }}</p>
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-sm border-collapse">
-          <thead>
-            <tr>
-              <th class="border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 p-2 text-left w-20 text-surface-500">
-                {{ t('common.time') }}
-              </th>
-              <th
-                v-for="(day, idx) in translatedWeekDays"
-                :key="WEEK_DAYS[idx]"
-                class="border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 p-2 text-center font-semibold text-surface-700 dark:text-surface-200"
-              >
-                {{ day }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="hour in scheduleHours" :key="hour">
-              <td class="border border-surface-200 dark:border-surface-700 p-2 text-surface-400 text-xs text-center whitespace-nowrap">
-                {{ String(hour).padStart(2, '0') }}:00
-              </td>
-              <td
-                v-for="day in WEEK_DAYS"
-                :key="day"
-                class="border border-surface-200 dark:border-surface-700 p-1 align-top min-w-28"
-              >
-                <div
-                  v-for="slot in getSlotForDayTime(day, hour)"
-                  :key="slot.id"
-                  class="bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-200 rounded-lg p-2 mb-1 text-xs"
+      <div v-else>
+        <!-- Mobile Schedule View (List) -->
+        <div class="md:hidden space-y-8">
+           <div v-for="day in WEEK_DAYS" :key="day" class="animate-fade-in">
+              <h3 class="text-lg font-black text-primary-600 dark:text-primary-400 mb-4 border-b border-primary-100 dark:border-primary-900/30 pb-2">
+                {{ t(`common.${day.toLowerCase()}`) }}
+              </h3>
+              <div v-if="(scheduleByDay[day] ?? []).length === 0" class="text-sm text-surface-400 italic py-2">
+                {{ t('teacher_portal.no_sessions') }}
+              </div>
+              <div v-else class="space-y-3">
+                 <div v-for="slot in scheduleByDay[day]" :key="slot.id" class="bg-surface-50 dark:bg-surface-900/50 p-4 rounded-2xl border border-surface-200 dark:border-surface-700">
+                    <div class="flex justify-between items-start mb-2">
+                       <span class="font-black text-surface-900 dark:text-surface-0">{{ getSubjectName(slot) }}</span>
+                       <span class="text-[10px] font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 px-2 py-0.5 rounded">{{ formatTime(slot.start_time) }}</span>
+                    </div>
+                    <div class="text-sm text-surface-500 font-medium mb-2">{{ getClassName(slot) }}</div>
+                    <div v-if="slot.room" class="text-xs text-surface-400 flex items-center gap-1">
+                       <i class="pi pi-map-marker"></i> {{ slot.room }}
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- Desktop Schedule View (Table) -->
+        <div class="hidden md:block overflow-x-auto rounded-3xl border border-surface-200 dark:border-surface-700">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                <th class="bg-surface-50 dark:bg-surface-900 p-4 text-center w-24 border-b border-r border-surface-200 dark:border-surface-700 font-black text-surface-400 uppercase text-[10px] tracking-widest">
+                  {{ t('common.time') }}
+                </th>
+                <th
+                  v-for="(day, idx) in translatedWeekDays"
+                  :key="WEEK_DAYS[idx]"
+                  class="bg-surface-50 dark:bg-surface-900 p-4 text-center font-black text-surface-700 dark:text-surface-200 border-b border-r border-surface-200 dark:border-surface-700 uppercase text-xs tracking-widest last:border-r-0"
                 >
-                  <div class="font-semibold">{{ getSubjectName(slot) }}</div>
-                  <div class="text-primary-600 dark:text-primary-400">{{ getClassName(slot) }}</div>
-                  <div class="text-primary-500 dark:text-primary-500 mt-0.5">
-                    {{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}
+                  {{ day }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="hour in scheduleHours" :key="hour">
+                <td class="p-4 bg-surface-50/50 dark:bg-surface-900/50 text-surface-400 font-black text-[10px] text-center border-b border-r border-surface-200 dark:border-surface-700">
+                  {{ String(hour).padStart(2, '0') }}:00
+                </td>
+                <td
+                  v-for="day in WEEK_DAYS"
+                  :key="day"
+                  class="p-2 align-top min-w-[150px] border-b border-r border-surface-200 dark:border-surface-700 last:border-r-0 h-24"
+                >
+                  <div
+                    v-for="slot in getSlotForDayTime(day, hour)"
+                    :key="slot.id"
+                    class="bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 text-primary-800 dark:text-primary-200 rounded-xl p-3 mb-2 shadow-sm transition-premium hover:shadow-md hover:scale-[1.02]"
+                  >
+                    <div class="font-black text-xs mb-1">{{ getSubjectName(slot) }}</div>
+                    <div class="text-[10px] font-bold opacity-70 mb-2">{{ getClassName(slot) }}</div>
+                    <div class="flex items-center justify-between text-[9px] font-black uppercase opacity-60">
+                      <span>{{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }}</span>
+                      <span v-if="slot.room"><i class="pi pi-map-marker mr-0.5"></i>{{ slot.room }}</span>
+                    </div>
                   </div>
-                  <div v-if="slot.room" class="text-primary-500 dark:text-primary-500">
-                    <i class="pi pi-map-marker text-[10px]"></i> {{ slot.room }}
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </Dialog>
   </div>
 </template>
+
+<style scoped>
+.modern-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.modern-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modern-scroll::-webkit-scrollbar-thumb {
+  background: rgba(var(--p-primary-500-rgb), 0.1);
+  border-radius: 10px;
+}
+.app-dark .modern-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+:deep(.premium-dialog) {
+  border-radius: 2rem;
+  overflow: hidden;
+  border: none;
+}
+
+:deep(.premium-dialog .p-dialog-header) {
+  padding: 2rem;
+}
+</style>

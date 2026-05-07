@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToast } from 'primevue/usetoast';
 import ApiService from '@/service/ApiService';
@@ -56,19 +56,23 @@ const statusSeverity: Record<string, string> = {
   excused: 'info',
 };
 
+
+
 // ─── Grades ───────────────────────────────────────────────────────────────────
 const gradesDialog = ref(false);
 const gradeClass = ref<any>(null);
 const gradeSubject = ref<any>(null);
-const gradeExamType = ref<string | null>(null);
 const gradeSemester = ref<string | null>(null);
-const gradeMaxGrade = ref<number>(20);
-const gradeRows = ref<Array<{ student: any; grade: number | null; comment: string }>>([]);
+const gradeSelectedExam = ref<any>(null);
+const gradeRows = ref<Array<{ student: any; grade: number | null; comment: string; exercise_grades: any[] }>>([]);
 const savingGrades = ref(false);
+const classExams = ref<any[]>([]);
+const loadingExams = ref(false);
 
 const examTypeOptions = [
   { label: 'Évaluation Continue', value: 'evaluation_continue' },
-  { label: 'Devoir', value: 'devoir' },
+  { label: 'Devoir 1', value: 'devoir_1' },
+  { label: 'Devoir 2', value: 'devoir_2' },
   { label: 'Composition', value: 'composition' },
 ];
 
@@ -236,7 +240,52 @@ const saveAttendance = async () => {
   }
 };
 
+
+
 // ─── Grades Dialog ─────────────────────────────────────────────────────────────
+const loadClassExams = async () => {
+  if (!gradeClass.value || !gradeSemester.value || !gradeSubject.value) {
+    classExams.value = [];
+    return;
+  }
+  loadingExams.value = true;
+  try {
+    const academicYear = gradeClass.value?.academic_year || currentAcademicYear.value;
+    const exams = await GradeService.getExams({
+      class_id: gradeClass.value.id,
+      semester: gradeSemester.value,
+      subject_id: gradeSubject.value.id,
+      teacher_id: teacherId.value!,
+      academic_year: academicYear
+    });
+    classExams.value = exams;
+  } catch (err) {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load exams', life: 3000 });
+  } finally {
+    loadingExams.value = false;
+  }
+};
+
+watch([gradeSubject, gradeSemester], () => {
+  gradeSelectedExam.value = null;
+  loadClassExams();
+});
+
+watch(gradeSelectedExam, (exam) => {
+  if (exam) {
+    gradeRows.value.forEach(row => {
+      row.exercise_grades = exam.exercises?.map((ex: any) => ({
+        exam_exercise_id: ex.id,
+        level_name: ex.level_name,
+        max_note: ex.max_note,
+        note: null,
+      })) || [];
+    });
+  } else {
+    gradeRows.value.forEach(row => { row.exercise_grades = []; });
+  }
+});
+
 const openGrades = (cls: any) => {
   gradeClass.value = cls;
 
@@ -247,30 +296,22 @@ const openGrades = (cls: any) => {
     gradeSubject.value = null;
   }
 
-  gradeExamType.value = null;
   gradeSemester.value = null;
-  gradeMaxGrade.value = 20;
+  gradeSelectedExam.value = null;
 
   gradeRows.value = (cls.students || []).map((student: any) => ({
     student,
-    grade: null,
+    grade: 0,
     comment: '',
+    exercise_grades: []
   }));
 
   gradesDialog.value = true;
 };
 
 const saveGrades = async () => {
-  if (!gradeSubject.value) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a subject', life: 3000 });
-    return;
-  }
-  if (!gradeExamType.value) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please select an exam type', life: 3000 });
-    return;
-  }
-  if (!gradeSemester.value) {
-    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a trimester', life: 3000 });
+  if (!gradeSelectedExam.value) {
+    toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please select an exam', life: 3000 });
     return;
   }
   if (!teacherId.value) {
@@ -278,7 +319,11 @@ const saveGrades = async () => {
     return;
   }
 
-  const filled = gradeRows.value.filter((r) => r.grade !== null && r.grade !== undefined);
+  // We consider a row "filled" if at least one exercise grade is entered
+  const filled = gradeRows.value.filter((r) => {
+    return r.exercise_grades?.some(eg => eg.note !== null && eg.note !== undefined);
+  });
+
   if (!filled.length) {
     toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please enter at least one grade', life: 3000 });
     return;
@@ -286,17 +331,19 @@ const saveGrades = async () => {
 
   savingGrades.value = true;
   try {
-    const grades = filled.map((row) => ({
-      student_id: row.student.id,
-      subject_id: gradeSubject.value.id,
-      teacher_id: teacherId.value!,
-      exam_type: gradeExamType.value!,
-      grade: row.grade!,
-      max_grade: gradeMaxGrade.value,
-      semester: gradeSemester.value!,
-      academic_year: gradeClass.value?.academic_year || currentAcademicYear.value,
-      comment: row.comment || null,
-    }));
+    const grades = filled.map((row) => {
+      const computedGrade = (row.exercise_grades as any[])?.reduce((sum: number, eg: any) => sum + (Number(eg.note) || 0), 0) || 0;
+      return {
+        student_id: row.student.id,
+        exam_id: gradeSelectedExam.value.id,
+        grade: computedGrade,
+        comment: row.comment || null,
+        exercise_grades: row.exercise_grades?.filter(eg => eg.note !== null).map(eg => ({
+            exam_exercise_id: eg.exam_exercise_id,
+            note: eg.note
+        })),
+      };
+    });
 
     const result = await GradeService.bulkCreateGrades(grades);
     const created = (result as any)?.created_count ?? filled.length;
@@ -423,6 +470,8 @@ const getSubjectColor = (index: number | string) => {
       </div>
     </div>
 
+
+
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <!-- Schedule Dialog                                                -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -541,13 +590,13 @@ const getSubjectColor = (index: number | string) => {
         scrollHeight="400px"
         size="small"
       >
-        <Column header="#" style="width: 50px">
+        <Column header="#" style="width: 50px" frozen>
           <template #body="{ index }">
             <span class="text-surface-500">{{ index + 1 }}</span>
           </template>
         </Column>
 
-        <Column header="Student">
+        <Column header="Student" frozen style="min-width: 150px">
           <template #body="{ data }">
             <div>
               <div class="font-medium">{{ data.student.first_name }} {{ data.student.last_name }}</div>
@@ -628,7 +677,7 @@ const getSubjectColor = (index: number | string) => {
       <!-- Config Row -->
       <div class="grid mb-4">
         <!-- Subject -->
-        <div class="col-12 md:col-6 lg:col-3">
+        <div class="col-12 md:col-4">
           <label class="block mb-1 font-medium text-sm">Subject <span class="text-red-400">*</span></label>
           <Select
             v-model="gradeSubject"
@@ -640,21 +689,8 @@ const getSubjectColor = (index: number | string) => {
           />
         </div>
 
-        <!-- Exam Type -->
-        <div class="col-12 md:col-6 lg:col-3">
-          <label class="block mb-1 font-medium text-sm">Exam Type <span class="text-red-400">*</span></label>
-          <Select
-            v-model="gradeExamType"
-            :options="examTypeOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select type"
-            class="w-full"
-          />
-        </div>
-
         <!-- Trimester -->
-        <div class="col-12 md:col-6 lg:col-3">
+        <div class="col-12 md:col-4">
           <label class="block mb-1 font-medium text-sm">Trimester <span class="text-red-400">*</span></label>
           <Select
             v-model="gradeSemester"
@@ -666,16 +702,29 @@ const getSubjectColor = (index: number | string) => {
           />
         </div>
 
-        <!-- Max Grade -->
-        <div class="col-12 md:col-6 lg:col-3">
-          <label class="block mb-1 font-medium text-sm">Max Grade</label>
-          <InputNumber
-            v-model="gradeMaxGrade"
-            :min="1"
-            :max="100"
+        <!-- Exam -->
+        <div class="col-12 md:col-4">
+          <label class="block mb-1 font-medium text-sm">Select Exam <span class="text-red-400">*</span></label>
+          <Select
+            v-model="gradeSelectedExam"
+            :options="classExams"
+            optionLabel="exam_type"
+            placeholder="Select exam..."
             class="w-full"
-            inputClass="w-full"
-          />
+            :loading="loadingExams"
+            :disabled="!gradeSubject || !gradeSemester"
+          >
+             <template #value="slotProps">
+               <span v-if="slotProps.value">{{ slotProps.value.exam_type }} ({{ slotProps.value.max_grade }} pts)</span>
+               <span v-else>Select exam...</span>
+             </template>
+             <template #option="slotProps">
+               <div>
+                 <span class="capitalize font-bold">{{ slotProps.option.exam_type }}</span>
+                 <span class="text-sm text-surface-500 ml-2">({{ slotProps.option.max_grade }} pts) - {{ slotProps.option.exercises?.length || 0 }} Exercises</span>
+               </div>
+             </template>
+          </Select>
         </div>
       </div>
 
@@ -684,6 +733,7 @@ const getSubjectColor = (index: number | string) => {
         <i class="pi pi-info-circle mr-1"></i>
         Academic Year:
         <strong>{{ gradeClass?.academic_year || currentAcademicYear }}</strong>
+        <span v-if="gradeSelectedExam" class="ml-4"><i class="pi pi-check-circle text-green-500 mr-1"></i>Exam max grade: {{ gradeSelectedExam.max_grade }}</span>
       </div>
 
       <!-- Students Table -->
@@ -694,13 +744,13 @@ const getSubjectColor = (index: number | string) => {
         scrollHeight="400px"
         size="small"
       >
-        <Column header="#" style="width: 50px">
+        <Column header="#" style="width: 50px" frozen>
           <template #body="{ index }">
             <span class="text-surface-500">{{ index + 1 }}</span>
           </template>
         </Column>
 
-        <Column header="Student">
+        <Column header="Student" frozen style="min-width: 150px">
           <template #body="{ data }">
             <div>
               <div class="font-medium">{{ data.student.first_name }} {{ data.student.last_name }}</div>
@@ -709,12 +759,14 @@ const getSubjectColor = (index: number | string) => {
           </template>
         </Column>
 
-        <Column :header="`Grade (/ ${gradeMaxGrade})`" style="width: 160px">
+        <!-- Dynamic Exercise Columns -->
+        <Column v-for="(ex, exIdx) in gradeSelectedExam?.exercises || []" :key="ex.id" :header="`${ex.level_name} (/${ex.max_note})`" style="min-width: 130px">
           <template #body="{ data }">
             <InputNumber
-              v-model="data.grade"
+              v-if="data.exercise_grades[exIdx]"
+              v-model="data.exercise_grades[exIdx].note"
               :min="0"
-              :max="gradeMaxGrade"
+              :max="ex.max_note"
               :maxFractionDigits="2"
               placeholder="—"
               class="w-full"
@@ -724,23 +776,19 @@ const getSubjectColor = (index: number | string) => {
           </template>
         </Column>
 
-        <Column header="%" style="width: 70px">
+        <Column header="Total" style="min-width: 100px; text-align: center" alignFrozen="right" frozen>
           <template #body="{ data }">
-            <span
-              v-if="data.grade !== null && data.grade !== undefined"
-              :class="[(data.grade / gradeMaxGrade) * 100 >= 50 ? 'text-green-500' : 'text-red-400', 'font-medium text-sm']"
-            >
-              {{ Math.round((data.grade / gradeMaxGrade) * 100) }}%
+            <span class="font-bold text-lg text-primary">
+              {{ (data.exercise_grades as any[])?.reduce((sum: number, eg: any) => sum + (Number(eg.note) || 0), 0) || 0 }}
             </span>
-            <span v-else class="text-surface-300">—</span>
           </template>
         </Column>
 
-        <Column header="Comment (optional)">
+        <Column header="Comment" style="min-width: 150px">
           <template #body="{ data }">
             <InputText
               v-model="data.comment"
-              placeholder="Optional comment..."
+              placeholder="Comment..."
               class="w-full"
               size="small"
             />
@@ -756,7 +804,7 @@ const getSubjectColor = (index: number | string) => {
       <template #footer>
         <div class="flex justify-content-between align-items-center">
           <div class="text-sm text-surface-400">
-            {{ gradeRows.filter(r => r.grade !== null).length }} / {{ gradeRows.length }} grades entered
+            {{ gradeRows.filter(r => r.exercise_grades?.some(eg => eg.note !== null && eg.note !== undefined)).length }} / {{ gradeRows.length }} grades entered
           </div>
           <div class="flex gap-2">
             <Button label="Cancel" severity="secondary" outlined @click="gradesDialog = false" />
@@ -764,7 +812,7 @@ const getSubjectColor = (index: number | string) => {
               label="Save Grades"
               icon="pi pi-save"
               :loading="savingGrades"
-              :disabled="!gradeRows.filter(r => r.grade !== null).length"
+              :disabled="!gradeRows.filter(r => r.exercise_grades?.some(eg => eg.note !== null && eg.note !== undefined)).length"
               @click="saveGrades"
             />
           </div>

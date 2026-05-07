@@ -83,6 +83,7 @@ class StudentService {
   async createStudent(data: CreateStudentDTO): Promise<Student> {
     console.log('Creating student with data:', data);
     const response = await apiService.post<Student>('/students', data);
+    console.log('Created student:', response.data);
     return response.data!;
   }
 

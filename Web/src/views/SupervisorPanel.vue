@@ -329,32 +329,32 @@ onMounted(async () => {
     </div>
 
     <!-- Stats row -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-      <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 flex items-center gap-3 border border-blue-100 dark:border-blue-800">
-        <div class="bg-blue-500 text-white rounded-lg p-3">
-          <i class="pi pi-building text-xl"></i>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+      <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 border border-blue-200/50 dark:border-blue-500/10">
+        <div class="bg-white/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+          <i class="pi pi-building text-3xl"></i>
         </div>
         <div>
-          <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ totalClassesCount }}</div>
-          <div class="text-sm text-blue-600 dark:text-blue-400">{{ t('supervisor.monitored_classes', 'Monitored Classes') }}</div>
+          <div class="text-4xl font-black text-blue-900 dark:text-blue-100 leading-none mb-1">{{ totalClassesCount }}</div>
+          <div class="text-blue-700/70 dark:text-blue-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('supervisor.monitored_classes', 'Monitored Classes') }}</div>
         </div>
       </div>
-      <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 flex items-center gap-3 border border-green-100 dark:border-green-800">
-        <div class="bg-green-500 text-white rounded-lg p-3">
-          <i class="pi pi-users text-xl"></i>
+      <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 border border-green-200/50 dark:border-green-500/10">
+        <div class="bg-white/80 dark:bg-green-500/10 text-green-600 dark:text-green-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+          <i class="pi pi-users text-3xl"></i>
         </div>
         <div>
-          <div class="text-2xl font-bold text-green-700 dark:text-green-300">{{ totalStudentsCount }}</div>
-          <div class="text-sm text-green-600 dark:text-green-400">{{ t('supervisor.total_students', 'Total Students') }}</div>
+          <div class="text-4xl font-black text-green-900 dark:text-green-100 leading-none mb-1">{{ totalStudentsCount }}</div>
+          <div class="text-green-700/70 dark:text-green-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('supervisor.total_students', 'Total Students') }}</div>
         </div>
       </div>
-      <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 flex items-center gap-3 border border-red-100 dark:border-red-800">
-        <div class="bg-red-500 text-white rounded-lg p-3">
-          <i class="pi pi-chart-line text-xl"></i>
+      <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/40 rounded-3xl p-6 flex items-center gap-5 premium-shadow transition-premium hover:-translate-y-1 border border-red-200/50 dark:border-red-500/10">
+        <div class="bg-white/80 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-2xl p-4 shadow-sm backdrop-blur-md">
+          <i class="pi pi-chart-line text-3xl"></i>
         </div>
         <div>
-          <div class="text-2xl font-bold text-red-700 dark:text-red-300">{{ totalAbsentTodayCount }}</div>
-          <div class="text-sm text-red-600 dark:text-red-400">{{ t('supervisor.absent_today', 'Absent Today') }}</div>
+          <div class="text-4xl font-black text-red-900 dark:text-red-100 leading-none mb-1">{{ totalAbsentTodayCount }}</div>
+          <div class="text-red-700/70 dark:text-red-300/70 font-bold uppercase text-[10px] tracking-widest">{{ t('supervisor.absent_today', 'Absent Today') }}</div>
         </div>
       </div>
     </div>
@@ -476,7 +476,7 @@ onMounted(async () => {
 
               <!-- Class Cards (like TeacherPanel) -->
               <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="cls in myClasses" :key="cls.id" class="p-5 border rounded-xl bg-surface-0 dark:bg-surface-900 border-surface-200 dark:border-surface-700 shadow-sm flex flex-col gap-4 transition-shadow hover:shadow-md">
+              <div v-for="cls in myClasses" :key="cls.id" class="p-6 border rounded-[2rem] bg-white dark:bg-surface-800 border-surface-200 dark:border-surface-700 shadow-sm flex flex-col gap-5 transition-premium hover:shadow-xl hover:-translate-y-1 relative overflow-hidden group">
                   <!-- Class Header -->
                   <div class="flex items-start justify-between">
                     <div>
@@ -721,7 +721,7 @@ onMounted(async () => {
             dateFormat="yy-mm-dd"
             :maxDate="new Date()"
             showIcon
-            class="w-full"
+            class="w-full premium-input"
             @date-select="onAttendanceDateChange"
           />
         </div>
@@ -770,7 +770,7 @@ onMounted(async () => {
                 :options="statusOptions"
                 optionLabel="label"
                 optionValue="value"
-                class="flex-1"
+                class="flex-1 premium-select"
                 size="small"
               />
             </div>
@@ -782,7 +782,7 @@ onMounted(async () => {
             <InputText
               v-model="data.reason"
               :placeholder="t('supervisor.reason_placeholder')"
-              class="w-full"
+              class="w-full premium-input"
               size="small"
               :disabled="data.status === 'present'"
             />

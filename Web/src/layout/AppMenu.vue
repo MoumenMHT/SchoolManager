@@ -77,6 +77,11 @@ const model = computed(() => {
                     label: t('nav.dashboard'),
                     icon: 'pi pi-fw pi-building',
                     to: '/teacher/portal'
+                },
+                {
+                    label: t('nav.exams_management', 'Exams Management'),
+                    icon: 'pi pi-fw pi-file-edit',
+                    to: '/teacher/exams'
                 }
             ]
         });
@@ -98,6 +103,7 @@ const model = computed(() => {
     if (isAdmin.value || isSecretariat.value || isDirector.value) {
         const academicItems = [];
         const peopleItems = [];
+        const adminSecretariatItems = [];
 
         academicItems.push({ label: t('nav.levels'), icon: 'pi pi-fw pi-sitemap', to: '/levels' });
         academicItems.push({ label: t('nav.classes'), icon: 'pi pi-fw pi-building', to: '/classes' });
@@ -114,17 +120,16 @@ const model = computed(() => {
 
         sections.push({ label: t('nav.academic', 'Academic'), items: academicItems });
 
-
         peopleItems.push({ label: t('nav.students'), icon: 'pi pi-fw pi-graduation-cap', to: '/students' });
         peopleItems.push({ label: t('nav.parents'), icon: 'pi pi-fw pi-users', to: '/parents' });
         peopleItems.push({ label: t('nav.teachers'), icon: 'pi pi-fw pi-id-card', to: '/teachers' });
+
 
         if (isAdmin.value || isDirector.value) {
             peopleItems.push({ label: t('nav.supervisors'), icon: 'pi pi-fw pi-eye', to: '/supervisors' });
         }
 
         sections.push({ label: t('nav.people', 'People'), items: peopleItems });
-
 
         if (isAdmin.value) {
             const adminItems = [];
@@ -135,13 +140,15 @@ const model = computed(() => {
 
             sections.push({ label: t('nav.administration', 'Administration'), items: adminItems });
         }
+        if(isSecretariat.value || isAdmin.value){
+            adminSecretariatItems.push({ label: t('nav.user_management', 'User Management'), icon: 'pi pi-fw pi-key', to: '/user-management' });
+            sections.push({ label: t('nav.administration', 'Administration'), items: adminSecretariatItems });
+        }
 
         if (isAdmin.value) {
             sections.push({
                 label: t('nav.finance', 'Finance'),
-                items: [
-                    { label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' }
-                ]
+                items: [{ label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' }]
             });
         }
     }
