@@ -15,7 +15,7 @@ class BillController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Bill::with(['contract', 'paymentAllocations.payment']);
+            $query = Bill::with(['contract.parent', 'paymentAllocations.payment']);
 
             // Parents can only see bills for their own contracts
             if ($request->user()->role === 'parent') {
@@ -60,7 +60,7 @@ class BillController extends Controller
     public function show($id)
     {
         try {
-            $bill = Bill::with(['contract', 'paymentAllocations.payment'])
+            $bill = Bill::with(['contract.parent', 'paymentAllocations.payment'])
                 ->findOrFail($id);
 
             return response()->json([

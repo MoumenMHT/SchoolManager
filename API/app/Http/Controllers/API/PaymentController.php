@@ -720,4 +720,68 @@ class PaymentController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get payments for a specific student (used by the parent portal).
+     * Route: GET /parent/students/{student}/payments
+     *
+     * Payments are linked to contracts (not directly to students).
+     * This returns all payments on the parent's contracts, with bill
+     * allocations included so the frontend can display the full breakdown.
+     */
+    public function studentPayments(Request $request, $studentId)
+    {
+        try {
+            $parent = $request->user()->parent;
+
+            if (!$parent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.parent_profile_not_found')
+                ], 404);
+            }
+
+            // Verify the parent owns this student
+            $student = Student::where('id', $studentId)
+                ->where('parent_id', $parent->id)
+                ->first();
+
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.student_not_found')
+                ], 404);
+            }
+
+            // Payments belong to contracts, contracts belong to the parent.
+            // Return all payments for this parent's contracts.
+            $query = Payment::with(['contract', 'allocations.bill'])
+                ->whereHas('contract', function ($q) use ($parent) {
+                    $q->where('parent_id', $parent->id);
+                });
+
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            $payments = $query->orderBy('paid_date', 'desc')->get();
+
+            return response()->json([
+                'success' => true,
+                'data'    => $payments,
+                'student' => [
+                    'id'         => $student->id,
+                    'first_name' => $student->first_name,
+                    'last_name'  => $student->last_name,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve student payments.',
+                'error'   => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
 }

@@ -26,6 +26,7 @@ class Contract extends Model
         'end_date',
         'notes',
         'status',
+        'is_active',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class Contract extends Model
         'balance' => 'decimal:2',
         'start_date' => 'date',
         'end_date' => 'date',
+        'is_active' => 'boolean',
     ];
 
     public function parent()

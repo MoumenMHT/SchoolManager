@@ -2,11 +2,13 @@
 import { ref, onMounted, computed } from 'vue';
 import { ParentPortalService } from '@/service/ParentPortalService';
 import { useToast } from 'primevue/usetoast';
+import { useI18n } from 'vue-i18n';
 
 const dashboardData = ref(null);
 const childrenData = ref([]);
 const loading = ref(true);
 const toast = useToast();
+const { t } = useI18n();
 
 // Calculate total children based on actual student profiles
 const totalChildren = computed(() => {
@@ -78,7 +80,7 @@ onMounted(() => {
             <div class="card mb-0">
                 <div class="flex justify-between mb-4">
                     <div>
-                        <span class="block text-muted-color font-medium mb-4">Total Children</span>
+                        <span class="block text-muted-color font-medium mb-4">{{ t('parent_portal.total_children') }}</span>
                         <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ totalChildren }}</div>
                     </div>
                     <div class="flex items-center justify-center bg-blue-100 dark:bg-blue-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
@@ -92,7 +94,7 @@ onMounted(() => {
             <div class="card mb-0">
                 <div class="flex justify-between mb-4">
                     <div>
-                        <span class="block text-muted-color font-medium mb-4">Outstanding Balance</span>
+                        <span class="block text-muted-color font-medium mb-4">{{ t('parent_portal.outstanding_balance') }}</span>
                         <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ totalOutstanding }} DZD</div>
                     </div>
                     <div class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
@@ -106,10 +108,10 @@ onMounted(() => {
             <div class="card mb-0">
                 <div class="flex justify-between mb-4">
                     <div>
-                        <span class="block text-muted-color font-medium mb-4">Unpaid Bills</span>
+                        <span class="block text-muted-color font-medium mb-4">{{ t('parent_portal.unpaid_bills') }}</span>
                         <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
                             {{ unpaidBillsCount }}
-                            <span v-if="lateBillsCount > 0" class="text-red-500 text-sm ml-2">({{ lateBillsCount }} Late)</span>
+                            <span v-if="lateBillsCount > 0" class="text-red-500 text-sm ml-2">({{ lateBillsCount }} {{ t('parent_portal.late') }})</span>
                         </div>
                     </div>
                     <div class="flex items-center justify-center bg-red-100 dark:bg-red-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
@@ -123,9 +125,9 @@ onMounted(() => {
             <div class="card mb-0">
                 <div class="flex justify-between mb-4">
                     <div>
-                        <span class="block text-muted-color font-medium mb-4">Next Payment Due</span>
+                        <span class="block text-muted-color font-medium mb-4">{{ t('parent_portal.next_payment_due') }}</span>
                         <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">
-                            {{ nextDueDate ? nextDueDate.toLocaleDateString() : 'No pending payments' }}
+                            {{ nextDueDate ? nextDueDate.toLocaleDateString() : t('parent_portal.no_pending_payments') }}
                         </div>
                     </div>
                     <div class="flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
@@ -137,14 +139,14 @@ onMounted(() => {
 
         <div class="col-span-12 xl:col-span-8">
             <div class="card">
-                <h5 class="text-surface-900 dark:text-surface-0 font-semibold mb-4">Recent Payments</h5>
-                <p class="text-muted-color" v-if="recentActivity.length === 0">No recent activity found.</p>
+                <h5 class="text-surface-900 dark:text-surface-0 font-semibold mb-4">{{ t('parent_portal.recent_payments') }}</h5>
+                <p class="text-muted-color" v-if="recentActivity.length === 0">{{ t('parent_portal.no_recent_activity') }}</p>
                 <ul class="p-0 mx-0 mt-0 mb-4 list-none" v-else>
                     <li v-for="(payment, i) in recentActivity" :key="i" class="flex items-center py-3 border-b border-surface">
                         <span class="text-surface-900 dark:text-surface-0 leading-normal">
                             <span class="font-semibold text-primary block">{{ payment.amount }} DZD</span>
-                            <span class="text-muted-color text-sm">Paid on {{ new Date(payment.paid_date).toLocaleDateString() }} 
-                            via {{ payment.payment_type.replace('_', ' ') }}</span>
+                            <span class="text-muted-color text-sm">{{ t('parent_portal.paid_on') }} {{ new Date(payment.paid_date).toLocaleDateString() }} 
+                            {{ t('parent_portal.via') }} {{ payment.payment_type.replace('_', ' ') }}</span>
                         </span>
                     </li>
                 </ul>
@@ -153,11 +155,11 @@ onMounted(() => {
 
         <div class="col-span-12 xl:col-span-4">
             <div class="card">
-                <h5 class="text-surface-900 dark:text-surface-0 font-semibold mb-4">Quick Actions</h5>
+                <h5 class="text-surface-900 dark:text-surface-0 font-semibold mb-4">{{ t('parent_portal.quick_actions') }}</h5>
                 <div class="flex flex-col gap-3">
-                    <Button label="View Children" icon="pi pi-users" class="w-full p-button-outlined" @click="$router.push('/parent/children')" />
-                    <Button label="View Contracts & Bills" icon="pi pi-wallet" class="w-full p-button-outlined p-button-secondary" @click="$router.push('/parent/finances')" />
-                    <Button label="Contact Administration" icon="pi pi-phone" class="w-full p-button-outlined p-button-info" />
+                    <Button :label="t('parent_portal.view_children')" icon="pi pi-users" class="w-full p-button-outlined" @click="$router.push('/parent/children')" />
+                    <Button :label="t('parent_portal.view_contracts_bills')" icon="pi pi-wallet" class="w-full p-button-outlined p-button-secondary" @click="$router.push('/parent/finances')" />
+                    <Button :label="t('parent_portal.contact_admin')" icon="pi pi-phone" class="w-full p-button-outlined p-button-info" />
                 </div>
             </div>
         </div>

@@ -26,10 +26,11 @@ export const ParentPortalService = {
         const response = await api.get(`/parent/students/${studentId}/grades`);
         return response.data;
     },
-    async getChildReportCard(studentId: number) {
-        // This might return a file download or a URL depending on API implementation
-        const response = await api.get(`/parent/students/${studentId}/report-card`, { responseType: 'blob' });
-        return response.data;
+    async getChildReportCard(studentId: number, semester: string, academicYear: string) {
+        const response = await api.get(`/parent/students/${studentId}/report-card`, {
+            params: { semester, academic_year: academicYear }
+        });
+        return response.data.data ? response.data.data : response.data;
     },
 
     // ---- Finances & Payments ----

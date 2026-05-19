@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Student extends Model
 {
@@ -53,6 +54,12 @@ class Student extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function fees(): BelongsToMany
+    {
+        return $this->belongsToMany(Fee::class, 'parents_fees', 'student_id', 'fee_id')
+            ->whereNotNull('parents_fees.student_id');
     }
 
     public function history(): HasMany

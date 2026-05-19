@@ -13,6 +13,7 @@ class ParentFee extends Model
 
     protected $fillable = [
         'parent_id',
+        'student_id',
         'fee_id',
     ];
 
@@ -24,5 +25,10 @@ class ParentFee extends Model
     public function fee()
     {
         return $this->belongsTo(Fee::class);
+    }
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
     }
 }

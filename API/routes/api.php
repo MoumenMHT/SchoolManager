@@ -43,8 +43,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
     });
 
-    // Admin, Secretariat, and Director routes
-    Route::middleware('role:admin,secretariat,primary_director,cem_director,lycee_director')->group(function () {
+    // Admin, Secretariat, Director and Accountant routes
+    // Include `accountant` so accountants can access parents (needed when creating contracts)
+    Route::middleware('role:admin,secretariat,primary_director,cem_director,lycee_director,accountant')->group(function () {
         // Level management
         Route::apiResource('levels', LevelController::class)->except(['index', 'show']);
         Route::post('/levels/{level}/assign-subjects', [LevelController::class, 'assignSubjects']);
@@ -58,8 +59,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('teachers', TeacherController::class);
         Route::apiResource('classes', ClassController::class);
         Route::apiResource('subjects', SubjectController::class);
+        Route::get('/parents/without-active-contract', [ParentController::class, 'withoutActiveContract']);
         Route::apiResource('parents', ParentController::class);
         Route::post('/parents/{id}/create-account', [ParentController::class, 'createAccount']);
+        Route::get('/parents/{id}/students-with-fees', [ParentController::class, 'studentsWithFees']);
         
         // Dashboard statistics
         Route::get('/dashboard/stats', [DashboardController::class, 'index']);
@@ -117,6 +120,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/available-for-contract', [FeeController::class, 'availableForContract']);
             Route::get('/statistics', [FeeController::class, 'statistics']);
             Route::put('/{id}/toggle-status', [FeeController::class, 'toggleStatus']);
+            Route::post('/{fee}/sync-levels', [FeeController::class, 'syncLevels']);
+            Route::get('/{fee}/levels', [FeeController::class, 'getLevels']);
         });
         Route::apiResource('fees', FeeController::class);
         

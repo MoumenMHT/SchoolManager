@@ -50,6 +50,26 @@ const model = computed(() => {
                     label: t('dashboard.payment_dashboard'),
                     icon: 'pi pi-fw pi-credit-card',
                     to: '/payments'
+                },
+                {
+                    label: t('nav.process_payment', 'Process Payment'),
+                    icon: 'pi pi-fw pi-plus-circle',
+                    to: '/payments/create'
+                },
+                {
+                    label: t('nav.fees_management', 'Fees'),
+                    icon: 'pi pi-fw pi-dollar',
+                    to: '/fees'
+                },
+                {
+                    label: t('nav.create_contract', 'New Contract'),
+                    icon: 'pi pi-fw pi-file-edit',
+                    to: '/contracts/create'
+                },
+                {
+                    label: t('nav.bills_management', 'Bills'),
+                    icon: 'pi pi-fw pi-file-pdf',
+                    to: '/bills'
                 }
             ]
         });
@@ -103,7 +123,6 @@ const model = computed(() => {
     if (isAdmin.value || isSecretariat.value || isDirector.value) {
         const academicItems = [];
         const peopleItems = [];
-        const adminSecretariatItems = [];
 
         academicItems.push({ label: t('nav.levels'), icon: 'pi pi-fw pi-sitemap', to: '/levels' });
         academicItems.push({ label: t('nav.classes'), icon: 'pi pi-fw pi-building', to: '/classes' });
@@ -131,24 +150,30 @@ const model = computed(() => {
 
         sections.push({ label: t('nav.people', 'People'), items: peopleItems });
 
-        if (isAdmin.value) {
+        if (isAdmin.value || isSecretariat.value) {
             const adminItems = [];
-            adminItems.push({ label: t('nav.directors', 'Directors'), icon: 'pi pi-fw pi-star', to: '/directors' });
-            adminItems.push({ label: t('nav.secretaries', 'Secretariats'), icon: 'pi pi-fw pi-desktop', to: '/secretariats' });
-            adminItems.push({ label: t('nav.accountants', 'Accountants'), icon: 'pi pi-fw pi-wallet', to: '/accountants' });
+            
+            if (isAdmin.value) {
+                adminItems.push({ label: t('nav.directors', 'Directors'), icon: 'pi pi-fw pi-star', to: '/directors' });
+                adminItems.push({ label: t('nav.secretaries', 'Secretariats'), icon: 'pi pi-fw pi-desktop', to: '/secretariats' });
+                adminItems.push({ label: t('nav.accountants', 'Accountants'), icon: 'pi pi-fw pi-wallet', to: '/accountants' });
+            }
+            
             adminItems.push({ label: t('nav.user_management', 'User Management'), icon: 'pi pi-fw pi-key', to: '/user-management' });
 
             sections.push({ label: t('nav.administration', 'Administration'), items: adminItems });
-        }
-        if(isSecretariat.value || isAdmin.value){
-            adminSecretariatItems.push({ label: t('nav.user_management', 'User Management'), icon: 'pi pi-fw pi-key', to: '/user-management' });
-            sections.push({ label: t('nav.administration', 'Administration'), items: adminSecretariatItems });
         }
 
         if (isAdmin.value) {
             sections.push({
                 label: t('nav.finance', 'Finance'),
-                items: [{ label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' }]
+                items: [
+                    { label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' },
+                    { label: t('nav.process_payment', 'Process Payment'), icon: 'pi pi-fw pi-plus-circle', to: '/payments/create' },
+                    { label: t('nav.fees_management', 'Fees'), icon: 'pi pi-fw pi-dollar', to: '/fees' },
+                    { label: t('nav.create_contract', 'New Contract'), icon: 'pi pi-fw pi-file-edit', to: '/contracts/create' },
+                    { label: t('nav.bills_management', 'Bills'), icon: 'pi pi-fw pi-file-pdf', to: '/bills' }
+                ]
             });
         }
     }

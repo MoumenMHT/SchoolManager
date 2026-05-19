@@ -80,6 +80,26 @@ const router = createRouter({
                     component: () => import('@/views/PaymentDashboard.vue')
                 },
                 {
+                    path: '/payments/create',
+                    name: 'payment-create',
+                    component: () => import('@/views/PaymentForm.vue')
+                },
+                {
+                    path: '/fees',
+                    name: 'fees',
+                    component: () => import('@/views/FeesManagement.vue')
+                },
+                {
+                    path: '/contracts/create',
+                    name: 'contract-create',
+                    component: () => import('@/views/ContractCreate.vue')
+                },
+                {
+                    path: '/bills',
+                    name: 'bills',
+                    component: () => import('@/views/BillsManagement.vue')
+                },
+                {
                     path: '/schedules/generate',
                     name: 'schedule-generate',
                     component: () => import('@/views/ScheduleGenerator.vue')
@@ -296,14 +316,15 @@ router.beforeEach((to, from, next) => {
         }
 
         if (userRole === 'teacher') {
-            const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/subjects', '/levels', '/attendance', '/analytics/grades', '/payments', '/schedules/generate', '/supervisors', '/secretariats', '/accountants', '/directors'];
+            const adminOnlyPaths = ['/', '/parents', '/teachers', '/students', '/classes', '/subjects', '/levels', '/attendance', '/analytics/grades', '/payments', '/fees', '/bills', '/contracts/create', '/schedules/generate', '/supervisors', '/secretariats', '/accountants', '/directors'];
             if (adminOnlyPaths.includes(to.path)) {
                 next(roleHome);
                 return;
             }
         } else if (userRole === 'accountant') {
-            // Accountant can ONLY access /payments and maybe auth related paths if they were allowed
-            if (to.path !== '/payments') {
+            // Accountant can access payment-related paths
+            const accountantPaths = ['/payments', '/fees', '/contracts', '/bills'];
+            if (!accountantPaths.some(p => to.path.startsWith(p))) {
                 next(roleHome);
                 return;
             }

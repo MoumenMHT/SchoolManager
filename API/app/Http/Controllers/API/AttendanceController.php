@@ -202,7 +202,7 @@ class AttendanceController extends Controller
                 }
             }
 
-            $query = Attendance::with(['subject', 'teacher'])
+            $query = Attendance::with(['subject', 'teacher', 'schedule.assignment.teacher'])
                 ->where('student_id', $studentId);
 
             // DB-level filters

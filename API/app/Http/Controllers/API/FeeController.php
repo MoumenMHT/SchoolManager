@@ -16,7 +16,7 @@ class FeeController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Fee::query();
+            $query = Fee::with('levels');
 
             // Filter by active status
             if ($request->has('is_active')) {
@@ -105,12 +105,72 @@ class FeeController extends Controller
     }
 
     /**
+     * Sync levels assigned to a fee
+     */
+    public function syncLevels(Request $request, $id)
+    {
+        try {
+            $fee = Fee::findOrFail($id);
+
+            $validator = Validator::make($request->all(), [
+                'level_ids' => 'present|array',
+                'level_ids.*' => 'exists:levels,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.validation_failed'),
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $fee->levels()->sync($request->level_ids);
+
+            $fee->load('levels');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Fee levels updated successfully',
+                'data' => $fee
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update fee levels',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Get levels assigned to a fee
+     */
+    public function getLevels($id)
+    {
+        try {
+            $fee = Fee::with('levels')->findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $fee->levels
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve fee levels',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
      * Display the specified fee
      */
     public function show($id)
     {
         try {
-            $fee = Fee::with('parentFees')->findOrFail($id);
+            $fee = Fee::with(['parentFees', 'levels'])->findOrFail($id);
 
             // Get usage statistics
             $usageStats = [
@@ -266,20 +326,8 @@ class FeeController extends Controller
     public function availableForContract(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'academic_year' => 'required|string',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('messages.validation_failed'),
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $fees = Fee::where('is_active', true)
-                ->where('academic_year', $request->academic_year)
+            $fees = Fee::with('levels')
+                ->where('is_active', true)
                 ->orderBy('name', 'asc')
                 ->get();
 

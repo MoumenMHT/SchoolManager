@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\ParentModel;
+use App\Models\Contract;
 
 
 class ParentController extends Controller
@@ -256,5 +257,63 @@ class ParentController extends Controller
             'message' => __('messages.account_created'),
             'data' => $parent->load('user')
         ], 201);
+    }
+
+    /**
+     * Get a parent's students, each with their assigned fees.
+     * Used when creating/editing a contract.
+     */
+    public function studentsWithFees(string $id)
+    {
+        $parent = ParentModel::with([
+            'students.class',
+            'students.fees',
+        ])->find($id);
+
+        if (!$parent) {
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.parent_not_found')
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $parent->students
+        ]);
+    }
+
+    /**
+     * Get parents who do not have any active contract.
+     * Used in contract creation to prevent duplicate active contracts per parent.
+     */
+    public function withoutActiveContract()
+    {
+        $query = ParentModel::withCount('students')
+            ->whereDoesntHave('contracts', function ($q) {
+                $q->where('is_active', true);
+            });
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $query->whereHas('students.class.levelProfile', function ($q) use ($directorCycle) {
+                $q->where('cycle', $directorCycle);
+            });
+        }
+
+        $parents = $query->get();
+        $parents->load('user:id,email,phone');
+
+        $parents->each(function ($parent) {
+            $parent->email = $parent->user ? $parent->user->email : null;
+            $parent->phone = $parent->user ? $parent->user->phone : null;
+            unset($parent->user);
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $parents
+        ]);
     }
 }

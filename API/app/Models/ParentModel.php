@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Contract;
 
 class ParentModel extends Model
 {
@@ -54,8 +55,26 @@ class ParentModel extends Model
         return $this->hasMany(Student::class, 'parent_id');
     }
 
+    public function fees()
+    {
+        return $this->belongsToMany(Fee::class, 'parents_fees', 'parent_id', 'fee_id')
+            ->whereNull('parents_fees.student_id');
+    }
+
+    public function studentFees()
+    {
+        return $this->hasMany(ParentFee::class, 'parent_id')
+            ->whereNotNull('student_id')
+            ->with(['fee', 'student']);
+    }
+
     public function payments()
     {
         return $this->hasManyThrough(Payment::class, Student::class, 'parent_id', 'student_id');
+    }
+
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class, 'parent_id');
     }
 }

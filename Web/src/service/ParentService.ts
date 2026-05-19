@@ -62,6 +62,15 @@ class ParentService {
   }
 
   /**
+   * Get parents that do not have an active contract.
+   * Used in contract creation to avoid assigning duplicate active contracts.
+   */
+  async getParentsWithoutActiveContract(): Promise<Parent[]> {
+    const response = await apiService.get<Parent[]>('/parents/without-active-contract');
+    return response.data || [];
+  }
+
+  /**
    * Get a single parent by ID
    */
   async getParent(id: number): Promise<Parent> {

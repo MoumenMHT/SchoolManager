@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ParentPortalService } from '@/service/ParentPortalService';
 import { useToast } from 'primevue/usetoast';
+import { useI18n } from 'vue-i18n';
 
 const router = useRouter();
 const toast = useToast();
+const { t } = useI18n();
 
 const children = ref([]);
 const loading = ref(true);
@@ -34,8 +36,8 @@ onMounted(() => {
     <div class="grid grid-cols-12 gap-8">
         <div class="col-span-12">
             <div class="card">
-                <h5 class="text-surface-900 dark:text-surface-0 font-semibold mb-2">My Children</h5>
-                <p class="text-muted-color">Select a child to view their specific schedule, attendance, grades, and payments.</p>
+                <h5 class="text-surface-900 dark:text-surface-0 font-semibold mb-2">{{ t('parent_portal.my_children') }}</h5>
+                <p class="text-muted-color">{{ t('parent_portal.select_child_hint') }}</p>
 
                 <div v-if="loading" class="flex justify-center items-center py-8">
                     <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
@@ -43,7 +45,7 @@ onMounted(() => {
                 
                 <div v-else-if="children.length === 0" class="text-center p-8 bg-surface-50 dark:bg-surface-800 rounded-border mt-4">
                     <i class="pi pi-info-circle text-4xl mb-4 text-muted-color"></i>
-                    <p class="text-surface-900 dark:text-surface-0">No children are currently enrolled under your profile.</p>
+                    <p class="text-surface-900 dark:text-surface-0">{{ t('parent_portal.no_children_enrolled') }}</p>
                 </div>
                 
                 <div v-else class="grid grid-cols-12 gap-4 mt-6">
@@ -56,10 +58,10 @@ onMounted(() => {
                                     </div>
                                 </div>
                                 <h6 class="text-center text-xl mb-2 text-surface-900 dark:text-surface-0">{{ child.first_name }} {{ child.last_name }}</h6>
-                                <p class="text-center text-muted-color">{{ child.class?.name || (child.level?.name + ' - ' + child.grade) || 'Registration Pending' }}</p>
+                                <p class="text-center text-muted-color">{{ child.class?.name || (child.level?.name + ' - ' + child.grade) || t('parent_portal.registration_pending') }}</p>
                             </div>
                             <div class="mt-6 w-full flex justify-center">
-                                <Button label="View Details" icon="pi pi-search" class="p-button-outlined p-button-sm" />
+                                <Button :label="t('parent_portal.view_details')" icon="pi pi-search" class="p-button-outlined p-button-sm" />
                             </div>
                         </div>
                     </div>

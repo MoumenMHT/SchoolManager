@@ -8,6 +8,7 @@ use App\Models\SchoolClass;
 use App\Models\Level;
 use App\Models\Student;
 use App\Models\StudentHistory;
+use App\Models\Schedule;
 use Illuminate\Support\Facades\Validator;
 
 class ClassController extends Controller
@@ -381,6 +382,70 @@ class ClassController extends Controller
             'data' => $student
         ]);
 
+    }
+
+    /**
+     * Get the schedule for a student (used by the parent portal).
+     * The route is: GET /parent/students/{student}/schedule
+     */
+    public function studentSchedule(Request $request, $studentId)
+    {
+        try {
+            $parent = auth()->user()->parent;
+
+            // Find the student and verify the authenticated parent owns them
+            $student = Student::with('class')->where('id', $studentId)
+                ->where('parent_id', $parent?->id)
+                ->first();
+
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.student_not_found')
+                ], 404);
+            }
+
+            if (!$student->class_id) {
+                return response()->json([
+                    'success' => true,
+                    'data'    => [],
+                    'total'   => 0,
+                    'message' => 'Student is not assigned to any class.'
+                ]);
+            }
+
+            $academicYear = $request->get('academic_year', $student->class->academic_year ?? (date('Y') . '-' . (date('Y') + 1)));
+
+            $schedules = Schedule::with(['assignment.subject', 'assignment.teacher'])
+                ->whereHas('assignment', function ($q) use ($student, $academicYear) {
+                    $q->where('class_id', $student->class_id)
+                      ->where('academic_year', $academicYear);
+                })
+                ->orderByRaw("FIELD(day, 'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')")
+                ->orderBy('start_time')
+                ->get();
+
+            // Normalize day to lowercase for frontend compatibility
+            $schedules->transform(function ($schedule) {
+                $schedule->day = strtolower($schedule->day);
+                return $schedule;
+            });
+
+            $groupedSchedules = $schedules->groupBy('day');
+
+            return response()->json([
+                'success' => true,
+                'data'    => $groupedSchedules,
+                'total'   => $schedules->count(),
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve student schedule.',
+                'error'   => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
     }
 
     private function resolveLevelId(Request $request): ?int
