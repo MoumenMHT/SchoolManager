@@ -840,7 +840,16 @@
     "avg_note": "متوسط العلامة",
     "subject_avg_20": "متوسط المادة /20",
     "teacher_avg_20": "متوسط المعلم /20",
-    "grade_count": "عدد العلامات"
+    "grade_count": "عدد العلامات",
+    "distribution_subtitle": "شاهد عدد الطلاب في كل نطاق نقاط",
+    "customize_ranges": "تخصيص النطاقات",
+    "close_ranges": "إغلاق المحرر",
+    "ranges_editor_title": "تعديل نطاقات النقاط",
+    "range_label": "التسمية (مثال: 0–4)",
+    "range_from": "من",
+    "range_to": "إلى",
+    "add_range": "إضافة نطاق",
+    "no_data_available": "لا توجد بيانات"
   },
   "subject_management": {
     "title": "إدارة المواد",

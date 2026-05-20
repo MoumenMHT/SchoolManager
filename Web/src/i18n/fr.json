@@ -794,7 +794,17 @@
       "avg_note": "Note moyenne",
       "subject_avg_20": "Moyenne de la matière /20",
       "teacher_avg_20": "Moyenne de l'enseignant /20",
-      "grade_count": "Nombre de notes"
+      "grade_count": "Nombre de notes",
+      "distribution_subtitle": "Voir combien d'élèves se situent dans chaque tranche de note",
+      "customize_ranges": "Personnaliser les tranches",
+      "close_ranges": "Fermer l'éditeur",
+      "ranges_editor_title": "Modifier les tranches de notes",
+      "range_label": "Libellé (ex. 0–4)",
+      "range_from": "De",
+      "range_to": "À",
+      "add_range": "Ajouter une tranche",
+      "col_student_note": "Note de l'élève",
+      "no_data_available": "Aucune donnée disponible"
     },
     "subject_management": {
       "title": "Gérer les Matières",
