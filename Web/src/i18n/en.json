@@ -783,7 +783,10 @@
     "range_to": "To",
     "add_range": "Add Range",
     "col_student_note": "Student Note",
-    "no_data_available": "No data available"
+    "no_data_available": "No data available",
+    "filter_by_exercise": "Filter by exercise",
+    "all_grades": "All Grades",
+    "exercise_ranges_note": "Ranges are auto-scaled to this exercise's max score"
   },
   "subject_management": {
     "title": "Manage Subjects",

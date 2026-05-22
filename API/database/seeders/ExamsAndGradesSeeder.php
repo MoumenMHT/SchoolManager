@@ -103,6 +103,13 @@ class ExamsAndGradesSeeder extends Seeder
                                 continue;
                             }
                             $exam = $existingExam;
+
+                            // Always ensure this class is linked to the exam in the pivot,
+                            // even if the exam was created for another class previously.
+                            DB::table('class_exam')->insertOrIgnore([
+                                'exam_id'  => $exam->id,
+                                'class_id' => $class->id,
+                            ]);
                         } else {
                             /** @var Exam $exam */
                             $exam = Exam::create([

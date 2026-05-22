@@ -804,7 +804,10 @@
       "range_to": "À",
       "add_range": "Ajouter une tranche",
       "col_student_note": "Note de l'élève",
-      "no_data_available": "Aucune donnée disponible"
+      "no_data_available": "Aucune donnée disponible",
+      "filter_by_exercise": "Filtrer par exercice",
+      "all_grades": "Toutes les notes",
+      "exercise_ranges_note": "Les tranches sont auto-adaptées à la note maximale de cet exercice"
     },
     "subject_management": {
       "title": "Gérer les Matières",

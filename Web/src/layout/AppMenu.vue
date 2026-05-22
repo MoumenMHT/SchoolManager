@@ -99,7 +99,6 @@ const model = computed(() => {
         peopleItems.push({ label: t('nav.parents'), icon: 'pi pi-fw pi-users', to: '/parents' });
         peopleItems.push({ label: t('nav.teachers'), icon: 'pi pi-fw pi-id-card', to: '/teachers' });
 
-
         if (isAdmin.value || isDirector.value) {
             peopleItems.push({ label: t('nav.supervisors'), icon: 'pi pi-fw pi-eye', to: '/supervisors' });
         }
@@ -115,7 +114,7 @@ const model = computed(() => {
 
             sections.push({ label: t('nav.administration', 'Administration'), items: adminItems });
         }
-        if(isSecretariat.value || isAdmin.value){
+        if (isSecretariat.value || isAdmin.value) {
             adminSecretariatItems.push({ label: t('nav.user_management', 'User Management'), icon: 'pi pi-fw pi-key', to: '/user-management' });
             sections.push({ label: t('nav.administration', 'Administration'), items: adminSecretariatItems });
         }

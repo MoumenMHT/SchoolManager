@@ -849,7 +849,10 @@
     "range_from": "من",
     "range_to": "إلى",
     "add_range": "إضافة نطاق",
-    "no_data_available": "لا توجد بيانات"
+    "no_data_available": "لا توجد بيانات",
+    "filter_by_exercise": "تصفية حسب التمرين",
+    "all_grades": "جميع النقاط",
+    "exercise_ranges_note": "تُضبط النطاقات تلقائياً وفق النقطة القصوى لهذا التمرين"
   },
   "subject_management": {
     "title": "إدارة المواد",

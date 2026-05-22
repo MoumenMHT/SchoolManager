@@ -17,6 +17,7 @@ declare module 'vue' {
     Column: typeof import('primevue/column')['default']
     ContractPaymentWidget: typeof import('./src/components/dashboard/ContractPaymentWidget.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
+    Divider: typeof import('primevue/divider')['default']
     FeaturesWidget: typeof import('./src/components/landing/FeaturesWidget.vue')['default']
     FinancialWidget: typeof import('./src/components/dashboard/FinancialWidget.vue')['default']
     FloatingConfigurator: typeof import('./src/components/FloatingConfigurator.vue')['default']
