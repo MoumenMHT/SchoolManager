@@ -38,6 +38,19 @@ const academicYears = computed(() => {
   return Array.from(years).sort().reverse();
 });
 
+const availableAcademicYears = computed(() => {
+  const currentYear = new Date().getFullYear();
+  const years = new Set<string>();
+  for (let i = -2; i <= 3; i++) {
+    const startYear = currentYear + i;
+    years.add(`${startYear}-${startYear + 1}`);
+  }
+  fees.value.forEach(f => {
+    if (f.academic_year) years.add(f.academic_year);
+  });
+  return Array.from(years).sort().reverse();
+});
+
 const loadFees = async () => {
   loading.value = true;
   try {
@@ -63,7 +76,7 @@ onMounted(() => {
 });
 
 const openNew = () => {
-  fee.value = { is_active: true };
+  fee.value = { is_active: true, academic_year: getAcademicYear() };
   submitted.value = false;
   feeDialog.value = true;
 };
@@ -295,7 +308,7 @@ const getAcademicYear = () => {
         </div>
         <div class="col-span-12 md:col-span-6">
           <label class="block font-medium mb-2">{{ t('common.academic_year', 'Academic Year') }} *</label>
-          <InputText v-model="fee.academic_year" class="w-full" :class="{ 'p-invalid': submitted && !fee.academic_year }"
+          <Select v-model="fee.academic_year" :options="availableAcademicYears" class="w-full" :class="{ 'p-invalid': submitted && !fee.academic_year }"
             :placeholder="getAcademicYear()" />
           <small v-if="submitted && !fee.academic_year" class="text-red-500">{{ t('common.required', 'Required') }}</small>
         </div>
