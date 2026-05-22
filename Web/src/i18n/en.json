@@ -913,7 +913,20 @@
     "eval_continue": "Evaluation Continue",
     "devoir_1_label": "Homework 1",
     "devoir_2_label": "Homework 2",
-    "composition_label": "Composition"
+    "composition_label": "Composition",
+    "distribution_subtitle": "See how many students fall in each grade range",
+    "customize_ranges": "Customize Ranges",
+    "close_ranges": "Close Editor",
+    "ranges_editor_title": "Edit Grade Ranges",
+    "range_label": "Label (e.g. 0–4)",
+    "range_from": "From",
+    "range_to": "To",
+    "add_range": "Add Range",
+    "col_student_note": "Student Note",
+    "no_data_available": "No data available",
+    "filter_by_exercise": "Filter by exercise",
+    "all_grades": "All Grades",
+    "exercise_ranges_note": "Ranges are auto-scaled to this exercise's max score"
   },
   "subject_management": {
     "title": "Manage Subjects",

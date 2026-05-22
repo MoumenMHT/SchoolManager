@@ -143,7 +143,6 @@ const model = computed(() => {
         peopleItems.push({ label: t('nav.parents'), icon: 'pi pi-fw pi-users', to: '/parents' });
         peopleItems.push({ label: t('nav.teachers'), icon: 'pi pi-fw pi-id-card', to: '/teachers' });
 
-
         if (isAdmin.value || isDirector.value) {
             peopleItems.push({ label: t('nav.supervisors'), icon: 'pi pi-fw pi-eye', to: '/supervisors' });
         }

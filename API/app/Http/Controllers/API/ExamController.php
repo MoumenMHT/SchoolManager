@@ -40,12 +40,21 @@ class ExamController extends Controller
             $query->where('academic_year', $request->input('academic_year'));
         }
         if ($request->filled('class_id')) {
-            $query->whereHas('classes', fn($q) => $q->where('classes.id', $request->integer('class_id')));
+            $classId = $request->integer('class_id');
+            // Include exams linked to the class via the pivot table
+            // OR via students that belong to that class (handles cases where pivot was not populated)
+            $query->where(function ($q) use ($classId) {
+                $q->whereHas('classes', fn($sq) => $sq->where('classes.id', $classId))
+                  ->orWhereHas('grades.student', fn($sq) => $sq->where('class_id', $classId));
+            });
         }
         if ($request->filled('student_id')) {
             $student = \App\Models\Student::find($request->integer('student_id'));
             if ($student && $student->class_id) {
-                $query->whereHas('classes', fn($q) => $q->where('classes.id', $student->class_id));
+                $query->where(function ($q) use ($student) {
+                    $q->whereHas('classes', fn($sq) => $sq->where('classes.id', $student->class_id))
+                      ->orWhereHas('grades.student', fn($sq) => $sq->where('class_id', $student->class_id));
+                });
             }
         }
 

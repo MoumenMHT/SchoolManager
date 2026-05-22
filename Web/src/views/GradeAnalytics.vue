@@ -195,6 +195,208 @@ const classStudentRankings = computed(() => {
   return arr.sort((a, b) => b.average - a.average);
 });
 
+// ── Exercise columns for the class rankings table ──────────────────────────
+// Builds a list of unique exercises (with their max_note) present in classGrades
+const classRankingExercises = computed(() => {
+  if (!showExerciseAnalytics.value) return [];
+  const map = new Map<number, { id: number; level_name: string; max_note: number }>();
+  classGrades.value.forEach((g: any) => {
+    (g.exercise_grades || []).forEach((eg: any) => {
+      if (eg.exam_exercise_id && !map.has(eg.exam_exercise_id)) {
+        map.set(eg.exam_exercise_id, {
+          id: eg.exam_exercise_id,
+          level_name: eg.exercise?.level_name || `Ex ${eg.exam_exercise_id}`,
+          max_note: eg.exercise?.max_note ?? 0
+        });
+      }
+    });
+  });
+  return Array.from(map.values());
+});
+
+// Enriches studentAggregatesData rows with per-exercise grades keyed by exercise id
+const classRankingRows = computed(() => {
+  if (!showExerciseAnalytics.value || classRankingExercises.value.length === 0) {
+    return studentAggregatesData.value;
+  }
+  // Build a per-student exercise note map from classGrades
+  const exMap = new Map<number, Map<number, number>>(); // studentId -> exerciseId -> note
+  classGrades.value.forEach((g: any) => {
+    if (!exMap.has(g.student_id)) exMap.set(g.student_id, new Map());
+    const eMap = exMap.get(g.student_id)!;
+    (g.exercise_grades || []).forEach((eg: any) => {
+      if (eg.exam_exercise_id != null) eMap.set(eg.exam_exercise_id, eg.note);
+    });
+  });
+
+  return studentAggregatesData.value.map((row: any) => {
+    const eMap = exMap.get(row.id) || new Map();
+    const extras: Record<string, number | null> = {};
+    classRankingExercises.value.forEach(ex => {
+      extras[`ex_${ex.id}`] = eMap.has(ex.id) ? eMap.get(ex.id)! : null;
+    });
+    return { ...row, ...extras };
+  });
+});
+
+// ── Customizable grade-range donut chart ────────────────────────────────────
+// Each range: { label, from, to } where from/to are /20 scores
+const gradeRanges = ref([
+  { label: '', from: 0, to: 5 },
+  { label: '', from: 5, to: 10 },
+  { label: '', from: 10, to: 14 },
+  { label: '', from: 14, to: 17 },
+  { label: '', from: 17, to: 20 }
+]);
+const showRangeEditor = ref(false);
+const rangeEditorError = ref('');
+
+const addGradeRange = () => {
+  gradeRanges.value.push({ label: '', from: 0, to: 20 });
+};
+const removeGradeRange = (idx: number) => {
+  if (gradeRanges.value.length > 1) gradeRanges.value.splice(idx, 1);
+};
+
+const DONUT_COLORS = [
+  'rgba(239, 68, 68, 0.8)',
+  'rgba(245, 158, 11, 0.8)',
+  'rgba(59, 130, 246, 0.8)',
+  'rgba(16, 185, 129, 0.8)',
+  'rgba(139, 92, 246, 0.8)',
+  'rgba(236, 72, 153, 0.8)',
+  'rgba(14, 165, 233, 0.8)',
+  'rgba(249, 115, 22, 0.8)'
+];
+
+// Selected exercise id for filtering the donut chart
+const selectedDonutExerciseId = ref<number | null>(null);
+
+// Collect unique exercises available in the current classGrades for the donut filter
+const donutExerciseOptions = computed(() => {
+  const map = new Map<number, { id: number; level_name: string; max_note: number }>();
+  const source = classGrades.value.length > 0 ? classGrades.value : allGrades.value;
+  source.forEach((g: any) => {
+    (g.exercise_grades || []).forEach((eg: any) => {
+      if (eg.exam_exercise_id && !map.has(eg.exam_exercise_id)) {
+        map.set(eg.exam_exercise_id, {
+          id: eg.exam_exercise_id,
+          level_name: eg.exercise?.level_name || `Ex ${eg.exam_exercise_id}`,
+          max_note: eg.exercise?.max_note ?? 0
+        });
+      }
+    });
+  });
+  return [
+    { id: null as number | null, level_name: t('grade_analytics.all_grades') },
+    ...Array.from(map.values())
+  ];
+});
+
+// When an exercise is selected, scale gradeRanges proportionally to the exercise's max_note.
+// e.g. a 5pt exercise with default ranges [0-5, 5-10, 10-14, 14-17, 17-20] becomes [0-1.25, 1.25-2.5, 2.5-3.5, 3.5-4.25, 4.25-5]
+const exerciseAdaptedRanges = computed(() => {
+  if (selectedDonutExerciseId.value === null) return gradeRanges.value;
+  const exerciseOption = donutExerciseOptions.value.find(o => o.id === selectedDonutExerciseId.value);
+  const maxNote = exerciseOption?.max_note || 20;
+  const scale = maxNote / 20;
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  return gradeRanges.value.map((r, i) => {
+    const from = r2(r.from * scale);
+    const to   = r2(r.to   * scale);
+    const isLast = i === gradeRanges.value.length - 1;
+    return { label: isLast ? `${from} – ${to}` : `${from} – <${to}`, from, to };
+  });
+});
+
+// Active ranges used by the donut chart: exercise-adapted when filtering by exercise, else user-defined
+const activeGradeRanges = computed(() =>
+  selectedDonutExerciseId.value !== null ? exerciseAdaptedRanges.value : gradeRanges.value
+);
+
+const currentMaxNote = computed(() => {
+  if (selectedDonutExerciseId.value === null) return 20;
+  const exerciseOption = donutExerciseOptions.value.find(o => o.id === selectedDonutExerciseId.value);
+  return exerciseOption?.max_note || 20;
+});
+
+const updateRangeValue = (idx: number, field: 'from' | 'to', value: number | null) => {
+  if (value === null || value === undefined) return;
+  const max = currentMaxNote.value;
+  const scale = max > 0 ? 20 / max : 1;
+  gradeRanges.value[idx][field] = value * scale;
+};
+
+// Helper: given a range and its position, return the display label using half-open interval format
+const rangeLabel = (range: { label: string; from: number; to: number }, idx: number, total: number): string => {
+  if (range.label) return range.label;
+  return idx === total - 1 ? `${range.from} – ${range.to}` : `${range.from} – <${range.to}`;
+};
+
+// Grades to use for the donut: classGrades when in class view, otherwise all grades
+const gradesForDistribution = computed(() => {
+  if (classGrades.value.length > 0) return classGrades.value;
+  return allGrades.value;
+});
+
+const classGradeDistributionData = computed(() => {
+  const ranges = activeGradeRanges.value;
+  const total  = ranges.length;
+
+  // Helper: half-open interval filter — [from, to) for all but the last which is [from, to]
+  const inRange = (v: number, range: { from: number; to: number }, idx: number) =>
+    v >= range.from && (idx === total - 1 ? v <= range.to : v < range.to);
+
+  // Exercise selected: use RAW exercise notes against the exercise-adapted ranges
+  if (selectedDonutExerciseId.value !== null) {
+    const exId = selectedDonutExerciseId.value;
+    const notes: number[] = [];
+    gradesForDistribution.value.forEach((g: any) => {
+      const eg = (g.exercise_grades || []).find((e: any) => e.exam_exercise_id === exId);
+      if (eg !== undefined) notes.push(Number(eg.note));
+    });
+    const counts = ranges.map((range, i) => notes.filter(v => inRange(v, range, i)).length);
+    return {
+      labels: ranges.map((r, i) => rangeLabel(r, i, total)),
+      datasets: [{
+        data: counts,
+        backgroundColor: ranges.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]),
+        borderWidth: 2, borderColor: 'transparent', hoverOffset: 8
+      }]
+    };
+  }
+
+  // Default: overall grade distribution (normalized to /20)
+  const grades = gradesForDistribution.value.map(g => normalizedGrade(g));
+  const counts = ranges.map((range, i) => grades.filter(v => inRange(v, range, i)).length);
+  return {
+    labels: ranges.map((r, i) => rangeLabel(r, i, total)),
+    datasets: [{
+      data: counts,
+      backgroundColor: ranges.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]),
+      borderWidth: 2, borderColor: 'transparent', hoverOffset: 8
+    }]
+  };
+});
+
+const classGradeDistributionOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: '62%',
+  plugins: {
+    legend: { position: 'right' as const, labels: { font: { size: 11 }, padding: 10 } },
+    tooltip: {
+      callbacks: {
+        label: (ctx: any) => {
+          const total = ctx.dataset.data.reduce((a: number, b: number) => a + b, 0);
+          const pct = total > 0 ? Math.round((ctx.parsed / total) * 100) : 0;
+          return ` ${ctx.label}: ${ctx.parsed} students (${pct}%)`;
+        }
+      }
+    }
+  }
+};
+
 const classTopStudents = computed(() => classStudentRankings.value.slice(0, 5));
 const classBottomStudents = computed(() => {
   const sorted = [...classStudentRankings.value].sort((a, b) => a.average - b.average);
@@ -405,7 +607,8 @@ const loadSubjectExerciseAverages = async () => {
   if (
     selectedStudentId.value ||
     (!selectedClassId.value && !selectedSubjectId.value && !selectedTeacherId.value) ||
-    (selectedClassId.value && !selectedSubjectId.value && !selectedTeacherId.value)
+    // Only skip when class is selected alone (no subject/teacher) AND showExerciseAnalytics is false
+    (selectedClassId.value && !selectedSubjectId.value && !selectedTeacherId.value && !showExerciseAnalytics.value)
   ) {
     subjectExerciseAverages.value = [];
     return;
@@ -437,7 +640,11 @@ const selectedStudentId = ref<number | null>(null);
 
 const examTypes = ref<string[]>([]);
 
+// Monotonic counter — incremented before every request so stale responses are discarded
+let examTypesReqId = 0;
+
 const loadExamTypes = async () => {
+  const reqId = ++examTypesReqId;
   try {
     const types = await GradeService.getExamTypes({
       semester: selectedSemester.value,
@@ -445,13 +652,18 @@ const loadExamTypes = async () => {
       class_id: selectedClassId.value || undefined,
       student_id: selectedStudentId.value || undefined
     });
+
+    // Discard stale response if a newer request has already been issued
+    if (reqId !== examTypesReqId) return;
+
     examTypes.value = types;
-    
+
     // Reset selected exam type if it's no longer available in the new list
     if (selectedExamType.value !== 'all' && !types.includes(selectedExamType.value)) {
       selectedExamType.value = 'all';
     }
   } catch (err: any) {
+    if (reqId !== examTypesReqId) return; // ignore stale errors too
     console.error('Failed to load exam types', err);
     examTypes.value = [];
   }
@@ -928,13 +1140,22 @@ const loadStudentGrades = async () => {
 };
 
 const loadClassGrades = async () => {
-  if (!selectedClassId.value || selectedStudentId.value) {
+  // Run for: class-only, class+subject, teacher-only, subject-only (no student selected)
+  const hasClass = !!selectedClassId.value && !selectedStudentId.value;
+  const teacherOnly = !!selectedTeacherId.value && !selectedClassId.value && !selectedStudentId.value;
+  const subjectOnly = !!selectedSubjectId.value && !selectedClassId.value && !selectedTeacherId.value && !selectedStudentId.value;
+  if (!hasClass && !teacherOnly && !subjectOnly) {
     classGrades.value = [];
     return;
   }
   classGradesLoading.value = true;
   try {
-    const rawGrades = await GradeService.getGrades({ ...buildAnalyticsParams(), class_id: selectedClassId.value });
+    const params = { ...buildAnalyticsParams() };
+    // Always include class_id when a class is selected
+    if (hasClass) params.class_id = selectedClassId.value!;
+    // Include subject_id when both class + subject are selected for subject-scoped distribution
+    if (hasClass && selectedSubjectId.value) params.subject_id = selectedSubjectId.value;
+    const rawGrades = await GradeService.getGrades(params);
     classGrades.value = rawGrades.map((g: any) => ({
       ...g,
       normalized_grade: normalizedGrade(g),
@@ -1139,10 +1360,12 @@ watch(selectedAcademicYear, async () => {
 });
 
 watch(selectedSemester, async () => {
+  selectedDonutExerciseId.value = null; // reset exercise filter on trimester change
   await loadAnalytics();
 });
 
 watch([selectedExamType, selectedClassId, selectedSubjectId, selectedTeacherId, selectedStudentId], async () => {
+  selectedDonutExerciseId.value = null; // reset exercise filter on main filter change
   await loadAnalytics();
 });
 
@@ -1725,8 +1948,98 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Full Class Student Rankings table -->
+      <!-- Full Class Student Rankings table + Grade Distribution Donut -->
       <div v-if="showExerciseAnalytics" class="col-span-12">
+        <!-- Grade Distribution Donut Chart with Customizable Ranges -->
+        <div class="card mb-4">
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div>
+              <h5 class="m-0"><i class="pi pi-chart-pie mr-2 text-violet-500"></i>{{ $t('grade_analytics.grade_distribution') }}</h5>
+              <p class="text-sm text-muted-color mt-1 mb-0">
+                <span v-if="selectedDonutExerciseId">
+                  {{ donutExerciseOptions.find(o => o.id === selectedDonutExerciseId)?.level_name }}
+                  &mdash; {{ $t('grade_analytics.distribution_subtitle') }}
+                </span>
+                <span v-else>{{ $t('grade_analytics.distribution_subtitle') }}</span>
+              </p>
+            </div>
+              <div class="flex items-center gap-2">
+              <!-- Exercise filter for the donut chart -->
+              <Select
+                v-if="donutExerciseOptions.length > 1"
+                v-model="selectedDonutExerciseId"
+                :options="donutExerciseOptions"
+                optionLabel="level_name"
+                optionValue="id"
+                :placeholder="$t('grade_analytics.filter_by_exercise')"
+                size="small"
+                class="w-52"
+              />
+              <Button
+                :icon="showRangeEditor ? 'pi pi-times' : 'pi pi-sliders-h'"
+                :label="showRangeEditor ? $t('grade_analytics.close_ranges') : $t('grade_analytics.customize_ranges')"
+                severity="secondary"
+                outlined
+                size="small"
+                @click="showRangeEditor = !showRangeEditor"
+              />
+            </div>
+          </div>
+
+          <!-- Range editor panel -->
+          <div v-if="showRangeEditor" class="range-editor mb-4 p-4 rounded-lg border">
+            <p class="text-sm font-semibold mb-3"><i class="pi pi-sliders-h mr-2"></i>{{ $t('grade_analytics.ranges_editor_title') }}</p>
+            <div class="flex flex-col gap-2">
+              <div v-for="(range, idx) in activeGradeRanges" :key="idx" class="flex items-center gap-2">
+                <span class="text-sm text-muted-color font-medium">{{ $t('grade_analytics.range_from') }}</span>
+                <InputNumber :modelValue="range.from" @update:modelValue="updateRangeValue(idx, 'from', $event)" :min="0" :max="currentMaxNote" :step="0.5" inputClass="w-16" size="small" />
+                <span class="text-sm text-muted-color font-medium">{{ $t('grade_analytics.range_to') }} &lt;</span>
+                <InputNumber :modelValue="range.to" @update:modelValue="updateRangeValue(idx, 'to', $event)" :min="0" :max="currentMaxNote" :step="0.5" inputClass="w-16" size="small" />
+                <Button icon="pi pi-trash" severity="danger" text size="small" @click="removeGradeRange(idx)" :disabled="gradeRanges.length <= 1" />
+                <div
+                  class="w-4 h-4 rounded-full flex-shrink-0"
+                  :style="{ background: DONUT_COLORS[idx % DONUT_COLORS.length] }"
+                ></div>
+              </div>
+            </div>
+            <Button
+              icon="pi pi-plus"
+              :label="$t('grade_analytics.add_range')"
+              severity="secondary"
+              text
+              size="small"
+              class="mt-3"
+              @click="addGradeRange"
+              :disabled="gradeRanges.length >= 8"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-center">
+            <!-- Donut chart -->
+            <div class="xl:col-span-2 flex justify-center" style="height:260px">
+              <Chart
+                type="doughnut"
+                :data="classGradeDistributionData"
+                :options="classGradeDistributionOptions"
+                class="w-full h-full"
+              />
+            </div>
+            <!-- Legend / stats sidebar -->
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="(range, idx) in activeGradeRanges"
+                :key="idx"
+                class="flex items-center justify-between p-2 rounded-lg text-sm"
+                :style="{ background: DONUT_COLORS[idx % DONUT_COLORS.length].replace('0.8', '0.12'), borderLeft: `4px solid ${DONUT_COLORS[idx % DONUT_COLORS.length]}` }"
+              >
+                <span class="font-medium">{{ rangeLabel(range, idx, activeGradeRanges.length) }}</span>
+                <span class="font-bold ml-2">{{ classGradeDistributionData.datasets[0].data[idx] }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rankings Table -->
         <div class="card">
           <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h5 class="m-0">
@@ -1738,11 +2051,11 @@ onMounted(async () => {
                 <InputIcon class="pi pi-search" />
                 <InputText v-model="studentRankingsFilters['global'].value" :placeholder="t('grade_analytics.search_students')" />
               </IconField>
-              <span class="text-sm text-muted-color">{{ studentAggregatesData.length }} {{ t('common.students') }}</span>
+              <span class="text-sm text-muted-color">{{ classRankingRows.length }} {{ t('common.students') }}</span>
             </div>
           </div>
           <DataTable
-            :value="studentAggregatesData"
+            :value="classRankingRows"
             size="small"
             stripedRows
             paginator
@@ -1750,8 +2063,9 @@ onMounted(async () => {
             :loading="loading"
             v-model:filters="studentRankingsFilters"
             :globalFilterFields="['student_name', 'class_name', 'best_subject']"
+            scrollable
           >
-            <Column :header="t('grade_analytics.col_rank')" style="width: 3rem">
+            <Column :header="t('grade_analytics.col_rank')" style="width: 3rem" frozen>
               <template #body="{ index }">
                 <span
                   class="font-bold"
@@ -1761,7 +2075,7 @@ onMounted(async () => {
                 </span>
               </template>
             </Column>
-            <Column field="student_name" :header="t('grade_analytics.student')" sortable>
+            <Column field="student_name" :header="t('grade_analytics.student')" sortable frozen>
               <template #body="{ data, index }">
                 <div class="flex items-center gap-2">
                   <i v-if="index === 0" class="pi pi-trophy text-amber-500"></i>
@@ -1769,11 +2083,10 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column field="class_name" :header="t('grade_analytics.class')" sortable />
             <Column field="average" :header="t('grade_analytics.overall_average')" sortable>
               <template #body="{ data }">
                 <div
-                  class="font-bold px-2 py-1 rounded  text-center inline-block min-w-12"
+                  class="font-bold px-2 py-1 rounded text-center inline-block min-w-12"
                   :class="data.average >= 16 ? 'bg-emerald-100 text-emerald-700'
                     : data.average >= getClassFailThreshold(data.class_id || selectedClassId) ? 'bg-blue-50 text-blue-700'
                     : 'bg-rose-100 text-rose-700'"
@@ -1782,19 +2095,32 @@ onMounted(async () => {
                 </div>
               </template>
             </Column>
-            <Column field="best_subject" :header="t('grade_analytics.best_subject')" sortable />
-            <Column field="best_subject_avg" :header="t('grade_analytics.best_average')" sortable>
+            <!-- Dynamic exercise columns -->
+            <Column
+              v-for="ex in classRankingExercises"
+              :key="ex.id"
+              :header="ex.level_name + ' (/' + ex.max_note + ')'"
+              :sortField="`ex_${ex.id}`"
+              sortable
+            >
               <template #body="{ data }">
-                <span v-if="data.best_subject_avg !== null" class="font-semibold text-emerald-600">
-                  {{ data.best_subject_avg }}
+                <span
+                  v-if="data[`ex_${ex.id}`] !== null && data[`ex_${ex.id}`] !== undefined"
+                  class="font-semibold px-2 py-0.5 rounded text-xs"
+                  :class="data[`ex_${ex.id}`] < ex.max_note / 2
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'bg-emerald-50 text-emerald-700'"
+                >
+                  {{ data[`ex_${ex.id}`] }}
                 </span>
-                <span v-else class="text-muted-color">—</span>
+                <span v-else class="text-muted-color text-xs">—</span>
               </template>
             </Column>
+            <Column field="best_subject" :header="t('grade_analytics.best_subject')" sortable />
             <Column field="passRate" :header="t('grade_analytics.pass_rate')" sortable>
               <template #body="{ data }">
                 <div class="flex items-center gap-2">
-                  <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:60px">
+                  <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:50px">
                     <div
                       class="h-1.5 rounded-full"
                       :class="data.passRate >= 70 ? 'bg-emerald-500' : data.passRate >= 40 ? 'bg-amber-400' : 'bg-rose-500'"
@@ -1840,17 +2166,71 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="col-span-12 xl:col-span-4">
-        <div class="card chart-card">
-          <h5 class="mb-3">{{ $t('grade_analytics.grade_distribution') }}</h5>
-          <div class="chart-wrap">
-            <Chart type="doughnut" :data="teacherDistributionChartData" :options="teacherPieOptions" />
+      <!-- Grade Distribution Donut Chart with Customizable Ranges (Teacher View) -->
+      <div class="col-span-12">
+        <div class="card mb-4">
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div>
+              <h5 class="m-0"><i class="pi pi-chart-pie mr-2 text-violet-500"></i>{{ $t('grade_analytics.grade_distribution') }}</h5>
+              <p class="text-sm text-muted-color mt-1 mb-0">{{ $t('grade_analytics.distribution_subtitle') }}</p>
+            </div>
+            <Button
+              :icon="showRangeEditor ? 'pi pi-times' : 'pi pi-sliders-h'"
+              :label="showRangeEditor ? $t('grade_analytics.close_ranges') : $t('grade_analytics.customize_ranges')"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="showRangeEditor = !showRangeEditor"
+            />
+          </div>
+
+          <!-- Range editor panel -->
+          <div v-if="showRangeEditor" class="range-editor mb-4 p-4 rounded-lg border">
+            <p class="text-sm font-semibold mb-3"><i class="pi pi-sliders-h mr-2"></i>{{ $t('grade_analytics.ranges_editor_title') }}</p>
+            <div class="flex flex-col gap-2">
+              <div v-for="(range, idx) in gradeRanges" :key="idx" class="flex items-center gap-2">
+                <InputText v-model="range.label" :placeholder="$t('grade_analytics.range_label')" class="w-36" size="small" />
+                <span class="text-sm text-muted-color">{{ $t('grade_analytics.range_from') }}</span>
+                <InputNumber v-model="range.from" :min="0" :max="20" :step="0.5" inputClass="w-16" size="small" />
+                <span class="text-sm text-muted-color">{{ $t('grade_analytics.range_to') }}</span>
+                <InputNumber v-model="range.to" :min="0" :max="20" :step="0.5" inputClass="w-16" size="small" />
+                <Button icon="pi pi-trash" severity="danger" text size="small" @click="removeGradeRange(idx)" :disabled="gradeRanges.length <= 1" />
+                <div class="w-4 h-4 rounded-full flex-shrink-0" :style="{ background: DONUT_COLORS[idx % DONUT_COLORS.length] }"></div>
+              </div>
+            </div>
+            <Button
+              icon="pi pi-plus"
+              :label="$t('grade_analytics.add_range')"
+              severity="secondary"
+              text
+              size="small"
+              class="mt-3"
+              @click="addGradeRange"
+              :disabled="gradeRanges.length >= 8"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-center">
+            <div class="xl:col-span-2 flex justify-center" style="height:260px">
+              <Chart type="doughnut" :data="classGradeDistributionData" :options="classGradeDistributionOptions" class="w-full h-full" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="(range, idx) in gradeRanges" :key="idx"
+                class="flex items-center justify-between p-2 rounded-lg text-sm"
+                :style="{ background: DONUT_COLORS[idx % DONUT_COLORS.length].replace('0.8', '0.12'), borderLeft: `4px solid ${DONUT_COLORS[idx % DONUT_COLORS.length]}` }"
+              >
+                <span class="font-medium">{{ range.label || `${range.from}–${range.to}` }}</span>
+                <span class="font-bold ml-2">{{ classGradeDistributionData.datasets[0].data[idx] }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="col-span-12 xl:col-span-8">
-        <div class="card chart-card">
+      <!-- Class Performance Matrix -->
+      <div class="col-span-12">
+        <div class="card">
           <h5 class="mb-3">{{ $t('grade_analytics.class_performance_matrix') }}</h5>
           <DataTable :value="classAggregates" size="small" stripedRows paginator :rows="10">
             <Column field="label" :header="$t('grade_analytics.class')" sortable></Column>
@@ -1887,24 +2267,13 @@ onMounted(async () => {
 
           <template v-else-if="subjectExerciseAverages.length">
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
-              <!-- Radar Chart -->
               <div class="chart-wrap" style="height:250px">
-                <Chart type="radar" :data="subjectExerciseRadarData" :options="{
-                  responsive: true, maintainAspectRatio: false,
-                  scales: { r: { min: 0 } }
-                }" />
+                <Chart type="radar" :data="subjectExerciseRadarData" :options="{ responsive: true, maintainAspectRatio: false, scales: { r: { min: 0 } } }" />
               </div>
-              <!-- Bar Chart -->
               <div class="chart-wrap" style="height:250px">
-                <Chart type="bar" :data="subjectExerciseBarData" :options="{
-                  responsive: true, maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
-                  scales: { y: { min: 0 } }
-                }" />
+                <Chart type="bar" :data="subjectExerciseBarData" :options="{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }" />
               </div>
             </div>
-
-            <!-- Exercise table -->
             <DataTable :value="subjectExerciseAverages" size="small" stripedRows>
               <Column field="level_name" :header="t('grade_analytics.col_exercise_name')" />
               <Column field="records_count" :header="t('grade_analytics.col_records')" />
@@ -1936,6 +2305,102 @@ onMounted(async () => {
             <i class="pi pi-inbox text-2xl mb-2 block"></i>
             {{ $t('grade_analytics.no_exercises') }}
           </div>
+        </div>
+      </div>
+
+      <!-- Student Rankings Table with Exercise Columns (Teacher View) -->
+      <div v-if="showExerciseAnalytics" class="col-span-12">
+        <div class="card">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h5 class="m-0">
+              <i class="pi pi-users mr-2 text-primary"></i>
+              {{ $t('grade_analytics.class_student_rankings') }}
+            </h5>
+            <div class="flex gap-4 items-center">
+              <IconField>
+                <InputIcon class="pi pi-search" />
+                <InputText v-model="studentRankingsFilters['global'].value" :placeholder="t('grade_analytics.search_students')" />
+              </IconField>
+              <span class="text-sm text-muted-color">{{ classRankingRows.length }} {{ t('common.students') }}</span>
+            </div>
+          </div>
+          <DataTable
+            :value="classRankingRows"
+            size="small"
+            stripedRows
+            paginator
+            :rows="20"
+            :loading="loading || classGradesLoading"
+            v-model:filters="studentRankingsFilters"
+            :globalFilterFields="['student_name', 'class_name', 'best_subject']"
+            scrollable
+          >
+            <Column :header="t('grade_analytics.col_rank')" style="width: 3rem" frozen>
+              <template #body="{ index }">
+                <span class="font-bold" :class="index === 0 ? 'text-amber-500' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-orange-600' : 'text-muted-color'">
+                  {{ index + 1 }}
+                </span>
+              </template>
+            </Column>
+            <Column field="student_name" :header="t('grade_analytics.student')" sortable frozen>
+              <template #body="{ data, index }">
+                <div class="flex items-center gap-2">
+                  <i v-if="index === 0" class="pi pi-trophy text-amber-500"></i>
+                  <span class="font-medium">{{ data.student_name }}</span>
+                </div>
+              </template>
+            </Column>
+            <Column field="class_name" :header="t('grade_analytics.class')" sortable />
+            <Column field="average" :header="t('grade_analytics.overall_average')" sortable>
+              <template #body="{ data }">
+                <div
+                  class="font-bold px-2 py-1 rounded text-center inline-block min-w-12"
+                  :class="data.average >= 16 ? 'bg-emerald-100 text-emerald-700'
+                    : data.average >= getClassFailThreshold(data.class_id || null) ? 'bg-blue-50 text-blue-700'
+                    : 'bg-rose-100 text-rose-700'"
+                >
+                  {{ data.average }}
+                </div>
+              </template>
+            </Column>
+            <!-- Dynamic exercise columns -->
+            <Column
+              v-for="ex in classRankingExercises"
+              :key="ex.id"
+              :header="ex.level_name + ' (/' + ex.max_note + ')'"
+              :sortField="`ex_${ex.id}`"
+              sortable
+            >
+              <template #body="{ data }">
+                <span
+                  v-if="data[`ex_${ex.id}`] !== null && data[`ex_${ex.id}`] !== undefined"
+                  class="font-semibold px-2 py-0.5 rounded text-xs"
+                  :class="data[`ex_${ex.id}`] < ex.max_note / 2 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-50 text-emerald-700'"
+                >
+                  {{ data[`ex_${ex.id}`] }}
+                </span>
+                <span v-else class="text-muted-color text-xs">—</span>
+              </template>
+            </Column>
+            <Column field="best_subject" :header="t('grade_analytics.best_subject')" sortable />
+            <Column field="passRate" :header="t('grade_analytics.pass_rate')" sortable>
+              <template #body="{ data }">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:50px">
+                    <div
+                      class="h-1.5 rounded-full"
+                      :class="data.passRate >= 70 ? 'bg-emerald-500' : data.passRate >= 40 ? 'bg-amber-400' : 'bg-rose-500'"
+                      :style="{ width: data.passRate + '%' }"
+                    ></div>
+                  </div>
+                  <span class="text-xs font-semibold w-10 text-right">{{ data.passRate }}%</span>
+                </div>
+              </template>
+            </Column>
+            <template #empty>
+              <div class="text-center py-4 text-muted-color">{{ t('common.no_data_available') }}</div>
+            </template>
+          </DataTable>
         </div>
       </div>
     </template>
@@ -2062,7 +2527,7 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Students Needing Work for this Subject -->
+      <!-- Students Needing Work for this Subject (all-trimesters view) -->
       <div class="col-span-12" v-if="selectedSemester === 'all'">
         <div class="card">
           <div class="flex justify-between items-center mb-4">
@@ -2120,24 +2585,9 @@ onMounted(async () => {
             </Column>
             <Column :header="t('grade_analytics.col_status')">
               <template #body="{ data }">
-                <Tag
-                  v-if="data.average !== null && data.average < data.threshold"
-                  severity="danger"
-                  :value="t('grade_analytics.needs_work')"
-                  rounded
-                />
-                <Tag
-                  v-else-if="data.average !== null && data.average >= 16"
-                  severity="success"
-                  :value="t('grade_analytics.excellent')"
-                  rounded
-                />
-                <Tag
-                  v-else-if="data.average !== null"
-                  severity="info"
-                  :value="t('grade_analytics.passing')"
-                  rounded
-                />
+                <Tag v-if="data.average !== null && data.average < data.threshold" severity="danger" :value="t('grade_analytics.needs_work')" rounded />
+                <Tag v-else-if="data.average !== null && data.average >= 16" severity="success" :value="t('grade_analytics.excellent')" rounded />
+                <Tag v-else-if="data.average !== null" severity="info" :value="t('grade_analytics.passing')" rounded />
                 <span v-else class="text-muted-color text-sm">—</span>
               </template>
             </Column>
@@ -2147,6 +2597,150 @@ onMounted(async () => {
           </DataTable>
         </div>
       </div>
+
+      <!-- Grade Distribution Donut + Student Rankings with Exercise Columns (specific trimester+exam) -->
+      <template v-if="showExerciseAnalytics">
+        <!-- Customizable Donut Chart -->
+        <div class="col-span-12">
+          <div class="card mb-4">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div>
+                <h5 class="m-0"><i class="pi pi-chart-pie mr-2 text-violet-500"></i>{{ $t('grade_analytics.grade_distribution') }}</h5>
+                <p class="text-sm text-muted-color mt-1 mb-0">{{ $t('grade_analytics.distribution_subtitle') }}</p>
+              </div>
+              <Button
+                :icon="showRangeEditor ? 'pi pi-times' : 'pi pi-sliders-h'"
+                :label="showRangeEditor ? $t('grade_analytics.close_ranges') : $t('grade_analytics.customize_ranges')"
+                severity="secondary" outlined size="small"
+                @click="showRangeEditor = !showRangeEditor"
+              />
+            </div>
+            <div v-if="showRangeEditor" class="range-editor mb-4 p-4 rounded-lg border">
+              <p class="text-sm font-semibold mb-3"><i class="pi pi-sliders-h mr-2"></i>{{ $t('grade_analytics.ranges_editor_title') }}</p>
+              <div class="flex flex-col gap-2">
+                <div v-for="(range, idx) in gradeRanges" :key="idx" class="flex items-center gap-2">
+                  <InputText v-model="range.label" :placeholder="$t('grade_analytics.range_label')" class="w-36" size="small" />
+                  <span class="text-sm text-muted-color">{{ $t('grade_analytics.range_from') }}</span>
+                  <InputNumber v-model="range.from" :min="0" :max="20" :step="0.5" inputClass="w-16" size="small" />
+                  <span class="text-sm text-muted-color">{{ $t('grade_analytics.range_to') }}</span>
+                  <InputNumber v-model="range.to" :min="0" :max="20" :step="0.5" inputClass="w-16" size="small" />
+                  <Button icon="pi pi-trash" severity="danger" text size="small" @click="removeGradeRange(idx)" :disabled="gradeRanges.length <= 1" />
+                  <div class="w-4 h-4 rounded-full flex-shrink-0" :style="{ background: DONUT_COLORS[idx % DONUT_COLORS.length] }"></div>
+                </div>
+              </div>
+              <Button icon="pi pi-plus" :label="$t('grade_analytics.add_range')" severity="secondary" text size="small" class="mt-3" @click="addGradeRange" :disabled="gradeRanges.length >= 8" />
+            </div>
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-center">
+              <div class="xl:col-span-2 flex justify-center" style="height:260px">
+                <Chart type="doughnut" :data="classGradeDistributionData" :options="classGradeDistributionOptions" class="w-full h-full" />
+              </div>
+              <div class="flex flex-col gap-2">
+                <div
+                  v-for="(range, idx) in gradeRanges" :key="idx"
+                  class="flex items-center justify-between p-2 rounded-lg text-sm"
+                  :style="{ background: DONUT_COLORS[idx % DONUT_COLORS.length].replace('0.8', '0.12'), borderLeft: `4px solid ${DONUT_COLORS[idx % DONUT_COLORS.length]}` }"
+                >
+                  <span class="font-medium">{{ range.label || `${range.from}–${range.to}` }}</span>
+                  <span class="font-bold ml-2">{{ classGradeDistributionData.datasets[0].data[idx] }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student Rankings with Exercise Columns -->
+        <div class="col-span-12">
+          <div class="card">
+            <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+              <h5 class="m-0">
+                <i class="pi pi-users mr-2 text-primary"></i>
+                {{ $t('grade_analytics.class_student_rankings') }}
+              </h5>
+              <div class="flex gap-4 items-center">
+                <IconField>
+                  <InputIcon class="pi pi-search" />
+                  <InputText v-model="studentRankingsFilters['global'].value" :placeholder="t('grade_analytics.search_students')" />
+                </IconField>
+                <span class="text-sm text-muted-color">{{ classRankingRows.length }} {{ t('common.students') }}</span>
+              </div>
+            </div>
+            <DataTable
+              :value="classRankingRows"
+              size="small" stripedRows paginator :rows="20"
+              :loading="loading || classGradesLoading"
+              v-model:filters="studentRankingsFilters"
+              :globalFilterFields="['student_name', 'class_name', 'best_subject']"
+              scrollable
+            >
+              <Column :header="t('grade_analytics.col_rank')" style="width: 3rem" frozen>
+                <template #body="{ index }">
+                  <span class="font-bold" :class="index === 0 ? 'text-amber-500' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-orange-600' : 'text-muted-color'">
+                    {{ index + 1 }}
+                  </span>
+                </template>
+              </Column>
+              <Column field="student_name" :header="t('grade_analytics.student')" sortable frozen>
+                <template #body="{ data, index }">
+                  <div class="flex items-center gap-2">
+                    <i v-if="index === 0" class="pi pi-trophy text-amber-500"></i>
+                    <span class="font-medium">{{ data.student_name }}</span>
+                  </div>
+                </template>
+              </Column>
+              <Column field="class_name" :header="t('grade_analytics.class')" sortable />
+              <Column field="average" :header="t('grade_analytics.overall_average')" sortable>
+                <template #body="{ data }">
+                  <div
+                    class="font-bold px-2 py-1 rounded text-center inline-block min-w-12"
+                    :class="data.average >= 16 ? 'bg-emerald-100 text-emerald-700'
+                      : data.average >= getClassFailThreshold(data.class_id || null) ? 'bg-blue-50 text-blue-700'
+                      : 'bg-rose-100 text-rose-700'"
+                  >
+                    {{ data.average }}
+                  </div>
+                </template>
+              </Column>
+              <!-- Dynamic exercise columns -->
+              <Column
+                v-for="ex in classRankingExercises"
+                :key="ex.id"
+                :header="ex.level_name + ' (/' + ex.max_note + ')'"
+                :sortField="`ex_${ex.id}`"
+                sortable
+              >
+                <template #body="{ data }">
+                  <span
+                    v-if="data[`ex_${ex.id}`] !== null && data[`ex_${ex.id}`] !== undefined"
+                    class="font-semibold px-2 py-0.5 rounded text-xs"
+                    :class="data[`ex_${ex.id}`] < ex.max_note / 2 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-50 text-emerald-700'"
+                  >
+                    {{ data[`ex_${ex.id}`] }}
+                  </span>
+                  <span v-else class="text-muted-color text-xs">—</span>
+                </template>
+              </Column>
+              <Column field="best_subject" :header="t('grade_analytics.best_subject')" sortable />
+              <Column field="passRate" :header="t('grade_analytics.pass_rate')" sortable>
+                <template #body="{ data }">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 bg-surface-200 rounded-full h-1.5" style="min-width:50px">
+                      <div
+                        class="h-1.5 rounded-full"
+                        :class="data.passRate >= 70 ? 'bg-emerald-500' : data.passRate >= 40 ? 'bg-amber-400' : 'bg-rose-500'"
+                        :style="{ width: data.passRate + '%' }"
+                      ></div>
+                    </div>
+                    <span class="text-xs font-semibold w-10 text-right">{{ data.passRate }}%</span>
+                  </div>
+                </template>
+              </Column>
+              <template #empty>
+                <div class="text-center py-4 text-muted-color">{{ t('common.no_data_available') }}</div>
+              </template>
+            </DataTable>
+          </div>
+        </div>
+      </template>
     </template>
 
     <template v-else-if="!loading">
@@ -2583,5 +3177,11 @@ onMounted(async () => {
 /* Subject view — row background for students below the fail threshold */
 :deep(.subject-student-fail) {
   background: color-mix(in srgb, var(--p-red-500) 8%, var(--p-content-background)) !important;
+}
+
+/* Range editor panel */
+.range-editor {
+  background: var(--p-surface-section);
+  border: 1px solid var(--p-content-border-color);
 }
 </style>

@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
 
         if (User::where('username', 'admin')->exists()) {
             $this->command->info('Seed baseline already exists, skipping duplicate seeding.');
+            $this->call(ExamsAndGradesSeeder::class);
             return;
         }
 
@@ -215,5 +216,8 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->command->info('✅ Clean seed complete!');
+
+        // Seed exams, exercises, and grades for existing students
+        $this->call(ExamsAndGradesSeeder::class);
     }
 }
