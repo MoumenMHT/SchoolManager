@@ -42,40 +42,6 @@ const model = computed(() => {
         return sections;
     }
 
-    if (isAccountant.value) {
-        sections.push({
-            label: t('nav.finance', 'Finance'),
-            items: [
-                {
-                    label: t('dashboard.payment_dashboard'),
-                    icon: 'pi pi-fw pi-credit-card',
-                    to: '/payments'
-                },
-                {
-                    label: t('nav.process_payment', 'Process Payment'),
-                    icon: 'pi pi-fw pi-plus-circle',
-                    to: '/payments/create'
-                },
-                {
-                    label: t('nav.fees_management', 'Fees'),
-                    icon: 'pi pi-fw pi-dollar',
-                    to: '/fees'
-                },
-                {
-                    label: t('nav.create_contract', 'New Contract'),
-                    icon: 'pi pi-fw pi-file-edit',
-                    to: '/contracts/create'
-                },
-                {
-                    label: t('nav.bills_management', 'Bills'),
-                    icon: 'pi pi-fw pi-file-pdf',
-                    to: '/bills'
-                }
-            ]
-        });
-        return sections;
-    }
-
     if (!isTeacher.value && !isSupervisor.value) {
         sections.push({
             label: t('nav.home'),
@@ -162,19 +128,19 @@ const model = computed(() => {
 
             sections.push({ label: t('nav.administration', 'Administration'), items: adminItems });
         }
+    }
 
-        if (isAdmin.value) {
-            sections.push({
-                label: t('nav.finance', 'Finance'),
-                items: [
-                    { label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' },
-                    { label: t('nav.process_payment', 'Process Payment'), icon: 'pi pi-fw pi-plus-circle', to: '/payments/create' },
-                    { label: t('nav.fees_management', 'Fees'), icon: 'pi pi-fw pi-dollar', to: '/fees' },
-                    { label: t('nav.create_contract', 'New Contract'), icon: 'pi pi-fw pi-file-edit', to: '/contracts/create' },
-                    { label: t('nav.bills_management', 'Bills'), icon: 'pi pi-fw pi-file-pdf', to: '/bills' }
-                ]
-            });
-        }
+    if (isAdmin.value || isAccountant.value) {
+        sections.push({
+            label: t('nav.finance', 'Finance'),
+            items: [
+                { label: t('dashboard.payment_dashboard'), icon: 'pi pi-fw pi-credit-card', to: '/payments' },
+                { label: t('nav.process_payment', 'Process Payment'), icon: 'pi pi-fw pi-plus-circle', to: '/payments/create' },
+                { label: t('nav.fees_management', 'Fees'), icon: 'pi pi-fw pi-dollar', to: '/fees' },
+                { label: t('nav.create_contract', 'New Contract'), icon: 'pi pi-fw pi-file-edit', to: '/contracts/create' },
+                { label: t('nav.bills_management', 'Bills'), icon: 'pi pi-fw pi-file-pdf', to: '/bills' }
+            ]
+        });
     }
 
     return sections;
