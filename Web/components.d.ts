@@ -17,6 +17,7 @@ declare module 'vue' {
     Column: typeof import('primevue/column')['default']
     ContractPaymentWidget: typeof import('./src/components/dashboard/ContractPaymentWidget.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
+    Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
     FeaturesWidget: typeof import('./src/components/landing/FeaturesWidget.vue')['default']
     FinancialWidget: typeof import('./src/components/dashboard/FinancialWidget.vue')['default']
@@ -48,11 +49,13 @@ declare module 'vue' {
     StudentsByClassWidget: typeof import('./src/components/dashboard/StudentsByClassWidget.vue')['default']
     Tag: typeof import('primevue/tag')['default']
     Toast: typeof import('primevue/toast')['default']
+    Toolbar: typeof import('primevue/toolbar')['default']
     TopbarWidget: typeof import('./src/components/landing/TopbarWidget.vue')['default']
     TopDebtorsWidget: typeof import('./src/components/dashboard/TopDebtorsWidget.vue')['default']
     UpcomingDuesWidget: typeof import('./src/components/dashboard/UpcomingDuesWidget.vue')['default']
   }
   export interface ComponentCustomProperties {
     StyleClass: typeof import('primevue/styleclass')['default']
+    Tooltip: typeof import('primevue/tooltip')['default']
   }
 }

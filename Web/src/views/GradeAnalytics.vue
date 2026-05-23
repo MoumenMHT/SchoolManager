@@ -288,7 +288,7 @@ const donutExerciseOptions = computed(() => {
     });
   });
   return [
-    { id: null as number | null, level_name: t('grade_analytics.all_grades') },
+    { id: null as number | null, level_name: t('grade_analytics.all_grades'), max_note: 20 },
     ...Array.from(map.values())
   ];
 });
