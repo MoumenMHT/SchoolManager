@@ -650,6 +650,7 @@ const loadExamTypes = async () => {
       semester: selectedSemester.value,
       academic_year: selectedAcademicYear.value,
       class_id: selectedClassId.value || undefined,
+      subject_id: selectedSubjectId.value || undefined,
       student_id: selectedStudentId.value || undefined
     });
 

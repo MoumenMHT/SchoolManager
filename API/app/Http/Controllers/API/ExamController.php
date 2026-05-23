@@ -39,6 +39,9 @@ class ExamController extends Controller
         if ($request->filled('academic_year') && $request->input('academic_year') !== 'all') {
             $query->where('academic_year', $request->input('academic_year'));
         }
+        if ($request->filled('subject_id')) {
+            $query->where('subject_id', $request->integer('subject_id'));
+        }
         if ($request->filled('class_id')) {
             $classId = $request->integer('class_id');
             // Include exams linked to the class via the pivot table

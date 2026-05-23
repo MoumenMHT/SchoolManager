@@ -285,6 +285,7 @@ class GradeService {
     academic_year?: string;
     class_id?: number;
     student_id?: number;
+    subject_id?: number;
   }): Promise<string[]> {
     const response = await ApiService.get<string[]>('/exams/types', params);
     return response.data ?? [];

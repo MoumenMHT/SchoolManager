@@ -75,12 +75,16 @@ const existingGradeMap = ref<Map<number, GradeRecord>>(new Map());
 // Nested dictionary: exerciseValues.value[student_id][exercise_id] = input_string
 const exerciseValues = ref<Record<number, Record<number, number | null>>>({});
 
-const EXAM_TYPES = computed(() => [
-  { label: t('grade_analytics.eval_continue'), value: 'evaluation_continue' },
-  { label: t('grade_analytics.devoir_1_label'), value: 'devoir_1' },
-  { label: t('grade_analytics.devoir_2_label'), value: 'devoir_2' },
-  { label: t('grade_analytics.composition_label'), value: 'composition' },
-]);
+const EXAM_TYPES = computed(() => {
+  const types = new Set<string>();
+  availableExams.value.forEach(exam => {
+    if (exam.exam_type) types.add(exam.exam_type);
+  });
+  return Array.from(types).map(type => ({
+    label: t(`teacher_class_detail.${type}`),
+    value: type
+  }));
+});
 
 const SEMESTERS = computed(() => [
   { label: t('grade_analytics.trimester_1'), value: 'Trimester 1' },
