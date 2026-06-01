@@ -35,7 +35,7 @@ class ChildrenListScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 22,
-                              backgroundColor: Colors.white.withOpacity(0.2),
+                              backgroundColor: Colors.white.withValues(alpha: 0.2),
                               child: Text(
                                 auth.user?.parent?.firstName.isNotEmpty == true
                                     ? auth.user!.parent!.firstName[0].toUpperCase()
@@ -55,7 +55,7 @@ class ChildrenListScreen extends StatelessWidget {
                                   Text(
                                     l10n.myChildren,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
+                                      color: Colors.white.withValues(alpha: 0.7),
                                       fontSize: 13,
                                     ),
                                   ),
@@ -179,7 +179,7 @@ class _ChildCard extends StatelessWidget {
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: isSelected
-                  ? [BoxShadow(color: color.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))]
+                  ? [BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 12, offset: const Offset(0, 4))]
                   : null,
             ),
             child: Row(
@@ -190,7 +190,7 @@ class _ChildCard extends StatelessWidget {
                   height: 52,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [color, color.withOpacity(0.7)],
+                      colors: [color, color.withValues(alpha: 0.7)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),

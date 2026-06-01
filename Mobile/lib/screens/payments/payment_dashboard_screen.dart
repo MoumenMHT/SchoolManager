@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:schoolhub_parent/l10n/app_localizations.dart';
 import '../../services/payment_service.dart';
 import '../../services/api_service.dart';
 import '../../models/payment.dart';
+import 'payment_history_screen.dart';
 import '../../theme/app_colors.dart';
 
 class PaymentDashboardScreen extends StatefulWidget {
@@ -15,6 +17,17 @@ class PaymentDashboardScreen extends StatefulWidget {
 
 class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
   late Future<List<ContractSummary>> _dashboardFuture;
+
+  String _formatDueDate(BuildContext context, String? value) {
+    final l10n = AppLocalizations.of(context)!;
+    if (value == null || value.isEmpty) return l10n.notAvailable;
+
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return l10n.notAvailable;
+
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat.yMMMd(locale).format(parsed);
+  }
 
   @override
   void initState() {
@@ -55,7 +68,7 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Error loading dashboard: \${snapshot.error}',
+                '${l10n.error}: ${snapshot.error}',
                 style: const TextStyle(color: Colors.red),
               ),
             );
@@ -63,8 +76,8 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
 
           final contracts = snapshot.data ?? [];
           if (contracts.isEmpty) {
-            return const Center(
-              child: Text('No active contracts found.'),
+            return Center(
+              child: Text(l10n.noContracts),
             );
           }
 
@@ -101,6 +114,8 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
   }
 
   Widget _buildGlobalSummary(double totalPaid, double totalRemaining, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -109,7 +124,7 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -118,13 +133,13 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Total Outstanding Balance',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+          Text(
+            l10n.totalOutstandingBalance,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Text(
-            '\${totalRemaining.toStringAsFixed(2)} DZD',
+            '${totalRemaining.toStringAsFixed(2)} DZD',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
@@ -133,29 +148,55 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
           ),
           const SizedBox(height: 24),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Total Paid', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text('\${totalPaid.toStringAsFixed(2)} DZD',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.history, color: Colors.white, size: 16),
-                    SizedBox(width: 4),
-                    Text('History', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(l10n.totalPaid,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text('${totalPaid.toStringAsFixed(2)} DZD',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PaymentHistoryScreen(),
+                      ),
+                    );
+                  },
+                  child: Ink(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.history, color: Colors.white, size: 16),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            l10n.paymentHistory,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -166,7 +207,10 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
   }
 
   Widget _buildContractCard(ContractSummary contract, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final bool hasDue = contract.unpaidBillsCount > 0 || contract.lateBillsCount > 0;
+    final int percentPaid = (contract.paymentProgress * 100).toInt();
+    final String formattedDueDate = _formatDueDate(context, contract.nextDueDate);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -175,7 +219,7 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -188,20 +232,24 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Contract: \${contract.contractNumber}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Expanded(
+                  child: Text(
+                    '${l10n.contractNumber}: ${contract.contractNumber}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: hasDue ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                    color: hasDue ? AppColors.error.withValues(alpha: 0.1) : AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    hasDue ? 'Payment Due' : 'Up to date',
+                    hasDue ? l10n.paymentDue : l10n.upToDate,
                     style: TextStyle(
                       color: hasDue ? AppColors.error : AppColors.success,
                       fontWeight: FontWeight.bold,
@@ -213,7 +261,7 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Academic Year: \${contract.academicYear}',
+              '${l10n.academicYear}: ${contract.academicYear}',
               style: TextStyle(color: Colors.grey[600], fontSize: 13),
             ),
             const SizedBox(height: 16),
@@ -222,9 +270,9 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('\${(contract.paymentProgress * 100).toInt()}% Paid',
+                Text('$percentPaid% ${l10n.paid}',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                Text('\${contract.paidAmount.toStringAsFixed(0)} / \${contract.totalAmount.toStringAsFixed(0)} DZD',
+                Text('${contract.paidAmount.toStringAsFixed(0)} / ${contract.totalAmount.toStringAsFixed(0)} DZD',
                     style: TextStyle(fontSize: 12, color: Colors.grey[600])),
               ],
             ),
@@ -246,29 +294,33 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
             const SizedBox(height: 8),
             
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Next Due Date', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                    const SizedBox(height: 4),
-                    Text(
-                      contract.nextDueDate ?? 'N/A',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: hasDue ? AppColors.error : Colors.black,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.nextDue, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Text(
+                        formattedDueDate,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: hasDue ? AppColors.error : Colors.black,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('Unpaid Bills', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    Text(l10n.unpaidBills, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(
-                      '\${contract.unpaidBillsCount} (\${contract.lateBillsCount} Late)',
+                      '${contract.unpaidBillsCount} (${contract.lateBillsCount} ${l10n.late})',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: contract.lateBillsCount > 0 ? AppColors.error : Colors.black,
@@ -279,22 +331,6 @@ class _PaymentDashboardScreenState extends State<PaymentDashboardScreen> {
               ],
             ),
             
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Navigate to Contract details / Bills list
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  foregroundColor: AppColors.primary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('View Bills'),
-              ),
-            ),
           ],
         ),
       ),

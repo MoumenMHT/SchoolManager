@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'SchoolHub Parent';
+  String get appTitle => 'SchoolHub';
 
   @override
   String get login => 'Login';
@@ -36,7 +36,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginButton => 'Sign In';
 
   @override
-  String get loginSubtitle => 'Sign in to monitor your children';
+  String get loginSubtitle => 'Sign in to access your school workspace';
 
   @override
   String get noAccount => 'Contact school administration for account access';
@@ -117,6 +117,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allSemesters => 'All Trimesters';
 
   @override
+  String get allExamTypes => 'All Exam Types';
+
+  @override
+  String get allSubjects => 'All Subjects';
+
+  @override
   String get subject => 'Subject';
 
   @override
@@ -159,6 +165,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get totalPaid => 'Total Paid';
 
   @override
+  String get totalOutstandingBalance => 'Total Outstanding Balance';
+
+  @override
   String get remaining => 'Remaining';
 
   @override
@@ -174,7 +183,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bills => 'Bills';
 
   @override
+  String get unpaidBills => 'Unpaid Bills';
+
+  @override
   String get paymentHistory => 'Payment History';
+
+  @override
+  String get paymentDetails => 'Payment Details';
+
+  @override
+  String get paymentType => 'Payment Type';
+
+  @override
+  String get paymentDate => 'Payment Date';
+
+  @override
+  String get amount => 'Amount';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get contractId => 'Contract ID';
+
+  @override
+  String get paymentId => 'Payment ID';
+
+  @override
+  String get note => 'Note';
 
   @override
   String get monthlyAmount => 'Monthly Amount';
@@ -184,6 +220,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nextDue => 'Next Due';
+
+  @override
+  String get paymentDue => 'Payment Due';
+
+  @override
+  String get upToDate => 'Up to date';
 
   @override
   String get overdue => 'Overdue';
@@ -246,6 +288,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewSchedule => 'View Schedule';
 
   @override
+  String get viewBills => 'View Bills';
+
+  @override
   String get noChildren => 'No children found';
 
   @override
@@ -265,6 +310,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noPayments => 'No payments recorded';
+
+  @override
+  String get notAvailable => 'N/A';
 
   @override
   String get selectChild => 'Select a child';
@@ -306,5 +354,193 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passwordChanged => 'Password changed successfully';
 
   @override
-  String get parentOnly => 'This app is only for parent accounts';
+  String get parentOnly => 'This app supports parent and teacher accounts only';
+
+  @override
+  String get examType_exam => 'Exam';
+
+  @override
+  String get examType_quiz => 'Quiz';
+
+  @override
+  String get examType_devoir_1 => 'Assignment 1';
+
+  @override
+  String get examType_devoir_2 => 'Assignment 2';
+
+  @override
+  String get examType_composition => 'Final Exam';
+
+  @override
+  String get examType_evaluation_continue => 'Continuous Assessment';
+
+  @override
+  String get performanceOverview => 'Performance Overview';
+
+  @override
+  String get dashboard => 'Dashboard';
+
+  @override
+  String get classes => 'Classes';
+
+  @override
+  String get exams => 'Exams';
+
+  @override
+  String get myClasses => 'My Classes';
+
+  @override
+  String get viewAll => 'View all';
+
+  @override
+  String get viewDetails => 'View details';
+
+  @override
+  String get levelLabel => 'Level';
+
+  @override
+  String get students => 'Students';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get exercise => 'Exercise';
+
+  @override
+  String get allClasses => 'All Classes';
+
+  @override
+  String get teacherDashboardTitle => 'Teacher Dashboard';
+
+  @override
+  String get teacherDashboardSubtitle => 'Teaching workspace';
+
+  @override
+  String get teacherDashboardHint =>
+      'Track sessions, attendance, grades, and exams';
+
+  @override
+  String get teacherMySchedule => 'My Schedule';
+
+  @override
+  String get teacherTodaySessions => 'Today\'s Sessions';
+
+  @override
+  String get teacherNoSessionsToday => 'No sessions today';
+
+  @override
+  String get teacherNoSessionsDay => 'No sessions scheduled for this day';
+
+  @override
+  String get teacherNoSchedule => 'No schedule available';
+
+  @override
+  String get teacherNoClassesAssigned => 'No classes assigned';
+
+  @override
+  String get teacherStudentsLabel => 'Students';
+
+  @override
+  String get teacherSubjectsLabel => 'Subjects';
+
+  @override
+  String get teacherMarkAllPresent => 'Mark all present';
+
+  @override
+  String get teacherMarkAllAbsent => 'Mark all absent';
+
+  @override
+  String get teacherMarkAllLate => 'Mark all late';
+
+  @override
+  String get teacherSaveAttendance => 'Save Attendance';
+
+  @override
+  String get teacherSelectExam => 'Select exam';
+
+  @override
+  String get teacherNoExams => 'No exams found';
+
+  @override
+  String get teacherFilledLabel => 'Filled';
+
+  @override
+  String get teacherSaveGrades => 'Save Grades';
+
+  @override
+  String get teacherClassNotFound => 'Class not found';
+
+  @override
+  String get teacherNoProfile => 'No teacher profile linked to your account.';
+
+  @override
+  String get teacherSelectLevel => 'Select level';
+
+  @override
+  String get teacherSelectClasses => 'Select classes';
+
+  @override
+  String get teacherStepLevel => 'Step 1: Level';
+
+  @override
+  String get teacherStepClasses => 'Step 2: Classes';
+
+  @override
+  String get teacherSelectAll => 'Select all';
+
+  @override
+  String get teacherStepConfig => 'Step 3: Exam Details';
+
+  @override
+  String get teacherExercises => 'Exercises';
+
+  @override
+  String get teacherExerciseName => 'Exercise name';
+
+  @override
+  String get teacherMaxNote => 'Max note';
+
+  @override
+  String get teacherOverallGrade => 'Total points';
+
+  @override
+  String get teacherSubmitExam => 'Create Exam';
+
+  @override
+  String get teacherCreateExam => 'Create';
+
+  @override
+  String get teacherManageExams => 'Manage';
+
+  @override
+  String get teacherExamDetailsRequired => 'Exam details are required';
+
+  @override
+  String get teacherExerciseRequired => 'Add at least one exercise';
+
+  @override
+  String get teacherExamSaved => 'Exam created successfully';
+
+  @override
+  String get teacherEditExam => 'Edit Exam';
+
+  @override
+  String get teacherDeleteExamTitle => 'Delete Exam';
+
+  @override
+  String get teacherDeleteExamMessage =>
+      'Are you sure you want to delete this exam?';
+
+  @override
+  String get classDetails => 'Class Details';
 }

@@ -6,6 +6,9 @@ class ScheduleSlot {
   final String? room;
   final String? academicYear;
   final ScheduleAssignment? assignment;
+  final ScheduleSubject? subject;
+  final ScheduleTeacher? teacher;
+  final ScheduleClass? schoolClass;
 
   ScheduleSlot({
     required this.id,
@@ -15,6 +18,9 @@ class ScheduleSlot {
     this.room,
     this.academicYear,
     this.assignment,
+    this.subject,
+    this.teacher,
+    this.schoolClass,
   });
 
   factory ScheduleSlot.fromJson(Map<String, dynamic> json) {
@@ -28,14 +34,24 @@ class ScheduleSlot {
       assignment: json['assignment'] != null
           ? ScheduleAssignment.fromJson(json['assignment'] as Map<String, dynamic>)
           : null,
+      subject: json['subject'] != null
+          ? ScheduleSubject.fromJson(json['subject'] as Map<String, dynamic>)
+          : null,
+      teacher: json['teacher'] != null
+          ? ScheduleTeacher.fromJson(json['teacher'] as Map<String, dynamic>)
+          : null,
+      schoolClass: json['class'] != null
+          ? ScheduleClass.fromJson(json['class'] as Map<String, dynamic>)
+          : null,
     );
   }
 
-  String get subjectName => assignment?.subject?.name ?? '—';
+  String get subjectName => assignment?.subject?.name ?? subject?.name ?? '—';
   String get teacherName {
-    final t = assignment?.teacher;
+    final t = assignment?.teacher ?? teacher;
     return t != null ? '${t.firstName} ${t.lastName}'.trim() : '—';
   }
+  String get className => assignment?.schoolClass?.name ?? schoolClass?.name ?? '—';
   String get timeRange => '$startTime - $endTime';
 }
 

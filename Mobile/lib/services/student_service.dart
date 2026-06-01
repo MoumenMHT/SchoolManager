@@ -24,6 +24,8 @@ class StudentService {
     
     if (data is List) {
       return data;
+    } else if (data is Map<String, dynamic> && data['grades'] != null) {
+      return data['grades'] as List;
     }
     return [];
   }
@@ -35,6 +37,8 @@ class StudentService {
     
     if (data is List) {
       return data;
+    } else if (data is Map<String, dynamic> && data['data'] != null) {
+      return data['data'] as List;
     }
     return [];
   }
@@ -42,6 +46,31 @@ class StudentService {
   /// Get schedule for a specific student
   Future<dynamic> getStudentSchedule(int studentId) async {
     final response = await _api.get('/parent/students/$studentId/schedule');
-    return _api.extractData(response);
+    final data = _api.extractData(response);
+
+    if (data is List) {
+      return data;
+    }
+
+    // API may return a grouped map: { "monday": [..], "tuesday": [..] }
+    if (data is Map<String, dynamic>) {
+      if (data['data'] is List) {
+        return data['data'] as List;
+      }
+      if (data['schedule'] is List) {
+        return data['schedule'] as List;
+      }
+
+      final flattened = <dynamic>[];
+      for (final entry in data.entries) {
+        final value = entry.value;
+        if (value is List) {
+          flattened.addAll(value);
+        }
+      }
+      return flattened;
+    }
+
+    return [];
   }
 }

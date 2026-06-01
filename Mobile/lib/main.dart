@@ -11,6 +11,7 @@ import 'theme/app_theme.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/teacher/teacher_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +92,9 @@ class _SchoolHubAppState extends State<SchoolHubApp> {
           }
           
           if (auth.isAuthenticated) {
+            if (auth.user?.role == 'teacher') {
+              return const TeacherHomeScreen();
+            }
             return const HomeScreen();
           }
           
@@ -100,6 +104,7 @@ class _SchoolHubAppState extends State<SchoolHubApp> {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
+        '/teacher': (context) => const TeacherHomeScreen(),
       },
     );
   }

@@ -19,6 +19,10 @@ class AuthProvider extends ChangeNotifier {
     _apiService.onUnauthorized = _handleUnauthorized;
   }
 
+  bool _isAllowedRole(User user) {
+    return user.role == 'parent' || user.role == 'teacher';
+  }
+
   AuthStatus get status => _status;
   User? get user => _user;
   String? get error => _error;
@@ -40,10 +44,10 @@ class AuthProvider extends ChangeNotifier {
 
       _user = await _authService.getCurrentUser();
 
-      // Verify this is a parent account
-      if (_user!.role != 'parent') {
+      // Verify this is a supported account
+      if (!_isAllowedRole(_user!)) {
         await _authService.logout();
-        _error = 'This app is only for parent accounts.';
+        _error = 'This app supports parent and teacher accounts only.';
         _status = AuthStatus.unauthenticated;
         _user = null;
         notifyListeners();
@@ -69,10 +73,10 @@ class AuthProvider extends ChangeNotifier {
       final result = await _authService.login(identifier, password);
       _user = result.user;
 
-      // Verify this is a parent account
-      if (_user!.role != 'parent') {
+      // Verify this is a supported account
+      if (!_isAllowedRole(_user!)) {
         await _authService.logout();
-        _error = 'This app is only for parent accounts.';
+        _error = 'This app supports parent and teacher accounts only.';
         _status = AuthStatus.unauthenticated;
         _user = null;
         notifyListeners();

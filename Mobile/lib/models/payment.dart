@@ -1,3 +1,10 @@
+double _asDouble(dynamic value) {
+  if (value == null) return 0;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0;
+  return 0;
+}
+
 class ContractSummary {
   final int contractId;
   final String contractNumber;
@@ -32,11 +39,11 @@ class ContractSummary {
       contractId: json['contract_id'] as int,
       contractNumber: json['contract_number'] as String? ?? '',
       academicYear: json['academic_year'] as String? ?? '',
-      totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
-      paidAmount: (json['paid_amount'] as num?)?.toDouble() ?? 0,
-      remainingAmount: (json['remaining_amount'] as num?)?.toDouble() ?? 0,
-      balance: (json['balance'] as num?)?.toDouble() ?? 0,
-      monthlyAmount: (json['monthly_amount'] as num?)?.toDouble() ?? 0,
+      totalAmount: _asDouble(json['total_amount']),
+      paidAmount: _asDouble(json['paid_amount']),
+      remainingAmount: _asDouble(json['remaining_amount']),
+      balance: _asDouble(json['balance']),
+      monthlyAmount: _asDouble(json['monthly_amount']),
       nextDueDate: json['next_due_date'] as String?,
       unpaidBillsCount: json['unpaid_bills_count'] as int? ?? 0,
       lateBillsCount: json['late_bills_count'] as int? ?? 0,
@@ -97,13 +104,13 @@ class Contract {
       contractNumber: json['contract_number'] as String?,
       parentId: json['parent_id'] as int,
       academicYear: json['academic_year'] as String? ?? '',
-      totalFees: (json['total_fees'] as num?)?.toDouble() ?? 0,
-      paidAmount: (json['paid_amount'] as num?)?.toDouble() ?? 0,
-      remainingAmount: (json['remaining_amount'] as num?)?.toDouble() ?? 0,
-      balance: (json['balance'] as num?)?.toDouble() ?? 0,
-      monthlyAmount: (json['monthly_amount'] as num?)?.toDouble() ?? 0,
+      totalFees: _asDouble(json['total_fees']),
+      paidAmount: _asDouble(json['paid_amount']),
+      remainingAmount: _asDouble(json['remaining_amount']),
+      balance: _asDouble(json['balance']),
+      monthlyAmount: _asDouble(json['monthly_amount']),
       discountType: json['discount_type'] as String?,
-      discountValue: (json['discount_value'] as num?)?.toDouble() ?? 0,
+      discountValue: _asDouble(json['discount_value']),
       discountReason: json['discount_reason'] as String?,
       status: json['status'] as String? ?? 'active',
       startDate: json['start_date'] as String?,
@@ -156,9 +163,9 @@ class Bill {
       id: json['id'] as int,
       contractId: json['contract_id'] as int,
       monthYear: json['month_year'] as String? ?? '',
-      amountDue: (json['amount_due'] as num?)?.toDouble() ?? 0,
-      amountPaid: (json['amount_paid'] as num?)?.toDouble() ?? 0,
-      balance: (json['balance'] as num?)?.toDouble() ?? 0,
+      amountDue: _asDouble(json['amount_due']),
+      amountPaid: _asDouble(json['amount_paid']),
+      balance: _asDouble(json['balance']),
       status: json['status'] as String? ?? 'unpaid',
       dueDate: json['due_date'] as String? ?? '',
       note: json['note'] as String?,
@@ -192,7 +199,7 @@ class Payment {
     return Payment(
       id: json['id'] as int,
       contractId: json['contract_id'] as int,
-      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+      amount: _asDouble(json['amount']),
       paymentType: json['payment_type'] as String? ?? '',
       paidDate: json['paid_date'] as String? ?? '',
       status: json['status'] as String? ?? '',

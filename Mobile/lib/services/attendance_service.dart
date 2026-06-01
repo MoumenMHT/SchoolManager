@@ -37,4 +37,45 @@ class AttendanceService {
     }
     return [];
   }
+
+  /// Get attendance records for a class (teacher view)
+  Future<List<AttendanceRecord>> getClassAttendances(int classId, {
+    String? date,
+    String? startDate,
+    String? endDate,
+    int? subjectId,
+    int? scheduleId,
+  }) async {
+    final params = <String, dynamic>{};
+
+    if (date != null) {
+      params['start_date'] = date;
+      params['end_date'] = date;
+    } else {
+      if (startDate != null) params['start_date'] = startDate;
+      if (endDate != null) params['end_date'] = endDate;
+    }
+    if (subjectId != null) params['subject_id'] = subjectId;
+    if (scheduleId != null) params['schedule_id'] = scheduleId;
+
+    final response = await _api.get(
+      '/classes/$classId/attendances',
+      params: params.isNotEmpty ? params : null,
+    );
+
+    final data = _api.extractData(response);
+    if (data is List) {
+      return data
+          .map((a) => AttendanceRecord.fromJson(a as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  /// Save attendance for a class in bulk
+  Future<void> saveClassAttendance(
+    List<Map<String, dynamic>> records,
+  ) async {
+    await _api.post('/attendances/bulk', data: { 'records': records });
+  }
 }

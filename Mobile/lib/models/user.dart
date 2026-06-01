@@ -6,6 +6,7 @@ class User {
   final String? address;
   final bool isActive;
   final ParentProfile? parent;
+  final TeacherProfile? teacher;
 
   User({
     required this.id,
@@ -15,6 +16,7 @@ class User {
     this.address,
     required this.isActive,
     this.parent,
+    this.teacher,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,9 @@ class User {
       parent: json['parent'] != null
           ? ParentProfile.fromJson(json['parent'] as Map<String, dynamic>)
           : null,
+        teacher: json['teacher'] != null
+          ? TeacherProfile.fromJson(json['teacher'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -39,9 +44,13 @@ class User {
     'address': address,
     'is_active': isActive,
     'parent': parent?.toJson(),
+    'teacher': teacher?.toJson(),
   };
 
   String get displayName {
+    if (teacher != null) {
+      return teacher!.fullName;
+    }
     if (parent != null) {
       return '${parent!.firstName} ${parent!.lastName}';
     }
@@ -103,6 +112,58 @@ class ParentProfile {
   };
 
   String get fullName => '$firstName $lastName';
+}
+
+class TeacherProfile {
+  final int id;
+  final int? userId;
+  final String firstName;
+  final String lastName;
+  final String? email;
+  final String? phone;
+  final String? cin;
+  final String? specialization;
+  final int? weeklyHours;
+
+  TeacherProfile({
+    required this.id,
+    this.userId,
+    required this.firstName,
+    required this.lastName,
+    this.email,
+    this.phone,
+    this.cin,
+    this.specialization,
+    this.weeklyHours,
+  });
+
+  factory TeacherProfile.fromJson(Map<String, dynamic> json) {
+    return TeacherProfile(
+      id: json['id'] as int,
+      userId: json['user_id'] as int?,
+      firstName: json['first_name'] as String? ?? '',
+      lastName: json['last_name'] as String? ?? '',
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      cin: json['cin'] as String?,
+      specialization: json['specialization'] as String?,
+      weeklyHours: json['weekly_hours'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'user_id': userId,
+    'first_name': firstName,
+    'last_name': lastName,
+    'email': email,
+    'phone': phone,
+    'cin': cin,
+    'specialization': specialization,
+    'weekly_hours': weeklyHours,
+  };
+
+  String get fullName => '$firstName $lastName'.trim();
 }
 
 class StudentBrief {

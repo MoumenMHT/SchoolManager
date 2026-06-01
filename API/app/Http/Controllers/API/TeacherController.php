@@ -302,6 +302,7 @@ class TeacherController extends Controller
             $classData = $class->toArray();
             $classData['subjects'] = $classAssignments->map(fn($a) => $a->subject)->filter()->values();
             $classData['students_count'] = $class->students->count();
+            $classData['students'] = $class->students->values();
 
             return $classData;
         })->filter()->values();

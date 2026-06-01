@@ -184,6 +184,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Teacher specific endpoints
         Route::get('/teacher/classes', [TeacherController::class, 'myClasses']);
         Route::get('/teacher/students', [TeacherController::class, 'myStudents']);
+        Route::get('/teachers/{teacher}/schedule', [ScheduleController::class, 'getTeacherSchedule']);
     });
     
     // Supervisor Portal routes

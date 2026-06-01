@@ -71,7 +71,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Error loading attendance: \${snapshot.error}',
+                'Error loading attendance: ${snapshot.error}',
                 style: const TextStyle(color: Colors.red),
               ),
             );
@@ -123,7 +123,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -212,7 +212,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -224,7 +224,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
+            color: statusColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(statusIcon, color: statusColor),
@@ -244,7 +244,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             if (record.reason != null && record.reason!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
-                'Reason: \${record.reason}',
+                'Reason: ${record.reason}',
                 style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
               ),
             ]

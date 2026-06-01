@@ -22,7 +22,9 @@ class GradeRecord {
       id: json['id'] as int,
       studentId: json['student_id'] as int,
       examId: json['exam_id'] as int,
-      grade: (json['grade'] as num).toDouble(),
+      grade: json['grade'] is String 
+          ? double.tryParse(json['grade']) ?? 0.0 
+          : (json['grade'] as num).toDouble(),
       comment: json['comment'] as String?,
       exam: json['exam'] != null
           ? Exam.fromJson(json['exam'] as Map<String, dynamic>)
@@ -65,6 +67,7 @@ class Exam {
   final Subject? subject;
   final Teacher? teacher;
   final List<ExamExercise>? exercises;
+  final List<ExamClass>? classes;
 
   Exam({
     required this.id,
@@ -77,6 +80,7 @@ class Exam {
     this.subject,
     this.teacher,
     this.exercises,
+    this.classes,
   });
 
   factory Exam.fromJson(Map<String, dynamic> json) {
@@ -87,7 +91,11 @@ class Exam {
       examType: json['exam_type'] as String? ?? '',
       semester: json['semester'] as String? ?? '',
       academicYear: json['academic_year'] as String? ?? '',
-      maxGrade: (json['max_grade'] as num?)?.toDouble() ?? 20,
+      maxGrade: json['max_grade'] != null 
+          ? (json['max_grade'] is String 
+              ? double.tryParse(json['max_grade']) ?? 20.0 
+              : (json['max_grade'] as num).toDouble())
+          : 20.0,
       subject: json['subject'] != null
           ? Subject.fromJson(json['subject'] as Map<String, dynamic>)
           : null,
@@ -98,6 +106,11 @@ class Exam {
           ? (json['exercises'] as List)
               .map((e) => ExamExercise.fromJson(e as Map<String, dynamic>))
               .toList()
+          : null,
+        classes: json['classes'] != null
+          ? (json['classes'] as List)
+            .map((c) => ExamClass.fromJson(c as Map<String, dynamic>))
+            .toList()
           : null,
     );
   }
@@ -155,7 +168,11 @@ class ExamExercise {
       id: json['id'] as int,
       examId: json['exam_id'] as int,
       levelName: json['level_name'] as String? ?? '',
-      maxNote: (json['max_note'] as num).toDouble(),
+      maxNote: json['max_note'] != null 
+          ? (json['max_note'] is String 
+              ? double.tryParse(json['max_note']) ?? 0.0 
+              : (json['max_note'] as num).toDouble())
+          : 0.0,
     );
   }
 }
@@ -178,7 +195,25 @@ class ExerciseGrade {
       id: json['id'] as int,
       gradeId: json['grade_id'] as int,
       examExerciseId: json['exam_exercise_id'] as int,
-      note: (json['note'] as num).toDouble(),
+      note: json['note'] != null 
+          ? (json['note'] is String 
+              ? double.tryParse(json['note']) ?? 0.0 
+              : (json['note'] as num).toDouble())
+          : 0.0,
+    );
+  }
+}
+
+class ExamClass {
+  final int id;
+  final String name;
+
+  ExamClass({required this.id, required this.name});
+
+  factory ExamClass.fromJson(Map<String, dynamic> json) {
+    return ExamClass(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
     );
   }
 }

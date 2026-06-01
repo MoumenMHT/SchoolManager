@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
 import '../attendance/attendance_screen.dart';
+import 'package:schoolhub_parent/l10n/app_localizations.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -12,25 +13,28 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final locale = context.watch<LocaleProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
         children: [
+          if (auth.user?.role == 'parent') ...[
+            ListTile(
+              title: Text(l10n.attendance),
+              subtitle: Text(l10n.viewAttendance),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              leading: const Icon(Icons.fact_check_outlined, color: AppColors.primary),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+                );
+              },
+            ),
+            const Divider(),
+          ],
           ListTile(
-            title: const Text('Attendance'),
-            subtitle: const Text('View your child\'s attendance records'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            leading: const Icon(Icons.fact_check_outlined, color: AppColors.primary),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AttendanceScreen()),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            title: const Text('Language'),
+            title: Text(l10n.language),
             subtitle: Text(locale.languageCode.toUpperCase()),
             trailing: const Icon(Icons.language),
             leading: const Icon(Icons.g_translate_outlined),
@@ -41,7 +45,7 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
           ListTile(
-            title: const Text('Logout'),
+            title: Text(l10n.logout),
             trailing: const Icon(Icons.logout, color: Colors.red),
             leading: const Icon(Icons.exit_to_app, color: Colors.red),
             onTap: () async {
