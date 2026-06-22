@@ -55,10 +55,9 @@ class ParentService {
   /**
    * Get all parents
    */
-  async getParents(): Promise<Parent[]> {
-    const response = await apiService.get<Parent[]>('/parents');
-    console.log('Fetched parents:', response.data);
-    return response.data || [];
+  async getParents(params?: any): Promise<any> {
+    const response = await apiService.get<any>('/parents', params);
+    return response.data;
   }
 
   /**

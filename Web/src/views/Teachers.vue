@@ -23,6 +23,20 @@ const filters = ref({
 });
 const submitted = ref(false);
 const loading = ref(false);
+
+const totalRecords = ref(0);
+const lazyParams = ref({ first: 0, page: 0, rows: 10, sortField: 'created_at', sortOrder: -1 });
+
+const onPage = (event: any) => {
+  lazyParams.value = event;
+  loadTeachers();
+};
+
+const onFilter = () => {
+  lazyParams.value.first = 0;
+  lazyParams.value.page = 0;
+  loadTeachers();
+};
 const createAccountDialog = ref(false);
 const accountData = ref({
   password: '',
@@ -126,11 +140,17 @@ onMounted(async () => {
   await loadTeachers();
 });
 
-// Load all teachers
 const loadTeachers = async () => {
   try {
     loading.value = true;
-    teachers.value = await TeacherService.getTeachers();
+    const params: any = {
+      page: lazyParams.value.page + 1,
+      per_page: lazyParams.value.rows,
+      search: filters.value.global.value
+    };
+    const response = await TeacherService.getTeachers(params);
+    teachers.value = response.data || [];
+    totalRecords.value = response.total || 0;
 
     // Add computed properties for each teacher
     teachers.value = teachers.value.map(t => ({
@@ -138,10 +158,10 @@ const loadTeachers = async () => {
       full_name: `${t.first_name} ${t.last_name}`,
       has_account: !!t.user_id,
       subjects_text: t.subjects && Array.isArray(t.subjects)
-        ? t.subjects.map(s => s.name).join(', ')
+        ? t.subjects.map((s: any) => s.name).join(', ')
         : '',
       classes_text: t.classes && Array.isArray(t.classes)
-        ? t.classes.map(c => c.name).join(', ')
+        ? t.classes.map((c: any) => c.name).join(', ')
         : '',
     }));
   } catch (error: any) {
@@ -927,14 +947,17 @@ const removeAvailabilityRow = (index: number) => {
       </template>
     </Toolbar>
 
-    <!-- DataTable -->
     <DataTable
       ref="dt"
       v-model:selection="selectedTeachers"
       :value="teachers"
       dataKey="id"
+      lazy
+      :totalRecords="totalRecords"
+      :first="lazyParams.first"
+      @page="onPage"
       :paginator="true"
-      :rows="10"
+      :rows="lazyParams.rows"
       :filters="filters"
       :loading="loading"
       exportFilename="teachers"
@@ -954,8 +977,10 @@ const removeAvailabilityRow = (index: number) => {
             </InputIcon>
             <InputText
               v-model="filters['global'].value"
+              @keydown.enter="onFilter"
               :placeholder="t('teachers.search_placeholder')"
             />
+            <Button icon="pi pi-search" @click="onFilter" class="ml-2" />
           </IconField>
         </div>
       </template>

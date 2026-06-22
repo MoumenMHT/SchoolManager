@@ -66,11 +66,12 @@ class ContractController extends Controller
                 ->unique()
                 ->values();
 
+            $allFees = Fee::whereIn('id', $allFeeIds)->get()->keyBy('id');
+
             // But total is the SUM of each student's fees (same fee on 2 students counts twice)
             $totalFees = 0;
             foreach ($request->student_fees as $sf) {
-                $fees = Fee::whereIn('id', $sf['fee_ids'])->get();
-                $totalFees += $fees->sum('base_amount');
+                $totalFees += collect($sf['fee_ids'])->map(fn($id) => $allFees[$id]->base_amount ?? 0)->sum();
             }
 
             // Apply discount
@@ -184,11 +185,17 @@ class ContractController extends Controller
 
             DB::beginTransaction();
 
+            $allFeeIds = collect($request->student_fees)
+                ->flatMap(fn($sf) => $sf['fee_ids'])
+                ->unique()
+                ->values();
+
+            $allFees = Fee::whereIn('id', $allFeeIds)->get()->keyBy('id');
+
             // Recalculate total (sum per student)
             $totalFees = 0;
             foreach ($request->student_fees as $sf) {
-                $fees = Fee::whereIn('id', $sf['fee_ids'])->get();
-                $totalFees += $fees->sum('base_amount');
+                $totalFees += collect($sf['fee_ids'])->map(fn($id) => $allFees[$id]->base_amount ?? 0)->sum();
             }
 
             $discountValue = $request->discount_value ?? 0;
@@ -336,7 +343,23 @@ class ContractController extends Controller
                 $query->where('status', $request->status);
             }
 
-            $contracts = $query->get();
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('contract_number', 'like', "%{$search}%")
+                      ->orWhereHas('parent', function($q2) use ($search) {
+                          $q2->where('first_name', 'like', "%{$search}%")
+                             ->orWhere('last_name', 'like', "%{$search}%");
+                      });
+                });
+            }
+
+            if ($request->input('paginate') === 'false') {
+                $contracts = $query->get();
+            } else {
+                $perPage = $request->input('per_page', 15);
+                $contracts = $query->paginate($perPage);
+            }
 
             return response()->json([
                 'success' => true,

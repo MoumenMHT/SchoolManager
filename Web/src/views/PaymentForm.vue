@@ -66,9 +66,16 @@ const effectiveAmount = computed(() => {
 });
 
 const loadParents = async () => {
+  // We don't load all parents on mount anymore to save time.
+  // The user will search for parents using AutoComplete.
+};
+
+const searchParents = async (event: any) => {
   loadingParents.value = true;
   try {
-    parents.value = await ParentService.getParents();
+    const res = await ParentService.getParents({ search: event.query, per_page: 20 });
+    const fetchedParents = res.data || [];
+    parents.value = fetchedParents.map((p: any) => ({ ...p, full_name: `${p.first_name} ${p.last_name}` }));
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('common.failed_to_load_parents', 'Failed to load parents'), life: 3000 });
   } finally {
@@ -236,33 +243,26 @@ onMounted(loadParents);
     <div class="col-span-12 xl:col-span-4">
       <Panel :header="t('nav.select_parent', 'Select Parent')" class="mb-6">
         <div class="flex flex-col gap-4">
-          <Select
+          <AutoComplete
             v-model="selectedParent"
-            :options="parents"
-            :filter="true"
-            :filterFields="['first_name', 'last_name']"
+            :suggestions="parents"
+            @complete="searchParents"
+            @item-select="onParentSelect"
             :placeholder="t('common.search_parent', 'Search parent by name...')"
             class="w-full"
-            :loading="loadingParents"
-            @change="onParentSelect"
+            :inputClass="'w-full'"
+            optionLabel="full_name"
           >
-            <template #value="slotProps">
-              <div v-if="slotProps.value" class="flex items-center gap-2">
-                <i class="pi pi-user"></i>
-                <div>{{ slotProps.value.first_name }} {{ slotProps.value.last_name }}</div>
-              </div>
-              <span v-else>{{ slotProps.placeholder }}</span>
-            </template>
             <template #option="slotProps">
               <div class="flex items-center gap-2">
                 <i class="pi pi-user text-lg"></i>
                 <div>
                   <div class="font-medium">{{ slotProps.option.first_name }} {{ slotProps.option.last_name }}</div>
-                  <div class="text-xs text-muted-color">{{ slotProps.option.students_count }} {{ t('common.students', 'students') }}</div>
+                  <div class="text-xs text-muted-color">{{ slotProps.option.students_count || 0 }} {{ t('common.students', 'students') }}</div>
                 </div>
               </div>
             </template>
-          </Select>
+          </AutoComplete>
 
           <div v-if="loadingDetails" class="flex items-center justify-center gap-2 py-4">
             <i class="pi pi-spin pi-spinner text-xl text-primary"></i>

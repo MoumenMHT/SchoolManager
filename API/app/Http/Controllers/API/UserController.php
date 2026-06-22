@@ -42,7 +42,36 @@ class UserController extends Controller
             $query->where('role', $request->input('role'));
         }
 
-        $users = $query->orderBy('created_at', 'desc')->get()->map(function ($user) {
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('username', 'like', "%{$search}%")
+                  ->orWhere('role', 'like', "%{$search}%")
+                  ->orWhereHas('teacher', function ($q2) use ($search) {
+                      $q2->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('supervisor', function ($q2) use ($search) {
+                      $q2->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('parent', function ($q2) use ($search) {
+                      $q2->where('first_name', 'like', "%{$search}%")
+                         ->orWhere('last_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->input('paginate') === 'false') {
+            $users = $query->orderBy('created_at', 'desc')->get();
+            $paginated = null;
+        } else {
+            $perPage = $request->input('per_page', 15);
+            $paginated = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            $users = collect($paginated->items());
+        }
+
+        $mappedUsers = $users->map(function ($user) {
             $profile = $user->teacher ?? $user->supervisor ?? $user->parent ?? null;
             $fullName = $profile
                 ? trim(($profile->first_name ?? '') . ' ' . ($profile->last_name ?? ''))
@@ -57,7 +86,12 @@ class UserController extends Controller
             ];
         });
 
-        return response()->json(['success' => true, 'data' => $users]);
+        if ($paginated) {
+            $paginated->setCollection($mappedUsers);
+            return response()->json(['success' => true, 'data' => $paginated]);
+        }
+
+        return response()->json(['success' => true, 'data' => $mappedUsers]);
     }
 
     /**

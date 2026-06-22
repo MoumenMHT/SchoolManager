@@ -79,17 +79,19 @@ class DashboardService {
   /**
    * Get all payments (with contract.parent eager-loaded)
    */
-  async getAllPayments(params?: { status?: string }): Promise<PaymentRecord[]> {
-    const response = await apiService.get<PaymentRecord[]>('/payments', params);
-    return (response as any).data || [];
+  async getAllPayments(params: any = {}): Promise<PaymentRecord[]> {
+    params.per_page = 200;
+    const response = await apiService.get<any>('/payments', params);
+    return response.data?.data || response.data || [];
   }
 
   /**
    * Get all bills (with contract.parent eager-loaded)
    */
-  async getAllBills(params?: { status?: string; contract_id?: number }): Promise<BillRecord[]> {
-    const response = await apiService.get<BillRecord[]>('/bills', params);
-    return (response as any).data || [];
+  async getAllBills(params: any = {}): Promise<BillRecord[]> {
+    params.per_page = 200;
+    const response = await apiService.get<any>('/bills', params);
+    return response.data?.data || response.data || [];
   }
 }
 

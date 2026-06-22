@@ -58,9 +58,9 @@ export interface Contract {
 }
 
 class ContractService {
-  async getContracts(params?: { parent_id?: number; academic_year?: string; status?: string }): Promise<Contract[]> {
-    const response = await apiService.get<Contract[]>('/contracts', params);
-    return response.data || [];
+  async getContracts(params: any = {}): Promise<any> {
+    const response = await apiService.get<any>('/contracts', params);
+    return response.data;
   }
 
   async getContract(id: number): Promise<Contract> {

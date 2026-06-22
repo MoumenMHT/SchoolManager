@@ -341,8 +341,13 @@ class GradeController extends Controller
 
         $levelId = $student->class->level_id;
 
-        $formattedSubjects = $subjectAverages->map(function ($avg) use ($levelId, $gradesBySubject) {
-            $coefficient = LevelSubject::getCoefficient($avg->subject_id, $levelId) ?? 1;
+        $subjectIds = $subjectAverages->pluck('subject_id')->unique();
+        $coefficients = LevelSubject::where('level_id', $levelId)
+            ->whereIn('subject_id', $subjectIds)
+            ->pluck('coefficient', 'subject_id');
+
+        $formattedSubjects = $subjectAverages->map(function ($avg) use ($levelId, $gradesBySubject, $coefficients) {
+            $coefficient = $coefficients[$avg->subject_id] ?? 1;
             $subjectRawGrades = $gradesBySubject->get($avg->subject_id, collect());
             
             $cc          = $subjectRawGrades->first(fn($g) => $g->exam?->exam_type === 'evaluation_continue');

@@ -22,6 +22,20 @@ const filters = ref({
 });
 const submitted = ref(false);
 const loading = ref(false);
+
+const totalRecords = ref(0);
+const lazyParams = ref({ first: 0, page: 0, rows: 10, sortField: 'created_at', sortOrder: -1 });
+
+const onPage = (event: any) => {
+  lazyParams.value = event;
+  loadParents();
+};
+
+const onFilter = () => {
+  lazyParams.value.first = 0;
+  lazyParams.value.page = 0;
+  loadParents();
+};
 const createAccountDialog = ref(false);
 const accountData = ref({
   username: '',
@@ -87,11 +101,17 @@ const loadClasses = async () => {
   }
 };
 
-// Load all parents
 const loadParents = async () => {
   try {
     loading.value = true;
-    parents.value = await ParentService.getParents();
+    const params: any = {
+      page: lazyParams.value.page + 1,
+      per_page: lazyParams.value.rows,
+      search: filters.value.global.value
+    };
+    const response = await ParentService.getParents(params);
+    parents.value = response.data || [];
+    totalRecords.value = response.total || 0;
 
     // Add computed properties for each parent
     parents.value = parents.value.map(p => ({
@@ -566,14 +586,17 @@ const createUserAccount = async () => {
       </template>
     </Toolbar>
 
-    <!-- DataTable -->
     <DataTable
       ref="dt"
       v-model:selection="selectedParents"
       :value="parents"
       dataKey="id"
+      lazy
+      :totalRecords="totalRecords"
+      :first="lazyParams.first"
+      @page="onPage"
       :paginator="true"
-      :rows="10"
+      :rows="lazyParams.rows"
       :filters="filters"
       :loading="loading"
       exportFilename="parents"
@@ -592,8 +615,10 @@ const createUserAccount = async () => {
             </InputIcon>
             <InputText
               v-model="filters['global'].value"
+              @keydown.enter="onFilter"
               :placeholder="t('parents.search_placeholder')"
             />
+            <Button icon="pi pi-search" @click="onFilter" class="ml-2" />
           </IconField>
         </div>
       </template>

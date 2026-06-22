@@ -14,7 +14,7 @@ class ParentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $query = ParentModel::withCount('students');
 
@@ -26,10 +26,27 @@ class ParentController extends Controller
             });
         }
 
-        $parents = $query->get();
-        $parents->load('user:id,email,phone'); // Load email and phone fields from the related user
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('cin', 'like', "%{$search}%");
+            });
+        }
 
-         $parents->each(function ($parent) {
+        if ($request->input('paginate') === 'false') {
+            $parents = $query->get();
+            $parentsToProcess = $parents;
+        } else {
+            $perPage = $request->input('per_page', 15);
+            $parents = $query->paginate($perPage);
+            $parentsToProcess = $parents->getCollection();
+        }
+
+        $parentsToProcess->load('user:id,email,phone'); // Load email and phone fields from the related user
+
+         $parentsToProcess->each(function ($parent) {
             $parent->email = $parent->user ? $parent->user->email : null; // Add email attribute to parent
             $parent->phone = $parent->user ? $parent->user->phone : null; // Add phone attribute to parent
             unset($parent->user); // Remove the user relationship to avoid confusion

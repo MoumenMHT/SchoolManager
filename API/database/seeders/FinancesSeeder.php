@@ -2,29 +2,30 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\ParentModel;
-use App\Models\Student;
+use App\Models\Bill;
+use App\Models\Contract;
 use App\Models\Fee;
 use App\Models\ParentFee;
-use App\Models\Contract;
-use App\Models\Bill;
+use App\Models\ParentModel;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class FinancesSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command->info('🌱 Starting finances seeding...');
+        $this->command->info('💰 Seeding finances (contracts, bills, payments)…');
 
-        // 1. Create Base Fees
+        // ── 1. Base Fees ──────────────────────────────────────────────────────
         $fees = [
-            ['name' => 'Frais de Scolarité', 'description' => 'Frais de base annuels', 'base_amount' => 100000, 'academic_year' => '2025-2026', 'is_active' => true],
-            ['name' => 'Cantine', 'description' => 'Frais de restauration', 'base_amount' => 30000, 'academic_year' => '2025-2026', 'is_active' => true],
-            ['name' => 'Transport', 'description' => 'Transport scolaire', 'base_amount' => 20000, 'academic_year' => '2025-2026', 'is_active' => true],
+            ['name' => 'رسوم التسجيل',  'description' => 'رسوم التسجيل السنوية',    'base_amount' => 5000,  'academic_year' => '2025-2026', 'is_active' => true],
+            ['name' => 'رسوم الدراسة',  'description' => 'الأقساط الشهرية',          'base_amount' => 15000, 'academic_year' => '2025-2026', 'is_active' => true],
+            ['name' => 'المطعم',        'description' => 'خدمة الإطعام المدرسي',    'base_amount' => 6000,  'academic_year' => '2025-2026', 'is_active' => true],
+            ['name' => 'النقل المدرسي', 'description' => 'خدمة النقل المدرسي',       'base_amount' => 4000,  'academic_year' => '2025-2026', 'is_active' => true],
+            ['name' => 'الكتب والقرطاسية', 'description' => 'الكتب والأدوات المدرسية', 'base_amount' => 3000, 'academic_year' => '2025-2026', 'is_active' => true],
         ];
 
         $createdFees = [];
@@ -32,175 +33,188 @@ class FinancesSeeder extends Seeder
             $createdFees[] = Fee::create($feeData);
         }
 
-        $parents = ParentModel::with('students')->get();
+        $feeRegistration = $createdFees[0]; // one-time
+        $feeTuition      = $createdFees[1]; // monthly base
+        $feeCantine      = $createdFees[2]; // optional monthly
+        $feeTransport    = $createdFees[3]; // optional monthly
+        $feeBooks        = $createdFees[4]; // one-time
+
+        $parents = ParentModel::with('students.class.levelProfile')->get();
+
         if ($parents->isEmpty()) {
             $this->command->info('No parents found. Skipping finances seeding.');
             return;
         }
 
+        $paymentTypes = ['cash', 'bank_transfer', 'cheque'];
+
+        // Payment scenarios – randomly assigned per parent
+        // 1 = fully up to date (paid 6+ months)
+        // 2 = partially paid (3-5 months)
+        // 3 = late / mostly unpaid (1-2 months)
+        $scenarioWeights = [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3]; // 50% up-to-date, 33% partial, 17% late
+
         DB::beginTransaction();
         try {
             foreach ($parents as $parent) {
-                // If the parent has no students, skip
-                if ($parent->students->isEmpty()) {
-                    continue;
-                }
+                if ($parent->students->isEmpty()) continue;
 
-                // Calculate total fees based on children and add ParentFee records
-                $totalContractFees = 0;
+                // ── 2. ParentFee entries ────────────────────────────────────
+                $monthlyFeeTotal     = 0;
+                $oneTimeFeeTotal     = 0;
+
                 foreach ($parent->students as $student) {
-                    // Everyone gets tuition
+                    // Everyone: tuition + registration + books
                     ParentFee::create([
-                        'parent_id' => $parent->id,
+                        'parent_id'  => $parent->id,
                         'student_id' => $student->id,
-                        'fee_id' => $createdFees[0]->id, // Tuition
+                        'fee_id'     => $feeRegistration->id,
                     ]);
-                    $totalContractFees += $createdFees[0]->base_amount;
+                    ParentFee::create([
+                        'parent_id'  => $parent->id,
+                        'student_id' => $student->id,
+                        'fee_id'     => $feeTuition->id,
+                    ]);
+                    ParentFee::create([
+                        'parent_id'  => $parent->id,
+                        'student_id' => $student->id,
+                        'fee_id'     => $feeBooks->id,
+                    ]);
 
-                    // Randomly assign Cantine and Transport
-                    if (rand(1, 100) > 50) {
+                    $monthlyFeeTotal += $feeTuition->base_amount;
+                    $oneTimeFeeTotal += $feeRegistration->base_amount + $feeBooks->base_amount;
+
+                    // Cantine: 60% chance
+                    if (rand(1, 100) <= 60) {
                         ParentFee::create([
-                            'parent_id' => $parent->id,
+                            'parent_id'  => $parent->id,
                             'student_id' => $student->id,
-                            'fee_id' => $createdFees[1]->id, // Cantine
+                            'fee_id'     => $feeCantine->id,
                         ]);
-                        $totalContractFees += $createdFees[1]->base_amount;
+                        $monthlyFeeTotal += $feeCantine->base_amount;
                     }
-                    if (rand(1, 100) > 70) {
+
+                    // Transport: 40% chance
+                    if (rand(1, 100) <= 40) {
                         ParentFee::create([
-                            'parent_id' => $parent->id,
+                            'parent_id'  => $parent->id,
                             'student_id' => $student->id,
-                            'fee_id' => $createdFees[2]->id, // Transport
+                            'fee_id'     => $feeTransport->id,
                         ]);
-                        $totalContractFees += $createdFees[2]->base_amount;
+                        $monthlyFeeTotal += $feeTransport->base_amount;
                     }
                 }
 
-                $monthlyAmount = $totalContractFees / 10;
+                // Total: one-time (paid in Sept) + 10 monthly payments (Sept–June)
+                $totalContractFees = $oneTimeFeeTotal + ($monthlyFeeTotal * 10);
+                $monthlyAmount     = $monthlyFeeTotal;
 
-                // 2. Create Contract (September to June)
+                // ── 3. Contract ─────────────────────────────────────────────
                 $contract = Contract::create([
-                    'parent_id' => $parent->id,
-                    'academic_year' => '2025-2026',
-                    'total_fees' => $totalContractFees,
-                    'monthly_amount' => $monthlyAmount,
-                    'paid_amount' => 0,
+                    'parent_id'        => $parent->id,
+                    'academic_year'    => '2025-2026',
+                    'total_fees'       => $totalContractFees,
+                    'monthly_amount'   => $monthlyAmount,
+                    'paid_amount'      => 0,
                     'remaining_amount' => $totalContractFees,
-                    'balance' => $totalContractFees,
-                    'start_date' => '2025-09-01',
-                    'end_date' => '2026-06-30',
-                    'status' => 'active',
-                    'is_active' => true,
+                    'balance'          => $totalContractFees,
+                    'start_date'       => '2025-09-01',
+                    'end_date'         => '2026-06-30',
+                    'status'           => 'active',
+                    'is_active'        => true,
+                    'notes'            => 'عقد السنة الدراسية 2025-2026',
                 ]);
 
-                // 3. Create 10 Monthly Bills (Sept to June)
+                // ── 4. Bills (10 monthly) ────────────────────────────────────
                 $bills = [];
-                for ($month = 9; $month <= 18; $month++) { // 9 to 18 to handle crossing into next year
+                for ($month = 9; $month <= 18; $month++) {
                     $realMonth = $month > 12 ? $month - 12 : $month;
-                    $year = $month > 12 ? 2026 : 2025;
-                    
-                    $dueDate = Carbon::createFromDate($year, $realMonth, 5); // Due on 5th of the month
-                    $monthYearStr = $dueDate->format('m/Y');
+                    $year      = $month > 12 ? 2026 : 2025;
+                    $dueDate   = Carbon::createFromDate($year, $realMonth, 5);
+
+                    // September bill includes one-time fees
+                    $amountDue = ($month === 9)
+                        ? $monthlyAmount + $oneTimeFeeTotal
+                        : $monthlyAmount;
 
                     $bills[] = Bill::create([
                         'contract_id' => $contract->id,
-                        'month_year' => $monthYearStr,
-                        'amount_due' => $monthlyAmount,
+                        'month_year'  => $dueDate->format('m/Y'),
+                        'amount_due'  => $amountDue,
                         'amount_paid' => 0,
-                        'balance' => $monthlyAmount,
-                        'status' => 'unpaid',
-                        'due_date' => $dueDate->toDateString(),
+                        'balance'     => $amountDue,
+                        'status'      => 'unpaid',
+                        'due_date'    => $dueDate->toDateString(),
                     ]);
                 }
 
-                // 4. Simulate Payments
-                // Scenario:
-                // 1. Fully paid up to current month
-                // 2. Partially paid
-                // 3. Late/Unpaid
-                $scenario = rand(1, 3);
+                // ── 5. Payments (scenario-driven) ────────────────────────────
+                $scenario     = $scenarioWeights[array_rand($scenarioWeights)];
+                $paidMonths   = match ($scenario) {
+                    1 => rand(5, 8),   // up-to-date: 5–8 months paid
+                    2 => rand(2, 4),   // partial: 2–4 months
+                    3 => rand(0, 1),   // late: 0–1 month
+                    default => 3,
+                };
+
                 $totalPaid = 0;
 
-                if ($scenario == 1) {
-                    // Fully paid for 4 months (Sept, Oct, Nov, Dec)
-                    $monthsToPay = 4;
-                } elseif ($scenario == 2) {
-                    // Paid for 2 months, partial on the 3rd
-                    $monthsToPay = 2.5;
-                } else {
-                    // Paid for only 1 month
-                    $monthsToPay = 1;
-                }
-
-                $paymentTypes = ['cash', 'bank_transfer', 'cheque'];
-
                 foreach ($bills as $index => $bill) {
-                    if ($monthsToPay <= 0) break;
+                    if ($index >= $paidMonths) break;
 
-                    $paymentAmount = 0;
-                    if ($monthsToPay >= 1) {
-                        $paymentAmount = $bill->amount_due;
-                        $monthsToPay -= 1;
-                    } else {
-                        $paymentAmount = $bill->amount_due * $monthsToPay;
-                        $monthsToPay = 0;
+                    $paymentDate = Carbon::parse($bill->due_date)->subDays(rand(0, 5));
+                    $payAmount   = (float) $bill->amount_due;
+
+                    // Occasionally make a partial payment on the last paid bill
+                    if ($index === $paidMonths - 1 && rand(0, 1) && $scenario !== 1) {
+                        $payAmount = round($payAmount * (rand(30, 80) / 100), 2);
                     }
 
-                    if ($paymentAmount > 0) {
-                        // Create Payment
-                        $paidDate = Carbon::parse($bill->due_date)->subDays(rand(1, 4)); // Paid slightly before due date
-                        $payment = Payment::create([
-                            'contract_id' => $contract->id,
-                            'amount' => $paymentAmount,
-                            'payment_type' => $paymentTypes[array_rand($paymentTypes)],
-                            'status' => 'paid',
-                            'paid_date' => $paidDate,
-                        ]);
+                    $payment = Payment::create([
+                        'contract_id'  => $contract->id,
+                        'amount'       => $payAmount,
+                        'payment_type' => $paymentTypes[array_rand($paymentTypes)],
+                        'status'       => 'completed',
+                        'paid_date'    => $paymentDate->toDateString(),
+                    ]);
 
-                        // Allocate Payment
-                        PaymentAllocation::create([
-                            'payment_id' => $payment->id,
-                            'bill_id' => $bill->id,
-                            'amount' => $paymentAmount,
-                        ]);
+                    PaymentAllocation::create([
+                        'payment_id' => $payment->id,
+                        'bill_id'    => $bill->id,
+                        'amount'     => $payAmount,
+                    ]);
 
-                        // Update Bill
-                        $bill->amount_paid = $paymentAmount;
-                        $bill->balance = $bill->amount_due - $paymentAmount;
-                        if ($bill->balance == 0) {
-                            $bill->status = 'paid';
-                        } else {
-                            $bill->status = 'partial';
-                        }
-                        $bill->save();
+                    // Update bill
+                    $bill->amount_paid = $payAmount;
+                    $bill->balance     = max(0, (float) $bill->amount_due - $payAmount);
+                    $bill->status      = ($bill->balance <= 0) ? 'paid' : 'partial';
+                    $bill->save();
 
-                        $totalPaid += $paymentAmount;
-                    }
+                    $totalPaid += $payAmount;
                 }
 
-                // Update bills that are overdue and unpaid
+                // Mark overdue bills
                 foreach ($bills as $bill) {
-                    if (Carbon::parse($bill->due_date)->isPast() && $bill->balance > 0) {
-                        if ($bill->amount_paid > 0) {
-                            $bill->status = 'partial'; // Keep it partial
-                        } else {
-                            $bill->status = 'late';
-                        }
+                    if (Carbon::parse($bill->due_date)->isPast() && (float) $bill->balance > 0) {
+                        $bill->status = ($bill->amount_paid > 0) ? 'partial' : 'late';
                         $bill->save();
                     }
                 }
 
-                // 5. Update Contract Balances
-                $contract->paid_amount = $totalPaid;
-                $contract->remaining_amount = $totalContractFees - $totalPaid;
-                $contract->balance = $totalContractFees - $totalPaid;
+                // Update contract totals
+                $contract->paid_amount      = $totalPaid;
+                $contract->remaining_amount = max(0, (float) $totalContractFees - $totalPaid);
+                $contract->balance          = (float) $totalContractFees - $totalPaid;
+                $contract->status           = ($totalPaid >= $totalContractFees) ? 'completed' : 'active';
                 $contract->save();
             }
+
             DB::commit();
             $this->command->info('✅ Finances seed complete!');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            $this->command->error('Error during finances seeding: ' . $e->getMessage());
+            $this->command->error('❌ Finances seeding failed: ' . $e->getMessage());
+            $this->command->error($e->getTraceAsString());
         }
     }
 }

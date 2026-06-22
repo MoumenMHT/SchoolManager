@@ -73,10 +73,9 @@ class TeacherService {
   /**
    * Get all teachers
    */
-  async getTeachers(): Promise<Teacher[]> {
-    const response = await apiService.get<Teacher[]>('/teachers');
-    console.log('Fetched teachers:', response.data);    
-    return response.data || [];
+  async getTeachers(params?: any): Promise<any> {
+    const response = await apiService.get<any>('/teachers', params);
+    return response.data;
   }
 
   /**

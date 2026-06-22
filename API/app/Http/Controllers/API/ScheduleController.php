@@ -1033,12 +1033,20 @@ class ScheduleController extends Controller
             $generatedRows = [];
             $unfilled = [];
 
+            $levelIds = $assignments->pluck('class.level_id')->filter()->unique();
+            $subjectIds = $assignments->pluck('subject_id')->unique();
+
+            $levelSubjects = LevelSubject::whereIn('level_id', $levelIds)
+                ->whereIn('subject_id', $subjectIds)
+                ->get()
+                ->keyBy(function($item) {
+                    return $item->level_id . '_' . $item->subject_id;
+                });
+
             $assignmentDemands = [];
             foreach ($assignments as $assignment) {
                 $levelId = $assignment->class?->level_id;
-                $levelSubject = LevelSubject::where('level_id', $levelId)
-                    ->where('subject_id', $assignment->subject_id)
-                    ->first();
+                $levelSubject = $levelSubjects[$levelId . '_' . $assignment->subject_id] ?? null;
 
                 if (!$levelSubject) {
                     $unfilled[] = [

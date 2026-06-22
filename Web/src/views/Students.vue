@@ -24,6 +24,20 @@ const filters = ref({
 const submitted = ref(false);
 const loading = ref(false);
 
+const totalRecords = ref(0);
+const lazyParams = ref({ first: 0, page: 0, rows: 10, sortField: 'created_at', sortOrder: -1 });
+
+const onPage = (event: any) => {
+  lazyParams.value = event;
+  loadStudents();
+};
+
+const onFilter = () => {
+  lazyParams.value.first = 0;
+  lazyParams.value.page = 0;
+  loadStudents();
+};
+
 // Data for dropdowns
 const availableClasses = ref<SchoolClass[]>([]);
 const availableParents = ref<Parent[]>([]);
@@ -76,21 +90,27 @@ onMounted(async () => {
   await loadParents();
 });
 
-// Load all students
 const loadStudents = async () => {
   try {
     loading.value = true;
-    students.value = await StudentService.getStudents();
+    const params: any = {
+      page: lazyParams.value.page + 1,
+      per_page: lazyParams.value.rows,
+      search: filters.value.global.value
+    };
+    const response = await StudentService.getStudents(params);
+    students.value = response.data || [];
+    totalRecords.value = response.total || 0;
 
     // Add computed properties for each student
-    students.value = students.value.map(s => ({
+    students.value = students.value.map((s: any) => ({
       ...s,
       full_name: `${s.first_name} ${s.last_name}`,
       class_name: s.class?.name || t('students.no_class'),
       parent_name: s.parent ? `${s.parent.first_name} ${s.parent.last_name}` : t('students.no_parent'),
       age: s.birth_date ? calculateAge(new Date(s.birth_date)) : null,
       status_text: s.is_active ? t('common.active') : t('common.inactive')
-    } as any));
+    }));
   } catch (error: any) {
     toast.add({
       severity: 'error',
@@ -495,14 +515,17 @@ const showStudentDetails = async (studentData: Student) => {
       </template>
     </Toolbar>
 
-    <!-- DataTable -->
     <DataTable
       ref="dt"
       v-model:selection="selectedStudents"
       :value="students"
       dataKey="id"
+      lazy
+      :totalRecords="totalRecords"
+      :first="lazyParams.first"
+      @page="onPage"
       :paginator="true"
-      :rows="10"
+      :rows="lazyParams.rows"
       :filters="filters"
       :loading="loading"
       exportFilename="students"
@@ -521,8 +544,10 @@ const showStudentDetails = async (studentData: Student) => {
             </InputIcon>
             <InputText
               v-model="filters['global'].value"
+              @keydown.enter="onFilter"
               :placeholder="t('students.search_placeholder')"
             />
+            <Button icon="pi pi-search" @click="onFilter" class="ml-2" />
           </IconField>
         </div>
       </template>

@@ -17,14 +17,26 @@ const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS
 const statusFilter = ref<string | null>(null);
 const contractIdFilter = ref<number | null>(null);
 
+const totalRecords = ref(0);
+const lazyParams = ref({ first: 0, page: 0, rows: 20, sortField: 'due_date', sortOrder: 1 });
+
+const onPage = (event: any) => {
+  lazyParams.value = event;
+  fetchBills();
+};
+
 const fetchBills = async () => {
   loading.value = true;
   try {
-    const params: any = {};
+    const params: any = {
+      page: lazyParams.value.page + 1,
+      per_page: lazyParams.value.rows
+    };
     if (statusFilter.value) params.status = statusFilter.value;
     if (contractIdFilter.value) params.contract_id = contractIdFilter.value;
-    const response = await apiService.get<BillRecord[]>('/bills', params);
-    bills.value = response.data || [];
+    const response = await apiService.get<any>('/bills', params);
+    bills.value = response.data.data || [];
+    totalRecords.value = response.data.total || 0;
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('bills.failed_load'), life: 3000 });
   } finally {
@@ -77,13 +89,17 @@ onMounted(fetchBills);
         <DataTable
           ref="dt"
           :value="bills"
+          lazy
+          :totalRecords="totalRecords"
+          :first="lazyParams.first"
+          @page="onPage"
           :loading="loading"
           :filters="filters"
           :globalFilterFields="['month_year', 'contract.contract_number', 'status']"
           stripedRows
           :size="'small'"
           paginator
-          :rows="20"
+          :rows="lazyParams.rows"
           :rowsPerPageOptions="[10, 20, 50]"
           sortField="due_date"
           :sortOrder="1"
@@ -96,7 +112,7 @@ onMounted(fetchBills);
               </span>
               <div class="flex items-center gap-2 text-sm text-muted-color">
                 <i class="pi pi-file"></i>
-                <span>{{ bills.length }} {{ t('common.bills') }}</span>
+                <span>{{ totalRecords }} {{ t('common.bills') }}</span>
               </div>
             </div>
           </template>

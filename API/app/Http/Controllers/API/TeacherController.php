@@ -16,7 +16,7 @@ class TeacherController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $query = Teacher::query();
 
@@ -28,15 +28,32 @@ class TeacherController extends Controller
             });
         }
 
-        $teachers = $query->get();
-        $teachers->makeVisible(['cin', 'salary']);
-        $teachers->load('user:id,email,phone'); // Load email and phone fields from the related user
-        $teachers->load('teachableSubjects'); // Load subjects relationship
-        $teachers->load('availabilities');
-        $teachers->loadCount('classes'); // Load count of related classes
-        $teachers->load('classes'); // Load count of related students
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('cin', 'like', "%{$search}%");
+            });
+        }
 
-        $teachers->each(function ($teacher) {
+        if ($request->input('paginate') === 'false') {
+            $teachers = $query->get();
+            $teachersToProcess = $teachers;
+        } else {
+            $perPage = $request->input('per_page', 15);
+            $teachers = $query->paginate($perPage);
+            $teachersToProcess = $teachers->getCollection();
+        }
+
+        $teachersToProcess->makeVisible(['cin', 'salary']);
+        $teachersToProcess->load('user:id,email,phone'); // Load email and phone fields from the related user
+        $teachersToProcess->load('teachableSubjects'); // Load subjects relationship
+        $teachersToProcess->load('availabilities');
+        $teachersToProcess->loadCount('classes'); // Load count of related classes
+        $teachersToProcess->load('classes'); // Load count of related students
+
+        $teachersToProcess->each(function ($teacher) {
             $teacher->email = $teacher->user ? $teacher->user->email : null; // Add email attribute to teacher
             $teacher->phone = $teacher->user ? $teacher->user->phone : null; // Add phone attribute to teacher
             unset($teacher->user); // Remove the user relationship to avoid confusion

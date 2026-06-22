@@ -39,8 +39,12 @@ class BillController extends Controller
                 $query->where('status', $request->status);
             }
 
-            $bills = $query->orderBy('due_date', 'asc')->get();
-
+            if ($request->input('paginate') === 'false') {
+                $bills = $query->orderBy('due_date', 'asc')->get();
+            } else {
+                $perPage = $request->input('per_page', 15);
+                $bills = $query->orderBy('due_date', 'asc')->paginate($perPage);
+            }
             return response()->json([
                 'success' => true,
                 'data' => $bills

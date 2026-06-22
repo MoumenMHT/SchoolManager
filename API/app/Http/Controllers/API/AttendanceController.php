@@ -322,12 +322,11 @@ class AttendanceController extends Controller
     public function getAttendanceByClass($classId, Request $request)
     {
         try {
-            $query = Attendance::with(['student', 'subject', 'teacher'])
+            $query = Attendance::with(['student.class', 'subject', 'teacher'])
                 ->whereHas('student', function ($q) use ($classId) {
                     $q->where('class_id', $classId);
                 });
 
-            // DB-level filters (fast, avoid Carbon/string comparison bugs)
             if ($request->has('start_date') && $request->has('end_date')) {
                 $query->whereDate('date', '>=', $request->start_date)
                       ->whereDate('date', '<=', $request->end_date);
@@ -349,38 +348,32 @@ class AttendanceController extends Controller
                 $query->where('teacher_id', $request->teacher_id);
             }
 
-            $attendances = $query->get();
-
-            // Collection-level filters that require loaded relations
             if ($request->has('academic_year')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->student && $attendance->student->class && $attendance->student->class->academic_year == $request->academic_year;
+                $query->whereHas('student.class', function ($q) use ($request) {
+                    $q->where('academic_year', $request->academic_year);
                 });
             }
 
             if ($request->has('month')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->date->month == $request->month;
-                });
+                $query->whereMonth('date', $request->month);
             }
 
             if ($request->has('semester')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    if (!$attendance->student || !$attendance->student->class || !$attendance->student->class->academic_year) {
-                        return false;
-                    }
-                    $academicYear = $attendance->student->class->academic_year;
-                    $semester = $request->semester;
-                    if ($semester == 1) {
-                        return in_array($attendance->date->month, [9, 10, 11, 12]) && $academicYear == now()->year;
-                    } elseif ($semester == 2) {
-                        return in_array($attendance->date->month, [1, 2, 3]) && $academicYear == now()->year;
-                    } elseif ($semester == 3) {
-                        return in_array($attendance->date->month, [4, 5, 6]) && $academicYear == now()->year;
-                    }
-                    return false;
+                $semester = $request->semester;
+                if ($semester == 1) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [9, 10, 11, 12]);
+                } elseif ($semester == 2) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [1, 2, 3]);
+                } elseif ($semester == 3) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [4, 5, 6]);
+                }
+                $query->whereHas('student.class', function($q) {
+                    $q->where('academic_year', 'like', now()->year . '-%')
+                      ->orWhere('academic_year', 'like', '%-' . now()->year);
                 });
             }
+
+            $attendances = $query->get();
 
             return response()->json([
                 'success' => true,
@@ -399,78 +392,58 @@ class AttendanceController extends Controller
     public function getAttendanceByTeacher($teacherId, Request $request)
     {
         try {
-            $attendances = Attendance::with(['student', 'subject'])
-                ->where('teacher_id', $teacherId)
-                ->get();
+            $query = Attendance::with(['student.class', 'subject'])
+                ->where('teacher_id', $teacherId);
 
-            //filter attendances by  academic year
             if ($request->has('academic_year')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->student && $attendance->student->class && $attendance->student->class->academic_year == $request->academic_year;
+                $query->whereHas('student.class', function ($q) use ($request) {
+                    $q->where('academic_year', $request->academic_year);
                 });
             }
 
-            //filter attendances by month
             if ($request->has('month')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->date->month == $request->month;
-                });
+                $query->whereMonth('date', $request->month);
             }
 
-            //filter attendances by semester
             if ($request->has('semester')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    if (!$attendance->class || !$attendance->class->academic_year) {
-                        return false;
-                    }
-                    $academicYear = $attendance->class->academic_year;
-                    $semester = $request->semester;
-                    
-                    if ($semester == 1) {
-                        return in_array($attendance->date->month, [9, 10, 11, 12]) && $academicYear == now()->year;
-                    } elseif ($semester == 2) {
-                        return in_array($attendance->date->month, [1, 2, 3]) && $academicYear == now()->year;
-                    }elseif ($semester == 3) {
-                        return in_array($attendance->date->month, [4, 5, 6]) && $academicYear == now()->year;
-                    }
-                    
-                    return false;
+                $semester = $request->semester;
+                if ($semester == 1) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [9, 10, 11, 12]);
+                } elseif ($semester == 2) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [1, 2, 3]);
+                } elseif ($semester == 3) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [4, 5, 6]);
+                }
+                $query->whereHas('student.class', function($q) {
+                    $q->where('academic_year', 'like', now()->year . '-%')
+                      ->orWhere('academic_year', 'like', '%-' . now()->year);
                 });
             }
 
-             //filter attendances by status
-             if ($request->has('status')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->status == $request->status;
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->has('subject_id')) {
+                $query->where('subject_id', $request->subject_id);
+            }
+
+            if ($request->has('start_date') && $request->has('end_date')) {
+                $query->whereDate('date', '>=', $request->start_date)
+                      ->whereDate('date', '<=', $request->end_date);
+            }
+
+            if ($request->has('class_id')) {
+                $query->whereHas('student', function ($q) use ($request) {
+                    $q->where('class_id', $request->class_id);
                 });
             }
 
-             //filter attendances by subject
-             if ($request->has('subject_id')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->subject_id == $request->subject_id;
-                });
-             }
-
-             //filter attendances by date range
-             if ($request->has('start_date') && $request->has('end_date')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->date >= $request->start_date && $attendance->date <= $request->end_date;
-                });
-             }
-
-             //filter attendances by class
-             if ($request->has('class_id')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->student && $attendance->student->class_id == $request->class_id;
-                });
-             }
-
-             
+            $attendances = $query->get();
 
             return response()->json([
                 'success' => true,
-                'data' => $attendances
+                'data' => $attendances->values()
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -484,76 +457,58 @@ class AttendanceController extends Controller
     public function getAttendanceBySubject($subjectId, Request $request)
     {
         try {
-            $attendances = Attendance::with(['student', 'subject', 'teacher'])
-                ->where('subject_id', $subjectId)
-                ->get();
+            $query = Attendance::with(['student.class', 'subject', 'teacher'])
+                ->where('subject_id', $subjectId);
 
-            //filter attendances by  academic year
             if ($request->has('academic_year')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->student && $attendance->student->class && $attendance->student->class->academic_year == $request->academic_year;
+                $query->whereHas('student.class', function ($q) use ($request) {
+                    $q->where('academic_year', $request->academic_year);
                 });
             }
 
-            //filter attendances by month
             if ($request->has('month')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->date->month == $request->month;
-                });
+                $query->whereMonth('date', $request->month);
             }
 
-            //filter attendances by semester
             if ($request->has('semester')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    if (!$attendance->class || !$attendance->class->academic_year) {
-                        return false;
-                    }
-                    $academicYear = $attendance->class->academic_year;
-                    $semester = $request->semester;
-                    
-                    if ($semester == 1) {
-                        return in_array($attendance->date->month, [9, 10, 11, 12]) && $academicYear == now()->year;
-                    } elseif ($semester == 2) {
-                        return in_array($attendance->date->month, [1, 2, 3]) && $academicYear == now()->year;
-                    }elseif ($semester == 3) {
-                        return in_array($attendance->date->month, [4, 5, 6]) && $academicYear == now()->year;
-                    }
-                    
-                    return false;
-                });
-            }
-
-             //filter attendances by status
-             if ($request->has('status')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->status == $request->status;
-                });
-            }
-
-             //filter attendances by teacher
-             if ($request->has('teacher_id')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->teacher_id == $request->teacher_id;
-                });
-             }
-
-             //filter attendances by date range
-                if ($request->has('start_date') && $request->has('end_date')) {
-                    $attendances = $attendances->filter(function ($attendance) use ($request) {
-                        return $attendance->date >= $request->start_date && $attendance->date <= $request->end_date;
-                    });
+                $semester = $request->semester;
+                if ($semester == 1) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [9, 10, 11, 12]);
+                } elseif ($semester == 2) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [1, 2, 3]);
+                } elseif ($semester == 3) {
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [4, 5, 6]);
                 }
-
-            //filter attendances by class
-            if ($request->has('class_id')) {
-                $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    return $attendance->student && $attendance->student->class_id == $request->class_id;
+                $query->whereHas('student.class', function($q) {
+                    $q->where('academic_year', 'like', now()->year . '-%')
+                      ->orWhere('academic_year', 'like', '%-' . now()->year);
                 });
             }
+
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->has('teacher_id')) {
+                $query->where('teacher_id', $request->teacher_id);
+            }
+
+            if ($request->has('start_date') && $request->has('end_date')) {
+                $query->whereDate('date', '>=', $request->start_date)
+                      ->whereDate('date', '<=', $request->end_date);
+            }
+
+            if ($request->has('class_id')) {
+                $query->whereHas('student', function ($q) use ($request) {
+                    $q->where('class_id', $request->class_id);
+                });
+            }
+
+            $attendances = $query->get();
 
             return response()->json([
                 'success' => true,
-                'data' => $attendances
+                'data' => $attendances->values()
             ]);
         } catch (\Exception $e) {
             return response()->json([

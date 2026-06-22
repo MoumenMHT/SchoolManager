@@ -33,7 +33,7 @@ export interface CreatePaymentDTO {
 
 class PaymentService {
   async getContractsByParent(parentId: number): Promise<any[]> {
-    const response = await apiService.get<any[]>('/contracts', { parent_id: parentId });
+    const response = await apiService.get<any>('/contracts', { parent_id: parentId, paginate: false });
     return response.data || [];
   }
 

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>SchoolHub – End-of-Studies Project</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;font-size:11pt;line-height:1.75;color:#1a1a2e;background:#dde3ea;counter-reset:pagenum;}
+
+    /* ─── Page shell ─── */
+    .page{
+      width:210mm;min-height:297mm;
+      margin:0 auto 24px;
+      padding:22mm 22mm 26mm 26mm;
+      background:#fff;
+      box-shadow:0 6px 32px rgba(0,0,0,.18);
+      position:relative;
+      page-break-after:always;
+    }
+    @media print{
+      body{background:#fff;}
+      .page{
+        width:210mm;min-height:297mm;
+        margin:0;
+        padding:20mm 20mm 24mm 24mm;
+        box-shadow:none;
+        page-break-after:always;
+      }
+      .no-print{display:none!important;}
+      .mermaid svg{max-width:100%!important;}
+    }
+
+    /* ─── COVER ─── */
+    .cover{display:flex;flex-direction:column;height:253mm;}
+    .cover-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #1a3a6b;margin-bottom:18px;}
+    .cover-school h3{font-size:13pt;font-weight:800;color:#1a3a6b;text-transform:uppercase;letter-spacing:2px;}
+    .cover-school p{font-size:9pt;color:#666;margin-top:3px;}
+    .logo-box{display:flex;flex-direction:column;align-items:center;gap:4px;}
+    .logo-fitya{width:110px;height:56px;background:linear-gradient(135deg,#1a3a6b,#2563a8);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:20pt;letter-spacing:4px;font-family:'Merriweather',serif;}
+
+    .cover-main{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:14px 0;}
+    .badge-pill{display:inline-block;background:#eff6ff;border:2px solid #1a3a6b;color:#1a3a6b;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:3px;padding:5px 22px;border-radius:40px;margin-bottom:20px;}
+    .cover-title{font-family:'Merriweather',serif;font-size:28pt;font-weight:900;color:#1a3a6b;line-height:1.15;margin-bottom:8px;}
+    .cover-subtitle{font-size:13pt;font-weight:300;color:#2563a8;font-style:italic;margin-bottom:26px;}
+    .cover-bar{width:90px;height:5px;background:linear-gradient(90deg,#1a3a6b,#2563a8,#f59e0b);border-radius:3px;margin:0 auto 26px;}
+    .topic-box{background:linear-gradient(135deg,#1a3a6b,#1e4d8c);color:#fff;padding:20px 32px;border-radius:14px;max-width:460px;margin:0 auto;}
+    .topic-box .lbl{font-size:8pt;letter-spacing:2px;text-transform:uppercase;opacity:.7;margin-bottom:8px;}
+    .topic-box .ttl{font-size:14pt;font-weight:700;font-family:'Merriweather',serif;line-height:1.3;}
+    .topic-box .sub{font-size:9pt;opacity:.8;margin-top:6px;}
+
+    .cover-footer{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;border-top:2px solid #e5e7eb;padding-top:18px;margin-top:18px;}
+    .cf-item .lbl{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#888;margin-bottom:3px;}
+    .cf-item .val{font-size:10pt;font-weight:600;color:#1a1a2e;}
+    .cf-item .val.muted{font-weight:400;color:#555;font-size:9.5pt;}
+
+    /* ─── Typography ─── */
+    h1.ch{font-family:'Merriweather',serif;font-size:16pt;font-weight:900;color:#1a3a6b;padding-bottom:8px;border-bottom:3px solid #1a3a6b;margin-bottom:22px;}
+    h1.ch:first-child{margin-top:0;}
+    h2.sh{font-family:'Merriweather',serif;font-size:12pt;font-weight:700;color:#1e4d8c;margin:24px 0 10px;padding-left:12px;border-left:4px solid #2563a8;}
+    h3.ssh{font-size:10.5pt;font-weight:700;color:#1a3a6b;margin:18px 0 8px;}
+    p{margin-bottom:10px;text-align:justify;}
+    ul,ol{margin:8px 0 12px 24px;}
+    li{margin-bottom:5px;}
+    strong{color:#1a3a6b;}
+    code{font-family:'JetBrains Mono',monospace;font-size:9pt;background:#f0f4ff;padding:1px 5px;border-radius:3px;color:#1a3a6b;}
+
+    /* ─── Page header ─── */
+    .ph{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid #e5e7eb;margin-bottom:22px;}
+    .ph span{font-size:8.5pt;color:#888;font-style:italic;}
+    .ph .r{font-weight:700;color:#1a3a6b;font-style:normal;}
+
+    /* ─── TOC ─── */
+    .toc-title{font-family:'Merriweather',serif;font-size:18pt;font-weight:900;color:#1a3a6b;text-align:center;margin-bottom:28px;padding-bottom:12px;border-bottom:3px solid #1a3a6b;}
+    .toc-row{display:flex;align-items:baseline;padding:5px 0;border-bottom:1px dotted #ccc;}
+    .toc-row:last-child{border:none;}
+    .toc-num{min-width:38px;font-weight:700;color:#1a3a6b;font-size:10pt;}
+    .toc-lbl{flex:1;font-size:10.5pt;}
+    .toc-lbl.sub{padding-left:20px;font-size:10pt;color:#444;}
+    .toc-dots{flex:1;border-bottom:1px dotted #bbb;margin:0 8px;position:relative;top:-4px;}
+    .toc-pg{font-size:10pt;font-weight:700;color:#1a3a6b;}
+    .toc-sec{margin-bottom:4px;}
+    .toc-sec-hdr{display:flex;align-items:baseline;padding:7px 0 4px;font-weight:700;}
+
+    /* ─── Tables ─── */
+    table.rt{width:100%;border-collapse:collapse;margin:14px 0;font-size:9.5pt;}
+    table.rt th{background:#1a3a6b;color:#fff;padding:8px 10px;text-align:left;font-size:9pt;}
+    table.rt td{padding:7px 10px;border-bottom:1px solid #e5e7eb;}
+    table.rt tr:nth-child(even) td{background:#f8fafc;}
+    table.rt tr:last-child td{border:none;}
+
+    /* ─── Info boxes ─── */
+    .ib{background:#eff6ff;border-left:5px solid #2563a8;padding:13px 16px;border-radius:0 8px 8px 0;margin:14px 0;}
+    .ib p{margin:0;color:#1e3a5f;}
+    .wb{background:#fefce8;border-left:5px solid #f59e0b;padding:13px 16px;border-radius:0 8px 8px 0;margin:14px 0;}
+    .wb p{margin:0;color:#78350f;}
+    .gb{background:#f0fdf4;border-left:5px solid #22c55e;padding:13px 16px;border-radius:0 8px 8px 0;margin:14px 0;}
+    .gb p{margin:0;color:#14532d;}
+
+    /* ─── Badges ─── */
+    .br{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0;}
+    .bd{background:#1a3a6b;color:#fff;padding:3px 12px;border-radius:20px;font-size:8.5pt;font-weight:600;}
+    .bd.lt{background:#e0e7ff;color:#1a3a6b;}
+    .bd.gn{background:#065f46;color:#fff;}
+    .bd.or{background:#92400e;color:#fff;}
+
+    /* ─── Arch cards ─── */
+    .arch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0;}
+    .ac{border:1.5px solid #e0e7ff;border-radius:10px;padding:14px 12px;background:#f8faff;}
+    .ac .ai{font-size:20pt;margin-bottom:6px;}
+    .ac .an{font-weight:700;font-size:10pt;color:#1a3a6b;margin-bottom:4px;}
+    .ac .at{font-size:8.5pt;color:#555;line-height:1.5;}
+
+    /* ─── Module grid ─── */
+    .mg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0;}
+    .mc{border:1.5px solid #dbeafe;border-radius:10px;padding:13px;background:linear-gradient(135deg,#f0f7ff,#fff);}
+    .mc .mt{font-weight:700;font-size:10pt;color:#1a3a6b;margin-bottom:6px;}
+    .mc ul{margin:0;padding-left:16px;font-size:9pt;color:#374151;}
+    .mc ul li{margin-bottom:2px;}
+
+    /* ─── Figures ─── */
+    .fig{margin:18px 0;text-align:center;}
+    .fig img{max-width:100%;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.08);}
+    .fig-cap{font-size:9pt;color:#555;margin-top:8px;font-style:italic;}
+    .fig-cap strong{color:#1a3a6b;font-style:normal;}
+
+    /* ─── Mermaid diagrams ─── */
+    .diagram-wrap{
+      background:#f8faff;
+      border:1.5px solid #c7d2fe;
+      border-radius:10px;
+      padding:16px;
+      margin:16px 0;
+      overflow-x:auto;
+      text-align:center;
+    }
+    .diagram-wrap .mermaid{display:inline-block;max-width:100%;}
+    .mermaid .edgeLabel, .mermaid .edgeLabel span { color: #000 !important; font-weight: 700 !important; background-color: rgba(255, 255, 255, 0.9) !important; padding: 1px 4px !important; }
+    /* ER diagram text fixes — ULTIMATE WILDCARD SELECTOR */
+    .mermaid [id^="entity-"] * { color: #000 !important; fill: #000 !important; font-weight: 600 !important; }
+    .mermaid [id^="entity-"] [class*="entityLabel"], .mermaid [id^="entity-"] [class*="entityLabel"] * { color: #fff !important; fill: #fff !important; font-weight: bold !important; }
+    .mermaid [id^="rel-"] * { color: #000 !important; fill: #000 !important; font-weight: 600 !important; }
+    /* Protect Flowchart & Sequence Diagrams */
+    .mermaid .nodeLabel, .mermaid .nodeLabel * { fill: #fff !important; color: #fff !important; }
+    .mermaid .actor *, .mermaid .messageText * { fill: #fff !important; color: #fff !important; stroke: none !important; }
+    .mermaid .noteText * { fill: #78350f !important; }
+    /* ER box colors */
+    .mermaid [id^="entity-"] rect[class*="entityBox"] { fill: #1a3a6b !important; stroke: #1a3a6b !important; }
+    .mermaid [id^="entity-"] rect[class*="attributeBox"] { fill: #f8fafc !important; stroke: #e2e8f0 !important; }
+    .mermaid [id^="rel-"] rect { fill: #fff !important; stroke: #e2e8f0 !important; }
+    .diagram-cap{font-size:9pt;color:#555;font-style:italic;margin-top:10px;text-align:center;}
+    .diagram-cap strong{color:#1a3a6b;font-style:normal;}
+
+    /* ─── Timeline ─── */
+    .tl{position:relative;margin:18px 0;padding-left:30px;}
+    .tl::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,#1a3a6b,#2563a8);}
+    .tli{position:relative;margin-bottom:18px;}
+    .tld{position:absolute;left:-26px;top:4px;width:14px;height:14px;border-radius:50%;background:#1a3a6b;border:2px solid #fff;box-shadow:0 0 0 2px #1a3a6b;}
+    .tlh{font-weight:700;font-size:10pt;color:#1a3a6b;margin-bottom:4px;}
+    .tlb{font-size:9.5pt;color:#374151;}
+    .tlt{display:inline-block;font-size:8pt;background:#e0e7ff;color:#1a3a6b;padding:2px 8px;border-radius:10px;font-weight:600;margin-bottom:5px;}
+
+    /* ─── Endpoint list ─── */
+    .epl{font-size:9pt;margin:8px 0 12px;}
+    .epl li{list-style:none;padding:4px 0;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start;}
+    .mth{display:inline-block;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:8pt;padding:1px 6px;border-radius:3px;min-width:40px;text-align:center;flex-shrink:0;margin-top:2px;}
+    .get{background:#dcfce7;color:#166534;}
+    .post{background:#dbeafe;color:#1e40af;}
+    .put{background:#fef9c3;color:#854d0e;}
+    .del{background:#fee2e2;color:#991b1b;}
+    .ep{font-family:'JetBrains Mono',monospace;color:#1a3a6b;font-size:8.5pt;}
+    .epd{color:#555;flex:1;}
+
+    /* ─── 2-col ─── */
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+
+    /* ─── Abstract boxes ─── */
+    .abs{border:1.5px solid #c7d2fe;border-radius:10px;padding:20px 24px;background:#f8faff;margin-top:18px;}
+    .abs h3{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#2563a8;margin-bottom:10px;}
+    .abs p{margin:0;font-size:10pt;line-height:1.8;}
+
+    /* ─── Schema table ─── */
+    .st{width:100%;border-collapse:collapse;font-size:9pt;margin:10px 0;}
+    .st th{background:#1e4d8c;color:#fff;padding:7px 10px;text-align:left;}
+    .st td{padding:5px 10px;border:1px solid #e5e7eb;vertical-align:top;}
+    .st tr:nth-child(even) td{background:#f0f7ff;}
+    .st .fn{font-family:'JetBrains Mono',monospace;color:#1a3a6b;font-weight:600;}
+    .st .ft{font-family:'JetBrains Mono',monospace;color:#065f46;}
+    .st .fpk{font-family:'JetBrains Mono',monospace;color:#b45309;font-weight:700;}
+
+    /* ─── Print button ─── */
+    .pbtn{position:fixed;bottom:28px;right:28px;background:linear-gradient(135deg,#1a3a6b,#2563a8);color:#fff;border:none;padding:13px 22px;border-radius:50px;font-size:11pt;font-weight:600;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,168,.45);font-family:'Inter',sans-serif;z-index:9999;transition:all .2s;}
+    .pbtn:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(37,99,168,.55);}
+    @media print{.pbtn{display:none;}}
+
+    /* ─── Centered ornament section ─── */
+    .cen{text-align:center;padding:30px 20px;}
+    .cen h2{font-family:'Merriweather',serif;font-size:16pt;color:#1a3a6b;margin-bottom:18px;}
+    .cen p{font-size:11pt;color:#333;line-height:1.9;max-width:480px;margin:0 auto 12px;}
+    .orn{font-size:28pt;color:#c7d2fe;margin:8px 0;}
+  </style>
+</head>
+<body>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#1a3a6b',
+      primaryTextColor: '#000000',
+      nodeTextColor: '#ffffff',
+      actorTextColor: '#ffffff',
+      primaryBorderColor: '#1a3a6b',
+      lineColor: '#2563a8',
+      secondaryColor: '#eff6ff',
+      tertiaryColor: '#f0f7ff',
+      noteBkgColor: '#fefce8',
+      noteTextColor: '#78350f',
+      activationBkgColor: '#dbeafe',
+      activationBorderColor: '#1a3a6b',
+      actorBkg: '#1a3a6b',
+      actorBorder: '#1e4d8c',
+      actorLineColor: '#2563a8',
+      signalColor: '#1a1a2e',
+      signalTextColor: '#1a1a2e',
+      fontSize: '13px',
+      fontFamily: 'Inter, sans-serif',
+      classText: '#1a1a2e',
+    },
+    flowchart:{ curve:'basis', htmlLabels:true },
+    sequence:{ actorMargin:60, boxTextMargin:5, noteMargin:10, messageMargin:40 },
+    classDiagram:{ titleTopMarginAdjust:10 }
+  });
+</script>
+
+<!-- ════════════════════════════════════════════════════
+     PAGE 1 — COVER
+════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-header">
+      <div class="cover-school">
+        <img src="cesi%20logo.png" alt="CESI Logo" style="max-height: 80px; object-fit: contain;" />
+      </div>
+      <div class="logo-box">
+        <div class="logo-fitya">FITYA</div>
+        <p style="font-size:7.5pt;color:#888;margin-top:3px;">Since 2005</p>
+      </div>
+    </div>
+
+    <div class="cover-main">
+      <div><span class="badge-pill">End-of-Studies Project</span></div>
+      <div class="cover-title">SchoolHub</div>
+      <div class="cover-subtitle">School Management System</div>
+      <div class="cover-bar"></div>
+      <div class="topic-box">
+        <div class="lbl">Project Title</div>
+        <div class="ttl">Design &amp; Development of a Full-Stack<br>School Management Platform</div>
+        <div class="sub">RESTful API · Web Admin Dashboard · Parent Mobile App</div>
+      </div>
+    </div>
+
+    <div class="cover-footer">
+      <div class="cf-item">
+        <div class="lbl">Developed by</div>
+        <div class="val">Mechta Abdelmoumen</div>
+      </div>
+      <div class="cf-item">
+        <div class="lbl">Academic Year</div>
+        <div class="val muted">2025 – 2026</div>
+      </div>
+      <div class="cf-item">
+        <div class="lbl">Duration</div>
+        <div class="val muted">February – July 2026</div>
+      </div>
+      <div class="cf-item">
+        <div class="lbl">Backend</div>
+        <div class="val muted">Laravel 12 / PHP 8.3</div>
+      </div>
+      <div class="cf-item">
+        <div class="lbl">Frontend &amp; Mobile</div>
+        <div class="val muted">Vue.js 3 · Flutter</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE 2 — ACKNOWLEDGEMENTS & ABSTRACT
+════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cen">
+    <div class="orn">✦</div>
+    <h2>Acknowledgements</h2>
+    <p>I would like to express my sincere gratitude to the entire academic team at <strong>FITYA</strong> for the quality of the training provided throughout my studies.</p>
+    <p>My warmest thanks go to my internship supervisor for his valuable guidance, availability, and constant support throughout the development of this project.</p>
+    <p>I also thank all individuals who contributed, directly or indirectly, to the completion of this work, including the future end-users who participated in the requirements-gathering interviews.</p>
+    <div class="orn">✦</div>
+  </div>
+
+  <div class="abs">
+    <h3>Abstract</h3>
+    <p>This report presents the work carried out during a final-year internship focused on the design and development of <strong>SchoolHub</strong>, a comprehensive school management platform. The system consists of three main components: a <strong>RESTful API</strong> built with Laravel 12, a <strong>web administration dashboard</strong> developed with Vue.js 3 and TypeScript, and a <strong>Flutter mobile application</strong> for parents and teachers. The platform covers all operational needs of a school: student and teacher management, class organisation, academic grading, attendance tracking, financial contract management, and intelligent schedule generation. The architecture follows an MVC/REST pattern with strict separation of concerns, role-based access control (RBAC) across 7 user roles, and dedicated interfaces per actor type.</p>
+  </div>
+
+  <div style="margin-top:16px;">
+    <strong style="font-size:9pt;text-transform:uppercase;letter-spacing:1px;color:#888;">Keywords: </strong>
+    <span style="font-size:9pt;color:#444;">School Management System, REST API, Laravel, Vue.js, Flutter, RBAC, Mobile, UML, Relational Database</span>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE 3 — TABLE OF CONTENTS
+════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="toc-title">Table of Contents</div>
+
+  <div class="toc-sec">
+    
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">I.</span><span class="toc-lbl">General Introduction</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Context &amp; Background</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Problem Statement</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Project Objectives</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">II.</span><span class="toc-lbl">Requirements Analysis</span><span class="toc-dots"></span><span class="toc-pg">5</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. System Actors</span><span class="toc-dots"></span><span class="toc-pg">5</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Functional Requirements</span><span class="toc-dots"></span><span class="toc-pg">5</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Non-Functional Requirements</span><span class="toc-dots"></span><span class="toc-pg">6</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">III.</span><span class="toc-lbl">System Design &amp; Conception</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Global Architecture</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Use Case Diagrams</span><span class="toc-dots"></span><span class="toc-pg">8</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Class Diagram (Domain Model)</span><span class="toc-dots"></span><span class="toc-pg">9</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">4. Database Schema</span><span class="toc-dots"></span><span class="toc-pg">10</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">5. Activity Diagrams</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">6. Sequence Diagrams</span><span class="toc-dots"></span><span class="toc-pg">13</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">7. Feature Deep-Dive: Schedule Generation Algorithm</span><span class="toc-dots"></span><span class="toc-pg">15</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">8. Feature Deep-Dive: Grading &amp; Exam Management</span><span class="toc-dots"></span><span class="toc-pg">17</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">9. Feature Deep-Dive: Class &amp; Teacher Assignments</span><span class="toc-dots"></span><span class="toc-pg">18</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">10. Feature Deep-Dive: Dashboard Analytics</span><span class="toc-dots"></span><span class="toc-pg">19</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">11. Feature Deep-Dive: Localized Financial Management</span><span class="toc-dots"></span><span class="toc-pg">20</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">12. Feature Deep-Dive: Attendance Tracking</span><span class="toc-dots"></span><span class="toc-pg">21</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">IV.</span><span class="toc-lbl">Implementation – Backend API (Laravel 12)</span><span class="toc-dots"></span><span class="toc-pg">22</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Project Structure</span><span class="toc-dots"></span><span class="toc-pg">22</span></div>
+    <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Authentication &amp; RBAC</span><span class="toc-dots"></span><span class="toc-pg">22</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">V.</span><span class="toc-lbl">Implementation – Web Dashboard (Vue.js 3)</span><span class="toc-dots"></span><span class="toc-pg">23</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">VI.</span><span class="toc-lbl">Implementation – Mobile App (Flutter)</span><span class="toc-dots"></span><span class="toc-pg">24</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">VII.</span><span class="toc-lbl">Testing &amp; Validation</span><span class="toc-dots"></span><span class="toc-pg">25</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num">VIII.</span><span class="toc-lbl">Conclusion &amp; Future Work</span><span class="toc-dots"></span><span class="toc-pg">26</span></div>
+
+    <div class="toc-sec-hdr toc-row"><span class="toc-num"></span><span class="toc-lbl">Table of Figures &amp; Tables</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
+
+<div class="toc-sec-hdr toc-row"><span class="toc-num">IX.</span><span class="toc-lbl">Appendices (Annexes)</span><span class="toc-dots"></span><span class="toc-pg">24</span></div>
+  </div>
+
+  <div class="toc-sec">
+    <div class="toc-sec-hdr toc-row"><span class="toc-num"></span><span class="toc-lbl">References</span><span class="toc-dots"></span><span class="toc-pg">25</span></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     PAGE 3 — TABLE OF FIGURES & TABLES
+════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph"><span>Table of Figures &amp; Tables</span><span class="r">SchoolHub</span></div>
+  <h1 class="ch">Table of Figures</h1>
+  <div class="toc-sec">
+    
+    
+    <div class="toc-row"><span class="toc-num">Fig. 1</span><span class="toc-lbl sub">Basic Use Case Diagram</span><span class="toc-dots"></span><span class="toc-pg">6</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 2</span><span class="toc-lbl sub">Detailed Use Case Diagram</span><span class="toc-dots"></span><span class="toc-pg">6</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 3</span><span class="toc-lbl sub">Conceptual Data Model (MCD)</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 4</span><span class="toc-lbl sub">Logical Data Model (MLD)</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 5</span><span class="toc-lbl sub">Activity Diagram — Schedule Generation</span><span class="toc-dots"></span><span class="toc-pg">8</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 6</span><span class="toc-lbl sub">Activity Diagram — Payment Processing</span><span class="toc-dots"></span><span class="toc-pg">9</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 7</span><span class="toc-lbl sub">Activity Diagram — Contract Creation</span><span class="toc-dots"></span><span class="toc-pg">10</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 8</span><span class="toc-lbl sub">Sequence Diagram — User Auth</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 9</span><span class="toc-lbl sub">Sequence Diagram — Bulk Grades</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 10</span><span class="toc-lbl sub">Sequence Diagram — Report Card</span><span class="toc-dots"></span><span class="toc-pg">12</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 11</span><span class="toc-lbl sub">Sequence Diagram — Payment Process</span><span class="toc-dots"></span><span class="toc-pg">13</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 12</span><span class="toc-lbl sub">Work Breakdown Structure (WBS)</span><span class="toc-dots"></span><span class="toc-pg">24</span></div>
+    <div class="toc-row"><span class="toc-num">Fig. 13</span><span class="toc-lbl sub">Gantt Chart (GanttPRO)</span><span class="toc-dots"></span><span class="toc-pg">24</span></div>
+
+  <h1 class="ch" style="margin-top: 40px;">Table of Tables</h1>
+  <div class="toc-sec">
+    <div class="toc-row"><span class="toc-num">Tab. 1</span><span class="toc-lbl sub">System Actors</span><span class="toc-dots"></span><span class="toc-pg">5</span></div>
+    <div class="toc-row"><span class="toc-num">Tab. 2</span><span class="toc-lbl sub">Database Schema (Tables &amp; Columns)</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+    <div class="toc-row"><span class="toc-num">Tab. 3</span><span class="toc-lbl sub">Project Planning Phases</span><span class="toc-dots"></span><span class="toc-pg">24</span></div>
+    <div class="toc-row"><span class="toc-num">Tab. 4</span><span class="toc-lbl sub">Core API Controllers</span><span class="toc-dots"></span><span class="toc-pg">14</span></div>
+    <div class="toc-row"><span class="toc-num">Tab. 5</span><span class="toc-lbl sub">Vue.js Application Structure</span><span class="toc-dots"></span><span class="toc-pg">15</span></div>
+    <div class="toc-row"><span class="toc-num">Tab. 6</span><span class="toc-lbl sub">Core State Stores (Pinia)</span><span class="toc-dots"></span><span class="toc-pg">15</span></div>
+    <div class="toc-row"><span class="toc-num">Tab. 7</span><span class="toc-lbl sub">Mobile App Feature Modules</span><span class="toc-dots"></span><span class="toc-pg">16</span></div>
+    <div class="toc-row"><span class="toc-num">Tab. 8</span><span class="toc-lbl sub">Backend Tests (PHPUnit)</span><span class="toc-dots"></span><span class="toc-pg">17</span></div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE 4 — INTRODUCTION
+════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph"><span>SchoolHub – End-of-Studies Project</span><span class="r">FITYA · 2025–2026</span></div>
+  <h1 class="ch">I. General Introduction</h1>
+
+  <h2 class="sh">1. Context &amp; Background</h2>
+  <p>This report comprehensively documents the engineering work carried out during a final-year academic internship at <strong>Fitya School</strong>, taking place between February and July 2026. Fitya School is a prominent Algerian private educational institution located in Ben Telha, Baraki. The establishment caters to both Primary and CEM (Middle School) educational levels. It has built a strong regional reputation not only for its uncompromising teaching quality but also for its unique pedagogical approach—successfully instilling a high level of discipline in its students by harmoniously blending rigorous academic standards with religious and moral education.</p>
+  <p>Despite its pedagogical success, the institution's administrative backbone required a digital transformation. The internship project, named <strong>SchoolHub</strong>, was conceived to address a critical, real-world operational bottleneck: the glaring absence of a unified, centralised digital management system capable of orchestrating complex administrative, financial, and pedagogical operations in real-time. SchoolHub was architected from the ground up as a production-ready, multi-platform ecosystem. It bridges the gap between administrators, educators, and parents through a highly secure RESTful backend API (Laravel 12), an intuitive web administration dashboard (Vue.js 3), and a responsive cross-platform mobile application (Flutter).</p>
+
+  <h2 class="sh">2. Problem Statement</h2>
+  <p>A prevalent critical issue within the Algerian educational sector—and specifically at Fitya School prior to this project—is the heavy, almost exclusive reliance on archaic paper-based workflows. The lack of digital tracking introduces severe vulnerabilities into the school's daily operations. Physical documents are highly susceptible to loss, damage, or misplacement, which directly leads to an unacceptable degradation in the quality of student tracking, archival integrity, and administrative efficiency.</p>
+  <p>Furthermore, this fragmented, analog approach severely stifles communication. Without a digital bridge, parents are left in the dark, forced to rely on infrequent physical report cards or manual phone calls to monitor their children's academic progress, attendance, and disciplinary standing.</p>
+  <p><strong>SchoolHub</strong> was engineered as a definitive, comprehensive solution to entirely eradicate these pain points. By digitising the entire school lifecycle, the platform prevents data loss through secure cloud storage, provides instantaneous detailed grade analytics, offers a live dashboard for meticulous attendance tracking, introduces a robust and transparent financial management module for tuition and bills, and tackles the historically tedious logistical nightmare of timetable creation via an intelligent, automated schedule generator.</p>
+
+  <h2 class="sh">3. Project Objectives</h2>
+  <ul>
+    <li>Build a <strong>robust RESTful API</strong> with Laravel 12 as the central business logic layer;</li>
+    <li>Develop a <strong>complete web administration dashboard</strong> with Vue.js 3 and TypeScript;</li>
+    <li>Create a <strong>cross-platform Flutter mobile application</strong> for parents and teachers;</li>
+    <li>Implement a <strong>Role-Based Access Control (RBAC)</strong> system with 7 distinct roles;</li>
+    <li>Cover all core school modules: students, teachers, classes, grades, attendance, payments, and schedules;</li>
+    <li>Develop an <strong>intelligent automatic schedule generator</strong> with constraint satisfaction;</li>
+    <li>Ensure <strong>security, performance, and code maintainability</strong> through industry best practices.</li>
+  </ul>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     PAGE 5 — REQUIREMENTS ANALYSIS
+════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="ph"><span>Chapter II – Requirements Analysis</span><span class="r">SchoolHub</span></div>
+  <h1 class="ch">II. Requirements Analysis</h1>
+
+  <h2 class="sh">1. System Actors</h2>
+  <table class="rt">
+    <thead><tr><th>Actor</th><th>Role</th><th>Primary Interface</th><th>Access Level</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Administrator</strong></td><td>Full system management</td><td>Web Dashboard</td><td>Full access</td></tr>
+      <tr><td><strong>Director</strong></td><td>Global supervision &amp; reports</td><td>Web Dashboard</td><td>Read-only global</td></tr>
+      <tr><td><strong>Supervisor</strong></td><td>Level-specific class supervision</td><td>Web</td><td>Own level access</td></tr>
+      <tr><td><strong>Teacher</strong></td><td>Enter grades (own classes only)</td><td>Web &amp; Mobile</td><td>Own classes only</td></tr>
+      <tr><td><strong>Parent</strong></td><td>Monitor child's academic progress</td><td>Mobile App</td><td>Own children only</td></tr>
+      <tr><td><strong>Secretariat</strong></td><td>Student &amp; administrative management (full control)</td><td>Web</td><td>Full student data access</td></tr>
+      <tr><td><strong>Accountant</strong></td><td>Financial management</td><td>Web</td><td>Financial module only</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sh">2. Functional Requirements</h2>
+  <p>Functional requirements were gathered through stakeholder interviews and analysed as user stories, grouped into eight functional modules:</p>
+  <div class="mg">
+    <div class="mc"><div class="mt"> User &amp; Auth Management</div><ul><li>Multi-role account creation &amp; activation</li><li>Token-based authentication per role</li><li>Password management &amp; RBAC enforcement</li><li>Data visibility restricted by assigned level for Directors and Supervisors</li></ul></div>
+    <div class="mc"><div class="mt"> Student Management</div><ul><li>Full student profile (personal &amp; medical)</li><li>Class assignment &amp; parent linking</li><li>Unique student code generation</li><li>Students assignments tracking</li></ul></div>
+    <div class="mc"><div class="mt"> Teacher Management</div><ul><li>Teacher profiles with specialisations</li><li>Weekly availability management</li><li>Contract type &amp; workload tracking</li><li>Teacher assignments distribution</li></ul></div>
+    <div class="mc"><div class="mt"> Classes &amp; Subjects</div><ul><li>Levels management and Multi-level class organisation</li><li>Class–Subject–Teacher pivot assignments</li><li>Subject coefficients per level</li></ul></div>
+    <div class="mc"><div class="mt"> Grading &amp; Report Cards</div><ul><li>Multiple exam types with bulk entry</li><li>Weighted average computation</li><li>Class ranking &amp; report cards</li><li>Comprehensive grades report generation</li></ul></div>
+    <div class="mc"><div class="mt"> Attendance Tracking</div><ul><li>Session-level daily tracking</li><li>Statuses: present / absent / late / excused</li><li>Per-student &amp; per-class statistics</li></ul></div>
+    <div class="mc"><div class="mt"> Payments &amp; Contracts</div><ul><li>Fee configuration by admin</li><li>Parent–school contract with auto-billing</li><li>Partial payments, advances, refunds</li></ul></div>
+    <div class="mc"><div class="mt"> Schedule Management</div><ul><li>Automatic constraint-based generation</li><li>Manual conflict detection</li><li>Weekly view per class / teacher</li></ul></div>
+  </div>
+
+  <h2 class="sh">3. Non-Functional Requirements</h2>
+  <ul>
+    <li><strong>Security:</strong> Token-based auth (Laravel Sanctum), bcrypt password hashing, SQL injection prevention via Eloquent ORM, CSRF protection, input validation via FormRequests.</li>
+    <li><strong>Performance:</strong> Paginated responses, optimised DB indexes on critical columns, API responses under 200 ms for standard queries.</li>
+    <li><strong>Maintainability:</strong> PSR-12 coding standards, separation of concerns (Controllers / Services / Models), 100 KB+ of Markdown documentation.</li>
+    <li><strong>Portability:</strong> API compatible with SQLite, MySQL, and PostgreSQL; mobile app targets Android and iOS.</li>
+    <li><strong>Multi-language:</strong> Mobile app supports Arabic (RTL), French, and English.</li>
+  </ul>
+
+  <h2 class="sh">4. Project Management &amp; Methodology</h2>
+  <h3 class="ssh">Agile &amp; Scrum Workflow</h3>
+  <p>To ensure the successful and timely delivery of a system of this magnitude, a rigorous Agile software development lifecycle (SDLC) was adopted. The project management was orchestrated using GitHub Projects, functioning as a Kanban board to continuously track sprint progress, backlog items, and bug fixes. Before writing a single line of code, the entire system was mapped out using a Work Breakdown Structure (WBS), which systematically deconstructed complex deliverables into manageable, verifiable tasks.</p>
+  <p>This WBS was subsequently translated into a highly detailed GANTT chart, dictating sprint deadlines, milestones, and integration phases. Through disciplined adherence to this Agile methodology and daily progress tracking, I was able to entirely avoid the common pitfall of scope creep. The predicted timeline was perfectly respected without a single day of delay. To visually corroborate this precise time management, the original projected GANTT chart alongside the actual executed timeline are presented both at the beginning and the end of this report.</p>
+  
+  <div class="fig" style="margin-top: 20px; margin-bottom: 20px;">
+    <img src="schoolhubGantt.png" alt="Gantt Chart"/>
+    <div class="fig-cap"><strong>Project Timeline:</strong> Gantt Chart showing the temporal planning and critical path tasks from February to July 2026.</div>
+  </div>
+
+  <h3 class="ssh">Version Control &amp; Branching Strategy</h3>
+  <p>Professional Git version control was a non-negotiable requirement for maintaining codebase integrity across the API, Web Dashboard, and Mobile App. GitHub served as the central hub for all source code. A strict feature-branching strategy was enforced: every new feature, bug fix, or architectural change was developed in absolute isolation on a dedicated branch.</p>
+  <p>Only after thorough local testing was a branch permitted to be merged. To facilitate continuous delivery and safe deployment for the school's administration, the project architecture was split into two strictly isolated main repositories:</p>
+  <ul>
+    <li><strong>Beta Repository (Production):</strong> The highly stable, deployed version of the application. This is the live environment currently being utilised by Fitya School's administration for daily operations. Code only enters this repository after passing all validation checks.</li>
+    <li><strong>Main Repository (Development):</strong> The complete, bleeding-edge project containing all source code, experimental features, comprehensive documentation, and the latest integrated components waiting for the next release cycle.</li>
+  </ul>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════

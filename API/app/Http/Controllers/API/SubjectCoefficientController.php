@@ -250,28 +250,61 @@ class SubjectCoefficientController extends Controller
         $created = [];
         $errors = [];
 
+        // Pre-fetch class levels
+        $classLevels = collect($validated['levels'])->pluck('class_level')->filter()->unique();
+        $levelIdsByName = \App\Models\Level::whereIn('name', $classLevels)->pluck('id', 'name');
+
+        $levelIdsToProcess = [];
+        $levelDataMap = [];
+
         foreach ($validated['levels'] as $level) {
-            $levelId = $this->resolveLevelId($level);
+            $levelId = null;
+            if (!empty($level['level_id'])) {
+                $levelId = (int) $level['level_id'];
+            } elseif (!empty($level['class_level'])) {
+                $levelId = $levelIdsByName[$level['class_level']] ?? null;
+            }
 
             if (!$levelId) {
                 $errors[] = 'Invalid level entry in bulk payload.';
                 continue;
             }
 
-            $exists = LevelSubject::where('subject_id', $validated['subject_id'])
-                ->where('level_id', $levelId)
-                ->exists();
+            $levelIdsToProcess[] = $levelId;
+            $levelDataMap[$levelId] = $level;
+        }
 
-            if (!$exists) {
-                $created[] = LevelSubject::create([
+        $existingLevelSubjects = LevelSubject::where('subject_id', $validated['subject_id'])
+            ->whereIn('level_id', $levelIdsToProcess)
+            ->pluck('level_id')
+            ->toArray();
+
+        $insertData = [];
+        foreach ($levelIdsToProcess as $levelId) {
+            if (!in_array($levelId, $existingLevelSubjects)) {
+                $level = $levelDataMap[$levelId];
+                $insertData[] = [
                     'subject_id' => $validated['subject_id'],
                     'level_id' => $levelId,
                     'coefficient' => $level['coefficient'],
                     'weekly_sessions_required' => $level['weekly_sessions_required'],
-                ]);
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+                // For the response $created array
+                $created[] = [
+                    'subject_id' => $validated['subject_id'],
+                    'level_id' => $levelId,
+                    'coefficient' => $level['coefficient'],
+                    'weekly_sessions_required' => $level['weekly_sessions_required'],
+                ];
             } else {
                 $errors[] = 'Coefficient already exists for one of the provided levels.';
             }
+        }
+
+        if (!empty($insertData)) {
+            LevelSubject::insert($insertData);
         }
 
         return response()->json([

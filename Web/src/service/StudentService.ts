@@ -62,10 +62,9 @@ class StudentService {
   /**
    * Get all students
    */
-  async getStudents(): Promise<Student[]> {
-    const response = await apiService.get<Student[]>('/students');
-    console.log('Fetched students:', response.data);
-    return response.data || [];
+  async getStudents(params?: any): Promise<any> {
+    const response = await apiService.get<any>('/students', params);
+    return response.data;
   }
 
   /**

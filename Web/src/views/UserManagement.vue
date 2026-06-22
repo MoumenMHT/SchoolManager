@@ -15,6 +15,20 @@ const loading = ref(false);
 const saving = ref(false);
 const submitted = ref(false);
 
+const totalRecords = ref(0);
+const lazyParams = ref({ first: 0, page: 0, rows: 15 });
+
+const onPage = (event: any) => {
+  lazyParams.value = event;
+  loadUsers();
+};
+
+const onFilter = () => {
+  lazyParams.value.first = 0;
+  lazyParams.value.page = 0;
+  loadUsers();
+};
+
 const editDialog = ref(false);
 const selectedUser = ref<any>(null);
 
@@ -58,9 +72,24 @@ const ROLE_SEVERITY: Record<string, string> = {
 async function loadUsers() {
   loading.value = true;
   try {
-    const res = await ApiService.get<any[]>('/users/with-profile');
-    const raw = (res as any)?.data ?? (res as any) ?? [];
-    users.value = Array.isArray(raw) ? raw : Object.values(raw);
+    const params: Record<string, any> = {
+      page: lazyParams.value.page + 1,
+      per_page: lazyParams.value.rows,
+      search: filters.value.global.value
+    };
+    
+    const res = await ApiService.get<any>('/users/with-profile', params);
+    
+    if (res?.data?.data) {
+        // Paginated response
+        users.value = res.data.data;
+        totalRecords.value = res.data.total || 0;
+    } else {
+        // Fallback for non-paginated or unexpected shape
+        const raw = res?.data ?? res ?? [];
+        users.value = Array.isArray(raw) ? raw : Object.values(raw);
+        totalRecords.value = users.value.length;
+    }
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('user_management.load_error'), life: 3000 });
   } finally {
@@ -132,8 +161,12 @@ async function saveCredentials() {
     <DataTable
       :value="users"
       dataKey="id"
+      lazy
+      :totalRecords="totalRecords"
+      :first="lazyParams.first"
+      @page="onPage"
       :paginator="true"
-      :rows="15"
+      :rows="lazyParams.rows"
       :filters="filters"
       :loading="loading"
       :globalFilterFields="['full_name', 'username', 'role']"
@@ -149,8 +182,10 @@ async function saveCredentials() {
             <InputIcon><i class="pi pi-search" /></InputIcon>
             <InputText
               v-model="filters['global'].value"
+              @keydown.enter="onFilter"
               :placeholder="t('user_management.search_placeholder')"
             />
+            <Button icon="pi pi-search" @click="onFilter" class="ml-2" />
           </IconField>
         </div>
       </template>

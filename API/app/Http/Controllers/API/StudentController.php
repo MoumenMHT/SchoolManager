@@ -31,9 +31,21 @@ class StudentController extends Controller
         if ($request->has('class_id')) {
             $query->where('class_id', $request->class_id);
         }
-        
-        $students = $query->get();
-        
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->input('paginate') === 'false') {
+            $students = $query->get();
+        } else {
+            $perPage = $request->input('per_page', 15);
+            $students = $query->paginate($perPage);
+        }
         return response()->json([
             'success' => true,
             'data' => $students

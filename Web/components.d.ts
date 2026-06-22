@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AttendanceWidget: typeof import('./src/components/dashboard/AttendanceWidget.vue')['default']
+    AutoComplete: typeof import('primevue/autocomplete')['default']
     Badge: typeof import('primevue/badge')['default']
     BestSellingWidget: typeof import('./src/components/dashboard/BestSellingWidget.vue')['default']
     BillStatusWidget: typeof import('./src/components/dashboard/BillStatusWidget.vue')['default']

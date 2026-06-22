@@ -36,6 +36,8 @@ const currentView = ref<'create' | 'list'>('create');
 const allContracts = ref<Contract[]>([]);
 const loadingContracts = ref(false);
 const contractsFilters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } });
+const totalRecords = ref(0);
+const lazyParams = ref({ page: 1, per_page: 10 });
 
 const totalFees = computed(() => {
   let sum = 0;
@@ -73,8 +75,8 @@ const getDefaultAcademicYear = () => {
 onMounted(async () => {
   loading.value = true;
   try {
-    // Load only parents without an active contract for new contract creation
-    parents.value = await ParentService.getParentsWithoutActiveContract();
+    // We no longer load parents on mount to save time.
+    // AutoComplete will search on demand.
     academicYear.value = getDefaultAcademicYear();
     await loadFees();
   } catch {
@@ -173,19 +175,64 @@ const resetForm = async () => {
   editingContractId.value = null;
   submitted.value = false;
   // Reload only parents without an active contract for a fresh create session
-  parents.value = await ParentService.getParentsWithoutActiveContract();
+  // Deferred to AutoComplete search.
 };
 
-const openContractsList = async () => {
+const searchParents = async (event: any) => {
+  try {
+    const params: any = { search: event.query, per_page: 20 };
+    // If we are in 'create' mode, only suggest parents without active contract
+    if (!editingContractId.value) {
+      params.without_active_contract = true;
+    }
+    const res = await ParentService.getParents(params);
+    const fetchedParents = res.data || [];
+    parents.value = fetchedParents.map((p: any) => ({ ...p, full_name: `${p.first_name} ${p.last_name}` }));
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const openContractsList = () => {
   currentView.value = 'list';
+  loadContractsLazy();
+};
+
+const loadContractsLazy = async () => {
   loadingContracts.value = true;
   try {
-    allContracts.value = await ContractService.getContracts();
+    const response = await ContractService.getContracts({
+      page: lazyParams.value.page,
+      per_page: lazyParams.value.per_page,
+      search: contractsFilters.value.global.value || ''
+    });
+    if (response.data) {
+      allContracts.value = response.data;
+      totalRecords.value = response.total;
+    } else {
+      allContracts.value = response;
+      totalRecords.value = response.length;
+    }
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('common.failed_to_load_contracts', 'Failed to load contracts'), life: 3000 });
   } finally {
     loadingContracts.value = false;
   }
+};
+
+let searchTimeout: ReturnType<typeof setTimeout>;
+const onSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    lazyParams.value.page = 1;
+    loadContractsLazy();
+  }, 300);
+};
+
+const onPage = (event: any) => {
+  lazyParams.value.page = event.page + 1;
+  lazyParams.value.per_page = event.rows;
+  loadContractsLazy();
 };
 
 const onRowClick = (event: any) => {
@@ -197,13 +244,10 @@ const editContract = async (contract: Contract) => {
   currentView.value = 'create';
   submitted.value = false;
 
-  // For editing, load all parents so the existing parent (who has an active contract) is selectable
-  if (parents.value.length === 0 || !parents.value.find(p => p.id === contract.parent_id)) {
-    parents.value = await ParentService.getParents();
-  }
-
-  const parent = parents.value.find(p => p.id === contract.parent_id);
-  selectedParent.value = parent || (contract.parent as unknown as Parent) || null;
+  // For editing, we don't load all parents.
+  // We just set the selected parent object directly from the contract relation if available.
+  const parent = contract.parent as unknown as Parent;
+  selectedParent.value = parent ? { ...parent, full_name: `${parent.first_name} ${parent.last_name}` } : null;
 
   academicYear.value = contract.academic_year || getDefaultAcademicYear();
 
@@ -267,16 +311,15 @@ const editContract = async (contract: Contract) => {
       <div class="card">
         <DataTable
           :value="allContracts"
+          lazy
+          :totalRecords="totalRecords"
+          @page="onPage($event)"
           :loading="loadingContracts"
-          :filters="contractsFilters"
-          :globalFilterFields="['contract_number', 'parent.first_name', 'parent.last_name', 'academic_year']"
           stripedRows
           :size="'small'"
           paginator
-          :rows="10"
+          :rows="lazyParams.per_page"
           :rowsPerPageOptions="[10, 20, 50]"
-          sortField="created_at"
-          :sortOrder="-1"
           @row-click="onRowClick"
           :rowClass="() => 'cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors'"
         >
@@ -284,7 +327,7 @@ const editContract = async (contract: Contract) => {
             <div class="flex items-center justify-end">
               <span class="p-input-icon-left">
                 <i class="pi pi-search" />
-                <InputText v-model="contractsFilters.global.value" :placeholder="t('common.search', 'Search...')" />
+                <InputText v-model="contractsFilters.global.value" @input="onSearch" :placeholder="t('common.search', 'Search...')" />
               </span>
             </div>
           </template>
@@ -381,31 +424,25 @@ const editContract = async (contract: Contract) => {
         <Panel :header="t('common.parent_info', 'Parent Information')" class="mb-6">
           <div class="flex flex-col gap-4">
             <label class="block font-medium">{{ t('common.select_parent', 'Select Parent') }} *</label>
-            <Select
+            <AutoComplete
               v-model="selectedParent"
-              :options="parents"
-              :filter="true"
-              :filterFields="['first_name', 'last_name']"
+              :suggestions="parents"
+              @complete="searchParents"
               :placeholder="t('common.search_parent', 'Search parent by name...')"
               class="w-full"
+              :inputClass="'w-full'"
+              optionLabel="full_name"
             >
-              <template #value="slotProps">
-                <div v-if="slotProps.value" class="flex items-center gap-2">
-                  <i class="pi pi-user"></i>
-                  <div>{{ slotProps.value.first_name }} {{ slotProps.value.last_name }}</div>
-                </div>
-                <span v-else>{{ slotProps.placeholder }}</span>
-              </template>
               <template #option="slotProps">
                 <div class="flex items-center gap-2">
-                  <i class="pi pi-user"></i>
+                  <i class="pi pi-user text-lg"></i>
                   <div>
                     <div class="font-medium">{{ slotProps.option.first_name }} {{ slotProps.option.last_name }}</div>
-                    <div class="text-xs text-muted-color">{{ slotProps.option.students_count }} {{ t('common.students', 'students') }}</div>
+                    <div class="text-xs text-muted-color">{{ slotProps.option.students_count || 0 }} {{ t('common.students', 'students') }}</div>
                   </div>
                 </div>
               </template>
-            </Select>
+            </AutoComplete>
           </div>
         </Panel>
 

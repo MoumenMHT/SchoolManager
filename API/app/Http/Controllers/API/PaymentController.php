@@ -44,8 +44,12 @@ class PaymentController extends Controller
                 $query->where('status', $request->status);
             }
 
-            $payments = $query->get();
-
+            if ($request->input('paginate') === 'false') {
+                $payments = $query->orderBy('paid_date', 'desc')->get();
+            } else {
+                $perPage = $request->input('per_page', 15);
+                $payments = $query->orderBy('paid_date', 'desc')->paginate($perPage);
+            }
             return response()->json([
                 'success' => true,
                 'data' => $payments
