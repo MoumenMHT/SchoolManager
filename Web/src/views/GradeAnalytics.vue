@@ -1071,10 +1071,10 @@ const highVarianceSubjects = computed(() => [...subjectAggregates.value].sort((a
 
 const loadMetadata = async () => {
   const [teachers, subjects, classes, students] = await Promise.all([
-    TeacherService.getTeachers(),
+    TeacherService.getTeachers({ paginate: 'false' }),
     SubjectService.getSubjects(),
     ClassesService.getClasses(),
-    StudentService.getStudents()
+    StudentService.getStudents({ paginate: 'false' })
   ]);
 
   allTeachers.value = teachers;
@@ -1738,7 +1738,7 @@ onMounted(async () => {
                 <tr v-for="(sub, index) in studentReportCardData.data?.subjects || []" :key="index" class="bulletin-row">
                   <td class="bulletin-td text-left">
                     <div class="font-bold">{{ sub.subject?.name || $t('grade_analytics.unknown') }}</div>
-                    <div class="text-xs text-muted-color mt-1" v-if="sub.teacher">{{ $t('grade_analytics.prof_prefix') }} {{ sub.teacher?.last_name }}</div>
+                    <div class="text-xs text-muted-color mt-1" v-if="sub.teacher"> {{ sub.teacher?.last_name }}</div>
                   </td>
                   <td class="bulletin-td font-bold">{{ sub.coefficient }}</td>
                   
@@ -1804,7 +1804,7 @@ onMounted(async () => {
               <p v-if="selectedSubjectInfo || selectedTeacherInfo" class="text-green-700/80 m-0 mt-1 text-sm">
                 <span v-if="selectedSubjectInfo">{{ selectedSubjectInfo.name }}</span>
                 <span v-if="selectedSubjectInfo && selectedTeacherInfo"> · </span>
-                <span v-if="selectedTeacherInfo">{{ $t('grade_analytics.prof_prefix') }} {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</span>
+                <span v-if="selectedTeacherInfo"> {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</span>
               </p>
             </div>
             <div class="ml-auto flex gap-4 text-center">
@@ -1892,7 +1892,7 @@ onMounted(async () => {
               <p class="text-sm text-muted-color mt-1 mb-0">
                 {{ selectedClassInfo.name }}
                 <span v-if="selectedSubjectInfo"> · {{ selectedSubjectInfo.name }}</span>
-                <span v-if="selectedTeacherInfo"> · {{ $t('grade_analytics.prof_prefix') }} {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</span>
+                <span v-if="selectedTeacherInfo"> ·  {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</span>
               </p>
             </div>
             <span v-if="subjectExerciseAverages.length" class="text-xs text-muted-color">
@@ -2148,7 +2148,7 @@ onMounted(async () => {
               {{ selectedTeacherInfo.first_name.charAt(0) }}{{ selectedTeacherInfo.last_name.charAt(0) }}
             </div>
             <div>
-              <h2 class="text-2xl font-bold m-0 text-orange-900">{{ $t('grade_analytics.prof_prefix') }} {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</h2>
+              <h2 class="text-2xl font-bold m-0 text-orange-900"> {{ selectedTeacherInfo.first_name }} {{ selectedTeacherInfo.last_name }}</h2>
               <p class="text-orange-700 m-0 mt-1">{{ $t('grade_analytics.teacher_analytics_profile') }}</p>
             </div>
             <div class="ml-auto flex gap-4 text-center">

@@ -151,7 +151,9 @@ const loadClasses = async () => {
 // Load available parents
 const loadParents = async () => {
   try {
-    availableParents.value = await ParentService.getParents();
+    const response = await ParentService.getParents({ paginate: 'false' });
+    // API returns paginated object { data: [...] } or a plain array when paginate=false
+    availableParents.value = Array.isArray(response) ? response : (response?.data ?? response ?? []);
   } catch (error: any) {
     toast.add({
       severity: 'error',

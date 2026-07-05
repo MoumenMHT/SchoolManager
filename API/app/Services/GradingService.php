@@ -35,7 +35,7 @@ class GradingService
             : 0;
 
         $ccGrades          = $grades->filter(fn($g) => $g->exam?->exam_type === 'evaluation_continue');
-        $devoirGrades      = $grades->filter(fn($g) => $g->exam?->exam_type === 'devoir');
+        $devoirGrades      = $grades->filter(fn($g) => in_array($g->exam?->exam_type, ['devoir_1', 'devoir_2']));
         $compositionGrades = $grades->filter(fn($g) => $g->exam?->exam_type === 'composition');
 
         $ccAvg          = $ccGrades->avg($normalize) ?? 0;
@@ -55,7 +55,7 @@ class GradingService
             return round($compositionAvg, 2);
         }
 
-        // Standard Algerian CEM/Lycee Formula: (((CC + Devoir)/2) + (Composition * 2)) / 3
+        // Standard Algerian CEM/Lycee Formula: (((CC + avg(Devoir1,Devoir2))/2) + (Composition * 2)) / 3
         $continuousAvg = ($ccAvg + $devoirAvg) / max(1, ($ccGrades->isEmpty() ? 0 : 1) + ($devoirGrades->isEmpty() ? 0 : 1));
         $subjectAverage = ($continuousAvg + ($compositionAvg * 2)) / 3;
 

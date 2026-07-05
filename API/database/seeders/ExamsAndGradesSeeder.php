@@ -5,182 +5,162 @@ namespace Database\Seeders;
 use App\Models\ClassSubjectTeacher;
 use App\Models\Exam;
 use App\Models\ExamExercise;
-use App\Models\ExerciseGrade;
 use App\Models\Grade;
 use App\Models\SchoolClass;
-use App\Models\Student;
-use App\Models\Subject;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class ExamsAndGradesSeeder extends Seeder
 {
     /**
-     * Seeds exams, exercises, and grades for all 3 trimesters
-     * using the correct teacher-per-class-per-subject assignment.
+     * Seeds exams, exercises, and grades for all 3 trimesters.
+     * Optimised: bulk inserts, pre-loaded lookups, no N+1 queries.
      */
     public function run(): void
     {
         $this->command->info('🎓 Seeding exams, exercises, and grades (3 trimesters)…');
 
-        $classes = SchoolClass::with(['students', 'levelProfile'])->get();
-
+        $classes = SchoolClass::with(['students'])->get();
         if ($classes->isEmpty()) {
             $this->command->warn('No classes found. Run the base seeder first.');
             return;
         }
 
         $academicYear = '2025-2026';
-
-        // Exam types per trimester: 2 devoirs + 1 composition each
-        $semesters = ['Trimester 1', 'Trimester 2', 'Trimester 3'];
-
-        // Exercise structure per exam type
-        $exerciseTemplates = [
-            'devoir_1'    => [
-                ['level_name' => 'تمرين 1', 'max_note' => 8],
-                ['level_name' => 'تمرين 2', 'max_note' => 8],
-                ['level_name' => 'تمرين 3', 'max_note' => 4],
-            ],
-            'devoir_2'    => [
-                ['level_name' => 'تمرين 1', 'max_note' => 8],
-                ['level_name' => 'تمرين 2', 'max_note' => 8],
-                ['level_name' => 'تمرين 3', 'max_note' => 4],
-            ],
-            'composition' => [
-                ['level_name' => 'الجزء الأول',  'max_note' => 10],
-                ['level_name' => 'الجزء الثاني', 'max_note' => 10],
-            ],
+        $semesters    = ['Trimester 1', 'Trimester 2', 'Trimester 3'];
+        $examTypes    = [
+            'devoir_1'    => ['max' => 20, 'exercises' => [['n' => 'تمرين 1', 'm' => 8], ['n' => 'تمرين 2', 'm' => 8], ['n' => 'تمرين 3', 'm' => 4]]],
+            'devoir_2'    => ['max' => 20, 'exercises' => [['n' => 'تمرين 1', 'm' => 8], ['n' => 'تمرين 2', 'm' => 8], ['n' => 'تمرين 3', 'm' => 4]]],
+            'composition' => ['max' => 20, 'exercises' => [['n' => 'الجزء الأول', 'm' => 10], ['n' => 'الجزء الثاني', 'm' => 10]]],
         ];
 
-        $examTypes = [
-            ['type' => 'devoir_1',    'max' => 20],
-            ['type' => 'devoir_2',    'max' => 20],
-            ['type' => 'composition', 'max' => 20],
-        ];
+        // ── 1 query: all assignments grouped by class ─────────────────────
+        $assignments = ClassSubjectTeacher::where('academic_year', $academicYear)
+            ->get()
+            ->groupBy('class_id');
 
-        $totalExams    = 0;
-        $totalExercise = 0;
-        $totalGrades   = 0;
+        // ── 1 query: existing exams → hash map to skip firstOrCreate SELECT ─
+        $existingExams = Exam::where('academic_year', $academicYear)
+            ->get()
+            ->keyBy(fn($e) => "{$e->subject_id}|{$e->teacher_id}|{$e->exam_type}|{$e->semester}");
+
+        // ── 1 query: existing class_exam pivot keys ────────────────────────
+        $existingClassExam = DB::table('class_exam')
+            ->get(['exam_id', 'class_id'])
+            ->mapWithKeys(fn($r) => ["{$r->exam_id}|{$r->class_id}" => true])
+            ->all();
+
+        // ── 1 query: existing grade keys (idempotency) ────────────────────
+        $existingGrades = Grade::all(['student_id', 'exam_id'])
+            ->mapWithKeys(fn($g) => ["{$g->student_id}|{$g->exam_id}" => true])
+            ->all();
+
+        // Exercise cache: exam_id → collection
+        $exerciseCache = [];
+
+        $totalExams  = 0;
+        $totalGrades = 0;
 
         foreach ($classes as $class) {
-            $students = $class->students;
-            if ($students->isEmpty()) {
-                continue;
-            }
+            $classAssignments = $assignments->get($class->id, []);
+            if (empty($classAssignments)) continue;
 
-            // Load all class-subject-teacher assignments for this class
-            $assignments = ClassSubjectTeacher::where('class_id', $class->id)
-                ->where('academic_year', $academicYear)
-                ->get();
-
-            if ($assignments->isEmpty()) {
-                // Fallback: skip if no assignments
-                continue;
-            }
-
-            foreach ($assignments as $assignment) {
-                $subject   = Subject::find($assignment->subject_id);
-                $teacherId = $assignment->teacher_id;
-
-                if (!$subject) continue;
-
+            foreach ($classAssignments as $assignment) {
                 foreach ($semesters as $semester) {
-                    foreach ($examTypes as $examDef) {
-                        // Idempotency check: find existing exam for this
-                        // teacher × subject × type × semester
-                        $exam = Exam::firstOrCreate(
-                            [
-                                'subject_id'    => $subject->id,
-                                'teacher_id'    => $teacherId,
-                                'exam_type'     => $examDef['type'],
+                    foreach ($examTypes as $type => $def) {
+                        $examKey = "{$assignment->subject_id}|{$assignment->teacher_id}|{$type}|{$semester}";
+
+                        // ── Get or create exam using in-memory map ─────────
+                        if (isset($existingExams[$examKey])) {
+                            $exam   = $existingExams[$examKey];
+                            $wasNew = false;
+                        } else {
+                            $exam = Exam::create([
+                                'subject_id'    => $assignment->subject_id,
+                                'teacher_id'    => $assignment->teacher_id,
+                                'exam_type'     => $type,
                                 'semester'      => $semester,
                                 'academic_year' => $academicYear,
-                            ],
-                            ['max_grade' => $examDef['max']]
-                        );
-
-                        $wasRecentlyCreated = $exam->wasRecentlyCreated;
-                        if ($wasRecentlyCreated) {
+                                'max_grade'     => $def['max'],
+                            ]);
+                            $existingExams[$examKey] = $exam;
+                            $wasNew = true;
                             $totalExams++;
                         }
 
-                        // Link exam to this class (pivot)
-                        DB::table('class_exam')->insertOrIgnore([
-                            'exam_id'  => $exam->id,
-                            'class_id' => $class->id,
-                        ]);
-
-                        // Create exercises if newly created exam
-                        if ($wasRecentlyCreated) {
-                            foreach ($exerciseTemplates[$examDef['type']] as $exDef) {
-                                ExamExercise::create([
-                                    'exam_id'    => $exam->id,
-                                    'level_name' => $exDef['level_name'],
-                                    'max_note'   => $exDef['max_note'],
-                                ]);
-                                $totalExercise++;
-                            }
+                        // ── class_exam pivot (skip if already exists) ──────
+                        $pivotKey = "{$exam->id}|{$class->id}";
+                        if (!isset($existingClassExam[$pivotKey])) {
+                            DB::table('class_exam')->insertOrIgnore(['exam_id' => $exam->id, 'class_id' => $class->id]);
+                            $existingClassExam[$pivotKey] = true;
                         }
 
-                        // Fetch exercises
-                        $exercises = ExamExercise::where('exam_id', $exam->id)->get();
+                        // ── Bulk-create exercises once per new exam ────────
+                        if ($wasNew) {
+                            $batch = [];
+                            foreach ($def['exercises'] as $ex) {
+                                $batch[] = ['exam_id' => $exam->id, 'level_name' => $ex['n'], 'max_note' => $ex['m'], 'created_at' => now(), 'updated_at' => now()];
+                            }
+                            ExamExercise::insert($batch);
+                        }
 
-                        // Grade each student
-                        foreach ($students as $student) {
-                            $alreadyGraded = Grade::where('student_id', $student->id)
-                                ->where('exam_id', $exam->id)
-                                ->exists();
-                            if ($alreadyGraded) continue;
+                        // ── Fetch exercises once and cache per exam ────────
+                        if (!isset($exerciseCache[$exam->id])) {
+                            $exerciseCache[$exam->id] = ExamExercise::where('exam_id', $exam->id)->get();
+                        }
+                        $examExercises = $exerciseCache[$exam->id];
 
-                            // Generate realistic scores (slightly bell-curved)
-                            $exerciseScores = [];
-                            $totalScore     = 0;
+                        $exerciseGradeData = [];
+                        $now = now();
 
-                            foreach ($exercises as $exercise) {
-                                // Give each student a performance profile (0.5–1.0)
-                                $performanceRatio = $this->gaussianRand(0.55, 1.0);
-                                $score = round($exercise->max_note * $performanceRatio, 2);
-                                $score = min(max($score, 0), (float) $exercise->max_note);
-                                $exerciseScores[$exercise->id] = $score;
+                        foreach ($class->students as $student) {
+                            // ── Skip already-graded students ───────────────
+                            $gradeKey = "{$student->id}|{$exam->id}";
+                            if (isset($existingGrades[$gradeKey])) continue;
+
+                            $totalScore       = 0;
+                            $studentExercises = [];
+                            foreach ($examExercises as $ex) {
+                                $score = min(round($ex->max_note * $this->gaussianRand(0.55, 1.0), 2), (float) $ex->max_note);
                                 $totalScore += $score;
+                                $studentExercises[$ex->id] = $score;
                             }
 
-                            $totalScore = min(round($totalScore, 2), (float) $exam->max_grade);
-
-                            $grade = Grade::create([
+                            $gradeId = DB::table('grades')->insertGetId([
                                 'student_id' => $student->id,
                                 'exam_id'    => $exam->id,
-                                'grade'      => $totalScore,
-                                'comment'    => null,
+                                'grade'      => min(round($totalScore, 2), (float) $exam->max_grade),
+                                'created_at' => $now,
+                                'updated_at' => $now,
                             ]);
+                            $existingGrades[$gradeKey] = true;
                             $totalGrades++;
 
-                            foreach ($exercises as $exercise) {
-                                ExerciseGrade::create([
-                                    'grade_id'         => $grade->id,
-                                    'exam_exercise_id' => $exercise->id,
-                                    'note'             => $exerciseScores[$exercise->id],
-                                ]);
+                            foreach ($studentExercises as $exId => $score) {
+                                $exerciseGradeData[] = [
+                                    'grade_id'         => $gradeId,
+                                    'exam_exercise_id' => $exId,
+                                    'note'             => $score,
+                                    'created_at'       => $now,
+                                    'updated_at'       => $now,
+                                ];
                             }
                         }
+
+                        // ── Bulk-insert all exercise_grades for this exam ──
+                        if (!empty($exerciseGradeData)) {
+                            DB::table('exercise_grades')->insert($exerciseGradeData);
+                        }
+
                     } // foreach examType
                 } // foreach semester
             } // foreach assignment
         } // foreach class
-
-        $this->command->info("✅ Seeded {$totalExams} exams, {$totalExercise} exercises, {$totalGrades} grade records.");
+        $this->command->info("✅ Seeded {$totalExams} exams and {$totalGrades} grade records.");
     }
 
-    /**
-     * Returns a random float between $min and $max, slightly weighted toward
-     * the middle (simple average of two uniform random numbers).
-     */
     private function gaussianRand(float $min, float $max): float
     {
-        $r1 = mt_rand(0, 1000) / 1000;
-        $r2 = mt_rand(0, 1000) / 1000;
-        $avg = ($r1 + $r2) / 2; // central-limit approximation
-        return $min + $avg * ($max - $min);
+        return $min + (($mt = (mt_rand(0, 1000) / 1000 + mt_rand(0, 1000) / 1000) / 2)) * ($max - $min);
     }
 }

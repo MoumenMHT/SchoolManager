@@ -16,7 +16,8 @@ class SyncAllAverages extends Command
     {
         $this->info('Fetching all unique student/trimester/year combinations...');
 
-        $combos = Grade::selectRaw('student_id, semester, academic_year')
+        $combos = Grade::join('exams', 'grades.exam_id', '=', 'exams.id')
+            ->selectRaw('grades.student_id, exams.semester, exams.academic_year')
             ->distinct()
             ->get();
 

@@ -351,7 +351,8 @@ class GradeController extends Controller
             $subjectRawGrades = $gradesBySubject->get($avg->subject_id, collect());
             
             $cc          = $subjectRawGrades->first(fn($g) => $g->exam?->exam_type === 'evaluation_continue');
-            $devoir      = $subjectRawGrades->first(fn($g) => $g->exam?->exam_type === 'devoir');
+            $devoir1     = $subjectRawGrades->first(fn($g) => $g->exam?->exam_type === 'devoir_1');
+            $devoir2     = $subjectRawGrades->first(fn($g) => $g->exam?->exam_type === 'devoir_2');
             $composition = $subjectRawGrades->first(fn($g) => $g->exam?->exam_type === 'composition');
 
             $norm = fn($g) => $g ? round(($g->grade / max(1, $g->exam?->max_grade ?? 20)) * 20, 2) : '-';
@@ -360,7 +361,8 @@ class GradeController extends Controller
                 'subject'              => $avg->subject,
                 'teacher'             => $subjectRawGrades->first()?->exam?->teacher,
                 'evaluation_continue' => $norm($cc),
-                'devoir'              => $norm($devoir),
+                'devoir_1'            => $norm($devoir1),
+                'devoir_2'            => $norm($devoir2),
                 'composition'         => $norm($composition),
                 'average'             => $avg->average,
                 'coefficient'         => $coefficient,

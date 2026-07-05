@@ -23,7 +23,7 @@ class User {
     return User(
       id: json['id'] as int,
       username: json['username'] as String? ?? '',
-      role: json['role'] as String? ?? 'parent',
+      role: json['role'] as String? ?? '',
       phone: json['phone'] as String?,
       address: json['address'] as String?,
       isActive: json['is_active'] == true || json['is_active'] == 1,

@@ -32,7 +32,8 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = User::where(function($query) use ($request) {
+        $user = User::with(['teacher', 'parent', 'parent.students', 'supervisor'])
+            ->where(function($query) use ($request) {
             if ($request->username) {
                 $query->where('username', $request->username);
             }
@@ -181,7 +182,7 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user()->load(['teacher', 'parent', 'parent.students', 'supervisor']);
         
         // Load related data based on role
         $userData = $user->toArray();

@@ -273,7 +273,8 @@ onMounted(() => {
                                 </template>
                             </Column>
                             <Column field="evaluation_continue" :header="t('parent_portal.cc')" align="center"></Column>
-                            <Column field="devoir" :header="t('parent_portal.devoir')" align="center"></Column>
+                            <Column field="devoir_1" :header="t('parent_portal.devoir_1')" align="center"></Column>
+                            <Column field="devoir_2" :header="t('parent_portal.devoir_2')" align="center"></Column>
                             <Column field="composition" :header="t('parent_portal.composition')" align="center"></Column>
                             <Column field="average" :header="t('parent_portal.average')" align="center">
                                 <template #body="{ data }">

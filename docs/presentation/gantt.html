@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SchoolHub - Project Management Gantt Chart</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      overflow-y: auto;
+      height: auto;
+      min-height: 100vh;
+    }
+    
+    .gantt-container {
+      max-width: 1400px;
+      margin: 30px auto;
+      padding: 30px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      box-shadow: var(--shadow-card), var(--shadow-glow);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .gantt-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+
+    .gantt-header-title h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: 12px;
+      align-items: center;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .filter-group label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .filter-input {
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .filter-input:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+    }
+
+    select.filter-input {
+      cursor: pointer;
+    }
+
+    /* Gantt Workspace */
+    .gantt-workspace {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Left panel: Task lists */
+    .gantt-list-panel {
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    /* Right panel: Timeline bars */
+    .gantt-timeline-panel {
+      overflow-x: auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Headers */
+    .gantt-header-row {
+      height: 50px;
+      background: var(--bg-input);
+      border-bottom: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--color-primary);
+    }
+
+    .gantt-timeline-ruler {
+      position: relative;
+      height: 50px;
+      background: var(--bg-input);
+      border-bottom: 2px solid var(--border-color);
+      display: flex;
+      width: 1200px; /* fixed width scrollable timeline */
+    }
+
+    .ruler-month {
+      position: absolute;
+      height: 100%;
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    body.light-mode .ruler-month {
+      border-left: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .gantt-rows-container {
+      display: flex;
+      flex-direction: column;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .gantt-row {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 0.8rem;
+    }
+
+    body.light-mode .gantt-row {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    }
+
+    .gantt-row:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    body.light-mode .gantt-row:hover {
+      background: rgba(0, 0, 0, 0.01);
+    }
+
+    /* Left row layout */
+    .gantt-list-row {
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .task-name-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .task-badge-row {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--border-color);
+      color: var(--text-muted);
+    }
+
+    /* Right row layout: Gantt track */
+    .gantt-track-row {
+      width: 1200px;
+      position: relative;
+    }
+
+    .gantt-vertical-grid {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      pointer-events: none;
+      background-size: 200px 100%; /* Represents months */
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+
+    body.light-mode .gantt-vertical-grid {
+      background-image: linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    }
+
+    /* Gantt Bars */
+    .gantt-bar {
+      position: absolute;
+      height: 24px;
+      top: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 0.7rem;
+      color: white;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .gantt-bar:hover {
+      transform: scaleY(1.1);
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+      z-index: 10;
+    }
+
+    /* Phase-specific colors */
+    .bar-phase-1 { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .bar-phase-2 { background: linear-gradient(90deg, #6366f1, #818cf8); }
+    .bar-phase-3 { background: linear-gradient(90deg, #ec4899, #f472b6); }
+    .bar-phase-4 { background: linear-gradient(90deg, #f97316, #fb923c); }
+    .bar-phase-5 { background: linear-gradient(90deg, #10b981, #34d399); }
+
+    /* Milestone diamond */
+    .gantt-milestone {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #f59e0b;
+      transform: rotate(45deg);
+      top: 15px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+      transition: all 0.2s ease;
+    }
+
+    .gantt-milestone:hover {
+      transform: rotate(45deg) scale(1.3);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.9);
+      background: #fbbf24;
+    }
+
+    /* Tooltip */
+    .gantt-tooltip {
+      position: absolute;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--color-primary);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.8rem;
+      color: #f3f4f6;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 100;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      max-width: 280px;
+    }
+
+    .gantt-tooltip h4 {
+      color: var(--color-secondary);
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    .gantt-tooltip-row {
+      margin-bottom: 4px;
+    }
+
+    .gantt-tooltip-label {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Timeline project info card */
+    .project-timeline-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    body.light-mode .stat-card {
+      background: rgba(0,0,0,0.01);
+    }
+
+    .stat-card h3 {
+      font-size: 1.8rem;
+      color: var(--color-primary);
+      margin-bottom: 4px;
+    }
+
+    .stat-card p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-section">
+      <div class="logo-icon">S</div>
+      <div class="logo-text">School<span>Hub</span></div>
+    </div>
+    <div class="header-meta">Project Timeline &amp; Gantt Visualizer</div>
+    <div class="header-controls">
+      <a href="index.html" class="widget-btn secondary" style="text-decoration: none; padding: 6px 12px; display: flex; align-items: center; gap: 8px;">
+        <span>← Back to Presentation</span>
+      </a>
+      <button id="btn-theme" class="icon-btn">
+        <span id="theme-icon">☀️</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="gantt-container">
+    
+    <div class="gantt-header">
+      <div class="gantt-header-title">
+        <h1>📅 Interactive Project Chart</h1>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Feb 2026 - Jul 2026 | Critical Path Tracking
+      </div>
+    </div>
+
+    <!-- Timeline Stats -->
+    <div class="project-timeline-summary">
+      <div class="stat-card">
+        <h3 id="stat-total-duration">~142 Days</h3>
+        <p>Total Duration</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="stat-total-tasks">154</h3>
+        <p>Total Tasks &amp; Milestones</p>
+      </div>
+      <div class="stat-card">
+        <h3 style="color: var(--color-secondary);">6 Sprints</h3>
+        <p>Agile Execution</p>
+      </div>
+      <div class="stat-card">
+        <h3 style="color: var(--color-success);">100%</h3>
+        <p>Adherence Rate</p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="filter-group" style="flex: 1; min-width: 250px;">
+        <label for="search-task">Search Task</label>
+        <input type="text" id="search-task" class="filter-input" placeholder="Search by task name or assignee...">
+      </div>
+
+      <div class="filter-group">
+        <label for="filter-phase">Phase</label>
+        <select id="filter-phase" class="filter-input">
+          <option value="All">All Phases</option>
+          <option value="Phase 1">Phase 1 - Planification &amp; Design</option>
+          <option value="Phase 2">Phase 2 - Backend Laravel</option>
+          <option value="Phase 3">Phase 3 - Frontend Vue.js</option>
+          <option value="Phase 4">Phase 4 - Intégration &amp; Testing</option>
+          <option value="Phase 5">Phase 5 - Finalisation &amp; Deployment</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="filter-type">Type</label>
+        <select id="filter-type" class="filter-input">
+          <option value="All">All Types</option>
+          <option value="task">Tasks Only</option>
+          <option value="milestone">Milestones Only</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Gantt Chart Workspace -->
+    <div class="gantt-workspace">
+      <!-- Left Panel: Task list names -->
+      <div class="gantt-list-panel">
+        <div class="gantt-header-row" style="padding: 0 16px;">Task Name</div>
+        <div class="gantt-rows-container" id="gantt-list-rows">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+      <!-- Right Panel: Gantt bars -->
+      <div class="gantt-timeline-panel">
+        <div class="gantt-timeline-ruler" id="gantt-ruler">
+          <!-- Month labels loaded dynamically -->
+        </div>
+        <div class="gantt-rows-container" id="gantt-track-rows">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Interactive Tooltip -->
+  <div id="gantt-tooltip" class="gantt-tooltip"></div>
+
+  <!-- Data and Application Script -->
+  <script src="gantt_data.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Elements
+      const listContainer = document.getElementById('gantt-list-rows');
+      const trackContainer = document.getElementById('gantt-track-rows');
+      const ruler = document.getElementById('gantt-ruler');
+      const searchInput = document.getElementById('search-task');
+      const phaseFilter = document.getElementById('filter-phase');
+      const typeFilter = document.getElementById('filter-type');
+      const tooltip = document.getElementById('gantt-tooltip');
+      const btnTheme = document.getElementById('btn-theme');
+      const themeIcon = document.getElementById('theme-icon');
+
+      // Theme toggle matching the presentation
+      const savedTheme = localStorage.getItem('schoolhub-presentation-theme');
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        themeIcon.textContent = '🌙';
+      } else {
+        themeIcon.textContent = '☀️';
+      }
+      
+      btnTheme.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        const isLight = document.body.classList.contains('light-mode');
+        localStorage.setItem('schoolhub-presentation-theme', isLight ? 'light' : 'dark');
+        themeIcon.textContent = isLight ? '🌙' : '☀️';
+      });
+
+      // Project Timeline bounds
+      const projectStart = new Date('2026-02-09');
+      const projectEnd = new Date('2026-07-02');
+      const totalDays = (projectEnd - projectStart) / (1000 * 60 * 60 * 24);
+
+      // Width of timeline panel (fixed in CSS at 1200px)
+      const timelineWidth = 1200;
+
+      // Draw timeline month markers
+      const months = [
+        { name: 'Feb 2026', date: '2026-02-09' },
+        { name: 'Mar 2026', date: '2026-03-01' },
+        { name: 'Apr 2026', date: '2026-04-01' },
+        { name: 'May 2026', date: '2026-05-01' },
+        { name: 'Jun 2026', date: '2026-06-01' },
+        { name: 'Jul 2026', date: '2026-07-01' }
+      ];
+
+      months.forEach(m => {
+        const mDate = new Date(m.date);
+        const diffDays = (mDate - projectStart) / (1000 * 60 * 60 * 24);
+        const positionLeft = Math.max(0, (diffDays / totalDays) * timelineWidth);
+        
+        const label = document.createElement('div');
+        label.className = 'ruler-month';
+        label.style.left = `${positionLeft}px`;
+        label.textContent = m.name;
+        ruler.appendChild(label);
+      });
+
+      function renderGantt(filteredTasks) {
+        listContainer.innerHTML = '';
+        trackContainer.innerHTML = '';
+
+        if (filteredTasks.length === 0) {
+          listContainer.innerHTML = '<div class="gantt-row gantt-list-row" style="color: var(--text-muted)">No tasks match filters</div>';
+          trackContainer.innerHTML = '<div class="gantt-row gantt-track-row"></div>';
+          return;
+        }
+
+        // Generate rows
+        filteredTasks.forEach(task => {
+          // List Row (Left)
+          const listRow = document.createElement('div');
+          listRow.className = 'gantt-row gantt-list-row';
+          
+          let nameHTML = `<span class="task-name-text" title="${task.name}">${task.name}</span>`;
+          if (task.type === 'milestone') {
+            nameHTML = `<strong style="color: #f59e0b;" class="task-name-text" title="${task.name}">🔶 ${task.name}</strong>`;
+          }
+          
+          listRow.innerHTML = `
+            ${nameHTML}
+            <span class="task-badge-row">${task.assignee.split(' ')[0]}</span>
+          `;
+          listContainer.appendChild(listRow);
+
+          // Track Row (Right)
+          const trackRow = document.createElement('div');
+          trackRow.className = 'gantt-row gantt-track-row';
+          
+          // Add grid lines background
+          const grid = document.createElement('div');
+          grid.className = 'gantt-vertical-grid';
+          trackRow.appendChild(grid);
+
+          const taskStart = new Date(task.start);
+          const taskEnd = new Date(task.end);
+          
+          // Calculate positions
+          const daysFromStart = (taskStart - projectStart) / (1000 * 60 * 60 * 24);
+          let durationDays = (taskEnd - taskStart) / (1000 * 60 * 60 * 24);
+          
+          // Ensure a minimum of 0.5 days width for visibility
+          if (durationDays <= 0) durationDays = 0.5;
+
+          const leftPos = (daysFromStart / totalDays) * timelineWidth;
+          const widthPos = (durationDays / totalDays) * timelineWidth;
+
+          if (task.type === 'milestone') {
+            const milestonePoint = document.createElement('div');
+            milestonePoint.className = 'gantt-milestone';
+            milestonePoint.style.left = `${leftPos}px`;
+            
+            // Interaction handlers
+            setupInteraction(milestonePoint, task);
+            trackRow.appendChild(milestonePoint);
+          } else {
+            const bar = document.createElement('div');
+            
+            // Map phase index to CSS color classes
+            let phaseClass = 'bar-phase-1';
+            if (task.phase.includes('Backend')) phaseClass = 'bar-phase-2';
+            else if (task.phase.includes('Frontend')) phaseClass = 'bar-phase-3';
+            else if (task.phase.includes('Testing')) phaseClass = 'bar-phase-4';
+            else if (task.phase.includes('Deployment')) phaseClass = 'bar-phase-5';
+
+            bar.className = `gantt-bar ${phaseClass}`;
+            bar.style.left = `${leftPos}px`;
+            bar.style.width = `${Math.max(8, widthPos)}px`;
+            
+            // Show snippet if width is wide enough
+            if (widthPos > 70) {
+              bar.textContent = task.name;
+              bar.style.whiteSpace = 'nowrap';
+              bar.style.overflow = 'hidden';
+              bar.style.textOverflow = 'ellipsis';
+            }
+
+            setupInteraction(bar, task);
+            trackRow.appendChild(bar);
+          }
+
+          trackContainer.appendChild(trackRow);
+        });
+      }
+
+      function setupInteraction(element, task) {
+        element.addEventListener('mouseenter', (e) => {
+          tooltip.style.opacity = 1;
+          tooltip.innerHTML = `
+            <h4>${task.type === 'milestone' ? '🔶 Milestone' : '📝 Task'}</h4>
+            <div class="gantt-tooltip-row"><strong>Name:</strong> ${task.name}</div>
+            <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Phase:</span> ${task.phase}</div>
+            <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Start:</span> ${task.start}</div>
+            <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">End:</span> ${task.end}</div>
+            <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Duration:</span> ${task.duration} hrs</div>
+            <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Owner:</span> ${task.assignee}</div>
+            <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Priority:</span> ${task.priority}</div>
+            <div class="gantt-tooltip-row"><span class="gantt-tooltip-label">Status:</span> ${task.status}</div>
+          `;
+        });
+
+        element.addEventListener('mousemove', (e) => {
+          // Keep tooltip centered on cursor
+          const bounds = trackContainer.getBoundingClientRect();
+          let x = e.clientX - bounds.left + 20;
+          let y = e.clientY - bounds.top + 20;
+
+          // Prevent tooltip clipping at bounds
+          if (x > timelineWidth - 250) x -= 280;
+          tooltip.style.left = `${x}px`;
+          tooltip.style.top = `${y}px`;
+        });
+
+        element.addEventListener('mouseleave', () => {
+          tooltip.style.opacity = 0;
+        });
+      }
+
+      function applyFilters() {
+        const query = searchInput.value.toLowerCase().trim();
+        const selectedPhase = phaseFilter.value;
+        const selectedType = typeFilter.value;
+
+        const filtered = GANTT_DATA.filter(task => {
+          // Search query match
+          const matchesQuery = query === '' || 
+                               task.name.toLowerCase().includes(query) ||
+                               task.assignee.toLowerCase().includes(query);
+
+          // Phase match
+          const matchesPhase = selectedPhase === 'All' || task.phase.includes(selectedPhase);
+
+          // Type match
+          const matchesType = selectedType === 'All' || task.type === selectedType;
+
+          return matchesQuery && matchesPhase && matchesType;
+        });
+
+        renderGantt(filtered);
+      }
+
+      // Hook Filters
+      searchInput.addEventListener('input', applyFilters);
+      phaseFilter.addEventListener('change', applyFilters);
+      typeFilter.addEventListener('change', applyFilters);
+
+      // Scroll syncing: left list panel follows right timeline panel scroll vertical
+      trackContainer.addEventListener('scroll', () => {
+        listContainer.scrollTop = trackContainer.scrollTop;
+      });
+      listContainer.addEventListener('scroll', () => {
+        trackContainer.scrollTop = listContainer.scrollTop;
+      });
+
+      // Initial Render (Major phases first or all data)
+      // Since 154 tasks is a lot, let's pre-filter showing all tasks
+      applyFilters();
+    });
+  </script>
+</body>
+</html>

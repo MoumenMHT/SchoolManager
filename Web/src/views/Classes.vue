@@ -180,7 +180,8 @@ const loadClasses = async () => {
 // Load available teachers for selection
 const loadTeachers = async () => {
   try {
-    availableTeachers.value = await TeacherService.getTeachers();
+    const response = await TeacherService.getTeachers({ paginate: 'false' });
+    availableTeachers.value = Array.isArray(response) ? response : (response?.data ?? response ?? []);
   } catch (error: any) {
     toast.add({
       severity: 'error',

@@ -1,0 +1,4288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>SchoolHub – End-of-Studies Project</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 11pt;
+      line-height: 1.75;
+      color: #1a1a2e;
+      background: #dde3ea;
+      counter-reset: pagenum;
+    }
+
+    /* ─── Page shell ─── */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto 24px;
+      padding: 22mm 22mm 26mm 26mm;
+      background: #fff;
+      box-shadow: 0 6px 32px rgba(0, 0, 0, .18);
+      position: relative;
+      page-break-after: always;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0;
+        padding: 20mm 20mm 24mm 24mm;
+        box-shadow: none;
+        page-break-after: always;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .mermaid svg {
+        max-width: 100% !important;
+      }
+    }
+
+    /* ─── COVER ─── */
+    .cover {
+      display: flex;
+      flex-direction: column;
+      height: 253mm;
+    }
+
+    .cover-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 14px;
+      border-bottom: 3px solid #1a3a6b;
+      margin-bottom: 18px;
+    }
+
+    .cover-school h3 {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #1a3a6b;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .cover-school p {
+      font-size: 9pt;
+      color: #666;
+      margin-top: 3px;
+    }
+
+    .logo-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .logo-fitya {
+      width: 110px;
+      height: 56px;
+      background: linear-gradient(135deg, #1a3a6b, #2563a8);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 20pt;
+      letter-spacing: 4px;
+      font-family: 'Merriweather', serif;
+    }
+
+    .cover-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+      padding: 14px 0;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      background: #eff6ff;
+      border: 2px solid #1a3a6b;
+      color: #1a3a6b;
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      padding: 5px 22px;
+      border-radius: 40px;
+      margin-bottom: 20px;
+    }
+
+    .cover-title {
+      font-family: 'Merriweather', serif;
+      font-size: 28pt;
+      font-weight: 900;
+      color: #1a3a6b;
+      line-height: 1.15;
+      margin-bottom: 8px;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      font-weight: 300;
+      color: #2563a8;
+      font-style: italic;
+      margin-bottom: 26px;
+    }
+
+    .cover-bar {
+      width: 90px;
+      height: 5px;
+      background: linear-gradient(90deg, #1a3a6b, #2563a8, #f59e0b);
+      border-radius: 3px;
+      margin: 0 auto 26px;
+    }
+
+    .topic-box {
+      background: linear-gradient(135deg, #1a3a6b, #1e4d8c);
+      color: #fff;
+      padding: 20px 32px;
+      border-radius: 14px;
+      max-width: 460px;
+      margin: 0 auto;
+    }
+
+    .topic-box .lbl {
+      font-size: 8pt;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: .7;
+      margin-bottom: 8px;
+    }
+
+    .topic-box .ttl {
+      font-size: 14pt;
+      font-weight: 700;
+      font-family: 'Merriweather', serif;
+      line-height: 1.3;
+    }
+
+    .topic-box .sub {
+      font-size: 9pt;
+      opacity: .8;
+      margin-top: 6px;
+    }
+
+    .cover-footer {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      border-top: 2px solid #e5e7eb;
+      padding-top: 18px;
+      margin-top: 18px;
+    }
+
+    .cf-item .lbl {
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #888;
+      margin-bottom: 3px;
+    }
+
+    .cf-item .val {
+      font-size: 10pt;
+      font-weight: 600;
+      color: #1a1a2e;
+    }
+
+    .cf-item .val.muted {
+      font-weight: 400;
+      color: #555;
+      font-size: 9.5pt;
+    }
+
+    /* ─── Typography ─── */
+    h1.ch {
+      font-family: 'Merriweather', serif;
+      font-size: 16pt;
+      font-weight: 900;
+      color: #1a3a6b;
+      padding-bottom: 8px;
+      border-bottom: 3px solid #1a3a6b;
+      margin-bottom: 22px;
+    }
+
+    h1.ch:first-child {
+      margin-top: 0;
+    }
+
+    h2.sh {
+      font-family: 'Merriweather', serif;
+      font-size: 12pt;
+      font-weight: 700;
+      color: #1e4d8c;
+      margin: 24px 0 10px;
+      padding-left: 12px;
+      border-left: 4px solid #2563a8;
+    }
+
+    h3.ssh {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1a3a6b;
+      margin: 18px 0 8px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    ul,
+    ol {
+      margin: 8px 0 12px 24px;
+    }
+
+    li {
+      margin-bottom: 5px;
+    }
+
+    strong {
+      color: #1a3a6b;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9pt;
+      background: #f0f4ff;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #1a3a6b;
+    }
+
+    /* ─── Page header ─── */
+    .ph {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 22px;
+    }
+
+    .ph span {
+      font-size: 8.5pt;
+      color: #888;
+      font-style: italic;
+    }
+
+    .ph .r {
+      font-weight: 700;
+      color: #1a3a6b;
+      font-style: normal;
+    }
+
+    /* ─── TOC ─── */
+    .toc-title {
+      font-family: 'Merriweather', serif;
+      font-size: 18pt;
+      font-weight: 900;
+      color: #1a3a6b;
+      text-align: center;
+      margin-bottom: 28px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #1a3a6b;
+    }
+
+    .toc-row {
+      display: flex;
+      align-items: baseline;
+      padding: 5px 0;
+      border-bottom: 1px dotted #ccc;
+    }
+
+    .toc-row:last-child {
+      border: none;
+    }
+
+    .toc-num {
+      min-width: 38px;
+      font-weight: 700;
+      color: #1a3a6b;
+      font-size: 10pt;
+    }
+
+    .toc-lbl {
+      flex: 1;
+      font-size: 10.5pt;
+    }
+
+    .toc-lbl.sub {
+      padding-left: 20px;
+      font-size: 10pt;
+      color: #444;
+    }
+
+    .toc-dots {
+      flex: 1;
+      border-bottom: 1px dotted #bbb;
+      margin: 0 8px;
+      position: relative;
+      top: -4px;
+    }
+
+    .toc-pg {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #1a3a6b;
+    }
+
+    .toc-sec {
+      margin-bottom: 4px;
+    }
+
+    .toc-sec-hdr {
+      display: flex;
+      align-items: baseline;
+      padding: 7px 0 4px;
+      font-weight: 700;
+    }
+
+    /* ─── Tables ─── */
+    table.rt {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 9.5pt;
+    }
+
+    table.rt th {
+      background: #1a3a6b;
+      color: #fff;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 9pt;
+    }
+
+    table.rt td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    table.rt tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    table.rt tr:last-child td {
+      border: none;
+    }
+
+    /* ─── Info boxes ─── */
+    .ib {
+      background: #eff6ff;
+      border-left: 5px solid #2563a8;
+      padding: 13px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+
+    .ib p {
+      margin: 0;
+      color: #1e3a5f;
+    }
+
+    .wb {
+      background: #fefce8;
+      border-left: 5px solid #f59e0b;
+      padding: 13px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+
+    .wb p {
+      margin: 0;
+      color: #78350f;
+    }
+
+    .gb {
+      background: #f0fdf4;
+      border-left: 5px solid #22c55e;
+      padding: 13px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+
+    .gb p {
+      margin: 0;
+      color: #14532d;
+    }
+
+    /* ─── Badges ─── */
+    .br {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 10px 0;
+    }
+
+    .bd {
+      background: #1a3a6b;
+      color: #fff;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 8.5pt;
+      font-weight: 600;
+    }
+
+    .bd.lt {
+      background: #e0e7ff;
+      color: #1a3a6b;
+    }
+
+    .bd.gn {
+      background: #065f46;
+      color: #fff;
+    }
+
+    .bd.or {
+      background: #92400e;
+      color: #fff;
+    }
+
+    /* ─── Arch cards ─── */
+    .arch {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .ac {
+      border: 1.5px solid #e0e7ff;
+      border-radius: 10px;
+      padding: 14px 12px;
+      background: #f8faff;
+    }
+
+    .ac .ai {
+      font-size: 20pt;
+      margin-bottom: 6px;
+    }
+
+    .ac .an {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #1a3a6b;
+      margin-bottom: 4px;
+    }
+
+    .ac .at {
+      font-size: 8.5pt;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    /* ─── Module grid ─── */
+    .mg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .mc {
+      border: 1.5px solid #dbeafe;
+      border-radius: 10px;
+      padding: 13px;
+      background: linear-gradient(135deg, #f0f7ff, #fff);
+    }
+
+    .mc .mt {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #1a3a6b;
+      margin-bottom: 6px;
+    }
+
+    .mc ul {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 9pt;
+      color: #374151;
+    }
+
+    .mc ul li {
+      margin-bottom: 2px;
+    }
+
+    /* ─── Figures ─── */
+    .fig {
+      margin: 18px 0;
+      text-align: center;
+    }
+
+    .fig img {
+      max-width: 100%;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+    }
+
+    .fig-cap {
+      font-size: 9pt;
+      color: #555;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    .fig-cap strong {
+      color: #1a3a6b;
+      font-style: normal;
+    }
+
+    /* ─── Mermaid diagrams ─── */
+    .diagram-wrap {
+      background: #f8faff;
+      border: 1.5px solid #c7d2fe;
+      border-radius: 10px;
+      padding: 12px 8px;
+      margin: 14px -4mm;
+      /* slightly wider than text column */
+      width: calc(100% + 8mm);
+      overflow: visible;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    /* SVG fills the full available width and scales proportionally */
+    .diagram-wrap .mermaid {
+      display: block;
+      width: 100%;
+    }
+
+    .diagram-wrap .mermaid svg {
+      display: block;
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    @media print {
+      .diagram-wrap {
+        margin: 14px 0;
+        width: 100%;
+        page-break-inside: avoid;
+      }
+
+      .diagram-wrap .mermaid svg {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+      }
+    }
+
+    .mermaid .edgeLabel,
+    .mermaid .edgeLabel span {
+      color: #1a1a2e !important;
+      font-weight: 700 !important;
+      background-color: rgba(255, 255, 255, 0.92) !important;
+      padding: 2px 5px !important;
+      border-radius: 3px;
+    }
+
+    /* ── Flowchart / activity node labels: white on dark backgrounds ── */
+    .mermaid .nodeLabel {
+      color: #fff !important;
+      fill: #fff !important;
+    }
+
+    .mermaid .nodeLabel * {
+      color: #fff !important;
+      fill: #fff !important;
+    }
+
+    /* Light-fill node override — dark text */
+    .mermaid g[style*="fill: rgb(239"] .nodeLabel,
+    .mermaid g[style*="fill: rgb(239"] .nodeLabel *,
+    .mermaid g[style*="fill:#eff6ff"] .nodeLabel,
+    .mermaid g[style*="fill:#eff6ff"] .nodeLabel *,
+    .mermaid g[style*="fill:#dbeafe"] .nodeLabel,
+    .mermaid g[style*="fill:#dbeafe"] .nodeLabel * {
+      color: #1a1a2e !important;
+      fill: #1a1a2e !important;
+    }
+
+    /* ── Sequence diagram actors / messages ── */
+    .mermaid .actor *,
+    .mermaid .messageText * {
+      fill: #fff !important;
+      color: #fff !important;
+      stroke: none !important;
+    }
+
+    .mermaid .noteText * {
+      fill: #78350f !important;
+    }
+
+    /* ── ER DIAGRAM: entity header boxes ── */
+    .mermaid [id^="entity-"] rect[class*="entityBox"] {
+      fill: #1a3a6b !important;
+      stroke: #1a3a6b !important;
+    }
+
+    /* ── ER DIAGRAM: attribute row backgrounds — alternating tones ── */
+    .mermaid [id^="entity-"] rect[class*="attributeBoxOdd"] {
+      fill: #dbeafe !important;
+      stroke: #93c5fd !important;
+    }
+
+    .mermaid [id^="entity-"] rect[class*="attributeBoxEven"] {
+      fill: #eff6ff !important;
+      stroke: #93c5fd !important;
+    }
+
+    .mermaid [id^="entity-"] rect[class*="attributeBox"] {
+      fill: #dbeafe !important;
+      stroke: #93c5fd !important;
+    }
+
+    /* ── ER DIAGRAM: ALL text inside an entity group — dark and bold ── */
+    .mermaid g[id^="entity-"] text {
+      fill: #1a1a2e !important;
+      color: #1a1a2e !important;
+      font-weight: 700 !important;
+    }
+
+    /* ── ER DIAGRAM: EXCEPT the entity name header — keep white ── */
+    .mermaid g[id^="entity-"] text[class*="entityLabel"] {
+      fill: #fff !important;
+      color: #fff !important;
+      font-weight: 800 !important;
+    }
+
+    /* ── ER DIAGRAM: relationship labels ── */
+    .mermaid [id^="rel-"] * {
+      color: #1a1a2e !important;
+      fill: #1a1a2e !important;
+      font-weight: 600 !important;
+    }
+
+    .mermaid [id^="rel-"] rect {
+      fill: #fff !important;
+      stroke: #c7d2fe !important;
+    }
+
+    .diagram-cap {
+      font-size: 9pt;
+      color: #555;
+      font-style: italic;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .diagram-cap strong {
+      color: #1a3a6b;
+      font-style: normal;
+    }
+
+    /* ─── Timeline ─── */
+    .tl {
+      position: relative;
+      margin: 18px 0;
+      padding-left: 30px;
+    }
+
+    .tl::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, #1a3a6b, #2563a8);
+    }
+
+    .tli {
+      position: relative;
+      margin-bottom: 18px;
+    }
+
+    .tld {
+      position: absolute;
+      left: -26px;
+      top: 4px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #1a3a6b;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 2px #1a3a6b;
+    }
+
+    .tlh {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #1a3a6b;
+      margin-bottom: 4px;
+    }
+
+    .tlb {
+      font-size: 9.5pt;
+      color: #374151;
+    }
+
+    .tlt {
+      display: inline-block;
+      font-size: 8pt;
+      background: #e0e7ff;
+      color: #1a3a6b;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    /* ─── Endpoint list ─── */
+    .epl {
+      font-size: 9pt;
+      margin: 8px 0 12px;
+    }
+
+    .epl li {
+      list-style: none;
+      padding: 4px 0;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .mth {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 8pt;
+      padding: 1px 6px;
+      border-radius: 3px;
+      min-width: 40px;
+      text-align: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .get {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .post {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .put {
+      background: #fef9c3;
+      color: #854d0e;
+    }
+
+    .del {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .ep {
+      font-family: 'JetBrains Mono', monospace;
+      color: #1a3a6b;
+      font-size: 8.5pt;
+    }
+
+    .epd {
+      color: #555;
+      flex: 1;
+    }
+
+    /* ─── 2-col ─── */
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* ─── Abstract boxes ─── */
+    .abs {
+      border: 1.5px solid #c7d2fe;
+      border-radius: 10px;
+      padding: 20px 24px;
+      background: #f8faff;
+      margin-top: 18px;
+    }
+
+    .abs h3 {
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #2563a8;
+      margin-bottom: 10px;
+    }
+
+    .abs p {
+      margin: 0;
+      font-size: 10pt;
+      line-height: 1.8;
+    }
+
+    /* ─── Schema table ─── */
+    .st {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin: 10px 0;
+    }
+
+    .st th {
+      background: #1e4d8c;
+      color: #fff;
+      padding: 7px 10px;
+      text-align: left;
+    }
+
+    .st td {
+      padding: 5px 10px;
+      border: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    .st tr:nth-child(even) td {
+      background: #f0f7ff;
+    }
+
+    .st .fn {
+      font-family: 'JetBrains Mono', monospace;
+      color: #1a3a6b;
+      font-weight: 600;
+    }
+
+    .st .ft {
+      font-family: 'JetBrains Mono', monospace;
+      color: #065f46;
+    }
+
+    .st .fpk {
+      font-family: 'JetBrains Mono', monospace;
+      color: #b45309;
+      font-weight: 700;
+    }
+
+    /* ─── Print button ─── */
+    .pbtn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: linear-gradient(135deg, #1a3a6b, #2563a8);
+      color: #fff;
+      border: none;
+      padding: 13px 22px;
+      border-radius: 50px;
+      font-size: 11pt;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(37, 99, 168, .45);
+      font-family: 'Inter', sans-serif;
+      z-index: 9999;
+      transition: all .2s;
+    }
+
+    .pbtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(37, 99, 168, .55);
+    }
+
+    @media print {
+      .pbtn {
+        display: none;
+      }
+    }
+
+    /* ─── Centered ornament section ─── */
+    .cen {
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    .cen h2 {
+      font-family: 'Merriweather', serif;
+      font-size: 16pt;
+      color: #1a3a6b;
+      margin-bottom: 18px;
+    }
+
+    .cen p {
+      font-size: 11pt;
+      color: #333;
+      line-height: 1.9;
+      max-width: 480px;
+      margin: 0 auto 12px;
+    }
+
+    .orn {
+      font-size: 28pt;
+      color: #c7d2fe;
+      margin: 8px 0;
+    }
+
+    /* ─── Specialty cards ─── */
+    .spec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .spec-card {
+      border-radius: 10px;
+      padding: 14px 13px;
+      border: 1.5px solid #dbeafe;
+      background: linear-gradient(135deg, #f0f7ff, #fff);
+    }
+
+    .spec-card .sc-icon {
+      font-size: 22pt;
+      margin-bottom: 6px;
+    }
+
+    .spec-card .sc-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #1a3a6b;
+      margin-bottom: 5px;
+    }
+
+    .spec-card .sc-desc {
+      font-size: 8.5pt;
+      color: #374151;
+      line-height: 1.55;
+    }
+
+    /* ─── Role highlight box ─── */
+    .role-box {
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin: 16px 0;
+    }
+
+    .role-box .rb-title {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .role-box p {
+      margin: 0;
+      color: #78350f;
+      font-size: 9.5pt;
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#1a3a6b',
+        primaryTextColor: '#ffffff',
+        nodeTextColor: '#ffffff',
+        actorTextColor: '#ffffff',
+        primaryBorderColor: '#1a3a6b',
+        lineColor: '#2563a8',
+        secondaryColor: '#2563a8',
+        tertiaryColor: '#1e4d8c',
+        noteBkgColor: '#fefce8',
+        noteTextColor: '#78350f',
+        activationBkgColor: '#2563a8',
+        activationBorderColor: '#1a3a6b',
+        actorBkg: '#1a3a6b',
+        actorBorder: '#1e4d8c',
+        actorLineColor: '#2563a8',
+        signalColor: '#1a1a2e',
+        signalTextColor: '#1a1a2e',
+        fontSize: '15px',
+        fontFamily: 'Inter, sans-serif',
+        classText: '#1a1a2e',
+      },
+      flowchart: { curve: 'basis', htmlLabels: true, useMaxWidth: true },
+      sequence: {
+        useMaxWidth: true,
+        actorMargin: 50,
+        boxTextMargin: 6,
+        noteMargin: 12,
+        messageMargin: 35,
+        mirrorActors: true,
+        width: 160
+      },
+      classDiagram: { titleTopMarginAdjust: 10, useMaxWidth: true }
+    });
+  </script>
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 1 — COVER
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="cover">
+      <div class="cover-header">
+        <div class="cover-school">
+          <img src="cesi%20logo.png" alt="CESI Logo" style="max-height: 80px; object-fit: contain;" />
+        </div>
+        <div class="logo-box">
+          <div class="logo-fitya">FITYA</div>
+          <p style="font-size:7.5pt;color:#888;margin-top:3px;">Since 2005</p>
+        </div>
+      </div>
+
+      <div class="cover-main">
+        <div><span class="badge-pill">End-of-Studies Project</span></div>
+        <div class="cover-title">SchoolHub</div>
+        <div class="cover-subtitle">School Management System</div>
+        <div class="cover-bar"></div>
+        <div class="topic-box">
+          <div class="lbl">Project Title</div>
+          <div class="ttl">Design &amp; Development of a Full-Stack<br>School Management Platform</div>
+          <div class="sub">RESTful API · Web Admin Dashboard · Parent Mobile App</div>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <div class="cf-item">
+          <div class="lbl">Developed by</div>
+          <div class="val">Mechta Abdelmoumen</div>
+        </div>
+        <div class="cf-item">
+          <div class="lbl">Academic Year</div>
+          <div class="val muted">2025 – 2026</div>
+        </div>
+        <div class="cf-item">
+          <div class="lbl">Duration</div>
+          <div class="val muted">February – July 2026</div>
+        </div>
+        <div class="cf-item">
+          <div class="lbl">Backend</div>
+          <div class="val muted">Laravel 12 / PHP 8.3</div>
+        </div>
+        <div class="cf-item">
+          <div class="lbl">Frontend &amp; Mobile</div>
+          <div class="val muted">Vue.js 3 · Flutter</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 2 — ACKNOWLEDGEMENTS & ABSTRACT
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="cen">
+      <div class="orn">✦</div>
+      <h2>Acknowledgements</h2>
+      <p>I would like to express my sincere gratitude to the entire academic team at <strong>FITYA</strong> for the
+        quality of the training provided throughout my studies.</p>
+      <p>My warmest thanks go to my internship supervisor for his valuable guidance, availability, and constant support
+        throughout the development of this project.</p>
+      <p>I also thank all individuals who contributed, directly or indirectly, to the completion of this work, including
+        the future end-users who participated in the requirements-gathering interviews.</p>
+      <div class="orn">✦</div>
+    </div>
+
+    <div class="abs">
+      <h3>Abstract</h3>
+      <p>This report presents the work carried out during a final-year internship focused on the design and development
+        of <strong>SchoolHub</strong>, a comprehensive school management platform. The system consists of three main
+        components: a <strong>RESTful API</strong> built with Laravel 12, a <strong>web administration
+          dashboard</strong> developed with Vue.js 3 and TypeScript, and a <strong>Flutter mobile application</strong>
+        for parents and teachers. The platform covers all operational needs of a school: student and teacher management,
+        class organisation, academic grading, attendance tracking, financial contract management, and intelligent
+        schedule generation. The architecture follows an MVC/REST pattern with strict separation of concerns, role-based
+        access control (RBAC) across 7 user roles, and dedicated interfaces per actor type.</p>
+    </div>
+
+    <div style="margin-top:16px;">
+      <strong style="font-size:9pt;text-transform:uppercase;letter-spacing:1px;color:#888;">Keywords: </strong>
+      <span style="font-size:9pt;color:#444;">School Management System, REST API, Laravel, Vue.js, Flutter, RBAC,
+        Mobile, UML, Relational Database</span>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 3 — TABLE OF CONTENTS
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="toc-title">Table of Contents</div>
+
+    <div class="toc-sec">
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">I.</span><span class="toc-lbl">General
+          Introduction</span><span class="toc-dots"></span><span class="toc-pg">8</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Context &amp;
+          Background</span><span class="toc-dots"></span><span class="toc-pg">8</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Problem Statement</span><span
+          class="toc-dots"></span><span class="toc-pg">8</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Project Objectives</span><span
+          class="toc-dots"></span><span class="toc-pg">9</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">I-B.</span><span class="toc-lbl">Host Enterprise &mdash;
+          Fitya School</span><span class="toc-dots"></span><span class="toc-pg">10</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Overview &amp; History</span><span
+          class="toc-dots"></span><span class="toc-pg">10</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Educational Specialties</span><span
+          class="toc-dots"></span><span class="toc-pg">10</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Organisational
+          Structure</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">4. My Role &amp; Position</span><span
+          class="toc-dots"></span><span class="toc-pg">11</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">II.</span><span class="toc-lbl">Requirements
+          Analysis</span><span class="toc-dots"></span><span class="toc-pg">13</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. System Actors</span><span
+          class="toc-dots"></span><span class="toc-pg">13</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Functional Requirements</span><span
+          class="toc-dots"></span><span class="toc-pg">13</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Non-Functional
+          Requirements</span><span class="toc-dots"></span><span class="toc-pg">14</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">4. Project Management &amp;
+          Methodology</span><span class="toc-dots"></span><span class="toc-pg">14</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">III.</span><span class="toc-lbl">System Design &amp;
+          Conception</span><span class="toc-dots"></span><span class="toc-pg">16</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Global Architecture</span><span
+          class="toc-dots"></span><span class="toc-pg">16</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Use Case Diagrams</span><span
+          class="toc-dots"></span><span class="toc-pg">16</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Data Modeling (MCD &amp;
+          MLD)</span><span class="toc-dots"></span><span class="toc-pg">21</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">4. Database Schema</span><span
+          class="toc-dots"></span><span class="toc-pg">23</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">5. Activity Diagrams</span><span
+          class="toc-dots"></span><span class="toc-pg">25</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">6. Sequence Diagrams</span><span
+          class="toc-dots"></span><span class="toc-pg">33</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">7. Feature Deep-Dive: Grades &amp;
+          Report Cards</span><span class="toc-dots"></span><span class="toc-pg">37</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">8. Feature Deep-Dive: Schedule
+          Generation Algorithm</span><span class="toc-dots"></span><span class="toc-pg">39</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">9. Feature Deep-Dive: Class &amp;
+          Teacher Assignments</span><span class="toc-dots"></span><span class="toc-pg">43</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">10. Feature Deep-Dive: Dashboard
+          Analytics</span><span class="toc-dots"></span><span class="toc-pg">50</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">11. Feature Deep-Dive: Financial
+          Management</span><span class="toc-dots"></span><span class="toc-pg">52</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">12. Feature Deep-Dive: Attendance
+          Tracking</span><span class="toc-dots"></span><span class="toc-pg">54</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">III-B.</span><span class="toc-lbl">Technology Choices &amp;
+          Justification</span><span class="toc-dots"></span><span class="toc-pg">56</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Backend &mdash; Laravel 12 vs.
+          Alternatives</span><span class="toc-dots"></span><span class="toc-pg">56</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Frontend &mdash; Vue.js 3 vs.
+          Alternatives</span><span class="toc-dots"></span><span class="toc-pg">56</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Mobile &mdash; Flutter vs.
+          Alternatives</span><span class="toc-dots"></span><span class="toc-pg">57</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">4. Database &amp; Hosting
+          Choices</span><span class="toc-dots"></span><span class="toc-pg">57</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">IV.</span><span class="toc-lbl">Implementation &ndash;
+          Backend API (Laravel 12)</span><span class="toc-dots"></span><span class="toc-pg">58</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Project Structure</span><span
+          class="toc-dots"></span><span class="toc-pg">58</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Authentication &amp;
+          RBAC</span><span class="toc-dots"></span><span class="toc-pg">58</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Core API Endpoints</span><span
+          class="toc-dots"></span><span class="toc-pg">58</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">V.</span><span class="toc-lbl">Implementation &ndash; Web
+          Dashboard (Vue.js 3)</span><span class="toc-dots"></span><span class="toc-pg">60</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Application Structure &amp;
+          Views</span><span class="toc-dots"></span><span class="toc-pg">60</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. State Management
+          (Pinia)</span><span class="toc-dots"></span><span class="toc-pg">60</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">VI.</span><span class="toc-lbl">Implementation &ndash;
+          Mobile App (Flutter)</span><span class="toc-dots"></span><span class="toc-pg">62</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Feature Modules</span><span
+          class="toc-dots"></span><span class="toc-pg">62</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Multi-language &amp; RTL
+          Support</span><span class="toc-dots"></span><span class="toc-pg">63</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">VII.</span><span class="toc-lbl">Testing &amp;
+          Validation</span><span class="toc-dots"></span><span class="toc-pg">64</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Backend Tests (PHPUnit)</span><span
+          class="toc-dots"></span><span class="toc-pg">64</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. API &amp; Security
+          Validation</span><span class="toc-dots"></span><span class="toc-pg">64</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Deployment, Hosting &amp;
+          DevOps</span><span class="toc-dots"></span><span class="toc-pg">65</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">VIII.</span><span class="toc-lbl">Conclusion &amp; Future
+          Work</span><span class="toc-dots"></span><span class="toc-pg">66</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">1. Project Summary</span><span
+          class="toc-dots"></span><span class="toc-pg">66</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">2. Technical Challenges &amp;
+          Difficulties</span><span class="toc-dots"></span><span class="toc-pg">66</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">3. Personal Growth &amp; Skills
+          Acquired</span><span class="toc-dots"></span><span class="toc-pg">67</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">4. Future Perspectives &amp;
+          Expansions</span><span class="toc-dots"></span><span class="toc-pg">67</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">5. Results vs. Initial
+          Objectives</span><span class="toc-dots"></span><span class="toc-pg">68</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">IX.</span><span class="toc-lbl">General
+          Conclusion</span><span class="toc-dots"></span><span class="toc-pg">70</span></div>
+
+      <div class="toc-sec-hdr toc-row"><span class="toc-num">X.</span><span class="toc-lbl">Appendices
+          (Annexes)</span><span class="toc-dots"></span><span class="toc-pg">74</span></div>
+      <div class="toc-row"><span class="toc-num"></span><span class="toc-lbl sub">Appendix A: Project Management Plan
+          (WBS &amp; Gantt)</span><span class="toc-dots"></span><span class="toc-pg">29</span></div>
+
+    </div>
+
+    <div class="toc-sec">
+      <div class="toc-sec-hdr toc-row"><span class="toc-num"></span><span class="toc-lbl">Table of Figures &amp;
+          Tables</span><span class="toc-dots"></span><span class="toc-pg">74</span></div>
+      <div class="toc-sec-hdr toc-row"><span class="toc-num"></span><span class="toc-lbl">References</span><span
+          class="toc-dots"></span><span class="toc-pg">74</span></div>
+      <div class="toc-sec-hdr toc-row"><span class="toc-num"></span><span class="toc-lbl">Back Cover</span><span
+          class="toc-dots"></span><span class="toc-pg">76</span></div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 4 — TABLE OF FIGURES & TABLES
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Table of Figures &amp; Tables</span><span class="r">SchoolHub &middot; 2025&ndash;2026</span>
+    </div>
+
+    <h1 class="ch">Table of Figures</h1>
+    <div class="toc-sec">
+      <div class="toc-row"><span class="toc-num">Fig. 1</span><span class="toc-lbl sub">Fitya School &mdash;
+          Organisational Chart</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 2</span><span class="toc-lbl sub">Project Timeline &mdash; Gantt
+          Chart (February&ndash;July 2026)</span><span class="toc-dots"></span><span class="toc-pg">15</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 3</span><span class="toc-lbl sub">Basic Use Case Diagram &mdash;
+          Core Actors</span><span class="toc-dots"></span><span class="toc-pg">18</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 4</span><span class="toc-lbl sub">Detailed Use Case Diagram
+          &mdash; All Actors &amp; Use Cases</span><span class="toc-dots"></span><span class="toc-pg">19</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 5</span><span class="toc-lbl sub">Conceptual Data Model
+          (MCD)</span><span class="toc-dots"></span><span class="toc-pg">21</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 6</span><span class="toc-lbl sub">Logical Data Model
+          (MLD)</span><span class="toc-dots"></span><span class="toc-pg">22</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 7</span><span class="toc-lbl sub">Activity Diagram &mdash;
+          Automatic Schedule Generation Algorithm</span><span class="toc-dots"></span><span class="toc-pg">27</span>
+      </div>
+      <div class="toc-row"><span class="toc-num">Fig. 8</span><span class="toc-lbl sub">Activity Diagram &mdash; Payment
+          Processing &amp; Bill Allocation</span><span class="toc-dots"></span><span class="toc-pg">31</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 9</span><span class="toc-lbl sub">Activity Diagram &mdash;
+          Contract Creation &amp; Auto-Billing</span><span class="toc-dots"></span><span class="toc-pg">32</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 10</span><span class="toc-lbl sub">Sequence Diagram &mdash; User
+          Authentication (Sanctum)</span><span class="toc-dots"></span><span class="toc-pg">33</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 11</span><span class="toc-lbl sub">Sequence Diagram &mdash;
+          Teacher Bulk Grade Submission</span><span class="toc-dots"></span><span class="toc-pg">34</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 12</span><span class="toc-lbl sub">Sequence Diagram &mdash; Parent
+          Views Report Card</span><span class="toc-dots"></span><span class="toc-pg">35</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 13</span><span class="toc-lbl sub">Sequence Diagram &mdash; Admin
+          Payment Processing</span><span class="toc-dots"></span><span class="toc-pg">36</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 14</span><span class="toc-lbl sub">Sequence Diagram &mdash; Full
+          Report Card Generation Flow</span><span class="toc-dots"></span><span class="toc-pg">37</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 15</span><span class="toc-lbl sub">Activity Diagram &mdash; Class
+          Ranking Generation</span><span class="toc-dots"></span><span class="toc-pg">38</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 16</span><span class="toc-lbl sub">Activity Diagram &mdash;
+          Director Cycle-Based Data Scoping</span><span class="toc-dots"></span><span class="toc-pg">40</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 17</span><span class="toc-lbl sub">Entity-Relationship Diagram
+          &mdash; Class-Subject-Teacher (CST) Pivot</span><span class="toc-dots"></span><span class="toc-pg">44</span>
+      </div>
+      <div class="toc-row"><span class="toc-num">Fig. 18</span><span class="toc-lbl sub">Sequence Diagram &mdash;
+          Teacher Assignment to Class (CST)</span><span class="toc-dots"></span><span class="toc-pg">46</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 19</span><span class="toc-lbl sub">Activity Diagram &mdash;
+          Student Enrollment &amp; Class Transfer</span><span class="toc-dots"></span><span class="toc-pg">48</span>
+      </div>
+      <div class="toc-row"><span class="toc-num">Fig. 20</span><span class="toc-lbl sub">Work Breakdown Structure (WBS)
+          &mdash; 5 Phases</span><span class="toc-dots"></span><span class="toc-pg">54</span></div>
+      <div class="toc-row"><span class="toc-num">Fig. 21</span><span class="toc-lbl sub">Gantt Chart (GanttPRO) &mdash;
+          Full Project Timeline</span><span class="toc-dots"></span><span class="toc-pg">75</span></div>
+    </div>
+
+    <h1 class="ch" style="margin-top: 32px;">Table of Tables</h1>
+    <div class="toc-sec">
+      <div class="toc-row"><span class="toc-num">Tab. 1</span><span class="toc-lbl sub">Fitya School &mdash; Internship
+          Summary</span><span class="toc-dots"></span><span class="toc-pg">12</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 2</span><span class="toc-lbl sub">System Actors &amp; Access
+          Levels</span><span class="toc-dots"></span><span class="toc-pg">13</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 3</span><span class="toc-lbl sub">Database Schema (26 Tables &amp;
+          Key Columns)</span><span class="toc-dots"></span><span class="toc-pg">23</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 4</span><span class="toc-lbl sub">Levels Management
+          Structure</span><span class="toc-dots"></span><span class="toc-pg">38</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 5</span><span class="toc-lbl sub">RBAC Visibility Scope per
+          Role</span><span class="toc-dots"></span><span class="toc-pg">39</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 6</span><span class="toc-lbl sub">Dashboard Analytics &mdash; SQL
+          Aggregation Metrics</span><span class="toc-dots"></span><span class="toc-pg">41</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 7</span><span class="toc-lbl sub">Technology Comparison &mdash;
+          Backend Frameworks</span><span class="toc-dots"></span><span class="toc-pg">56</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 8</span><span class="toc-lbl sub">Technology Comparison &mdash;
+          Frontend Frameworks</span><span class="toc-dots"></span><span class="toc-pg">56</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 9</span><span class="toc-lbl sub">Technology Comparison &mdash;
+          Mobile Frameworks</span><span class="toc-dots"></span><span class="toc-pg">57</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 10</span><span class="toc-lbl sub">Technology Comparison &mdash;
+          Database Options</span><span class="toc-dots"></span><span class="toc-pg">57</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 11</span><span class="toc-lbl sub">API Authentication Roles &amp;
+          Token Scope</span><span class="toc-dots"></span><span class="toc-pg">58</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 12</span><span class="toc-lbl sub">Vue.js Application Views &amp;
+          Structure</span><span class="toc-dots"></span><span class="toc-pg">60</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 13</span><span class="toc-lbl sub">Core State Stores
+          (Pinia)</span><span class="toc-dots"></span><span class="toc-pg">61</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 14</span><span class="toc-lbl sub">Mobile App Feature
+          Modules</span><span class="toc-dots"></span><span class="toc-pg">62</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 15</span><span class="toc-lbl sub">Backend Test Suites
+          (PHPUnit)</span><span class="toc-dots"></span><span class="toc-pg">64</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 16</span><span class="toc-lbl sub">Results vs. Initial
+          Objectives</span><span class="toc-dots"></span><span class="toc-pg">68</span></div>
+      <div class="toc-row"><span class="toc-num">Tab. 17</span><span class="toc-lbl sub">Project Planning Phases
+          (WBS)</span><span class="toc-dots"></span><span class="toc-pg">69</span></div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 5 — INTRODUCTION
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>SchoolHub – End-of-Studies Project</span><span class="r">FITYA · 2025–2026</span></div>
+    <h1 class="ch">I. General Introduction</h1>
+
+    <h2 class="sh">1. Context &amp; Background</h2>
+    <p>This report comprehensively documents the engineering work carried out during a final-year academic internship at
+      <strong>Fitya School</strong>, taking place between February and July 2026. Fitya School is a prominent Algerian
+      private educational institution located in Ben Telha, Baraki. The establishment caters to both Primary and CEM
+      (Middle School) educational levels. It has built a strong regional reputation not only for its uncompromising
+      teaching quality but also for its unique pedagogical approach—successfully instilling a high level of discipline
+      in its students by harmoniously blending rigorous academic standards with religious and moral education.</p>
+    <p>Despite its pedagogical success, the institution's administrative backbone required a digital transformation. The
+      internship project, named <strong>SchoolHub</strong>, was conceived to address a critical, real-world operational
+      bottleneck: the glaring absence of a unified, centralised digital management system capable of orchestrating
+      complex administrative, financial, and pedagogical operations in real-time. SchoolHub was architected from the
+      ground up as a production-ready, multi-platform ecosystem. It bridges the gap between administrators, educators,
+      and parents through a highly secure RESTful backend API (Laravel 12), an intuitive web administration dashboard
+      (Vue.js 3), and a responsive cross-platform mobile application (Flutter).</p>
+
+    <h2 class="sh">2. Problem Statement</h2>
+    <p>A prevalent critical issue within the Algerian educational sector—and specifically at Fitya School prior to this
+      project—is the heavy, almost exclusive reliance on archaic paper-based workflows. The lack of digital tracking
+      introduces severe vulnerabilities into the school's daily operations. Physical documents are highly susceptible to
+      loss, damage, or misplacement, which directly leads to an unacceptable degradation in the quality of student
+      tracking, archival integrity, and administrative efficiency.</p>
+    <p>Furthermore, this fragmented, analog approach severely stifles communication. Without a digital bridge, parents
+      are left in the dark, forced to rely on infrequent physical report cards or manual phone calls to monitor their
+      children's academic progress, attendance, and disciplinary standing.</p>
+    <p><strong>SchoolHub</strong> was engineered as a definitive, comprehensive solution to entirely eradicate these
+      pain points. By digitising the entire school lifecycle, the platform prevents data loss through secure cloud
+      storage, provides instantaneous detailed grade analytics, offers a live dashboard for meticulous attendance
+      tracking, introduces a robust and transparent financial management module for tuition and bills, and tackles the
+      historically tedious logistical nightmare of timetable creation via an intelligent, automated schedule generator.
+    </p>
+
+    <h2 class="sh">3. Project Objectives</h2>
+    <ul>
+      <li>Build a <strong>robust RESTful API</strong> with Laravel 12 as the central business logic layer;</li>
+      <li>Develop a <strong>complete web administration dashboard</strong> with Vue.js 3 and TypeScript;</li>
+      <li>Create a <strong>cross-platform Flutter mobile application</strong> for parents and teachers;</li>
+      <li>Implement a <strong>Role-Based Access Control (RBAC)</strong> system with 7 distinct roles;</li>
+      <li>Cover all core school modules: students, teachers, classes, grades, attendance, payments, and schedules;</li>
+      <li>Develop an <strong>intelligent automatic schedule generator</strong> with constraint satisfaction;</li>
+      <li>Ensure <strong>security, performance, and code maintainability</strong> through industry best practices.</li>
+    </ul>
+  </div>
+
+
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 4-B — HOST ENTERPRISE: FITYA SCHOOL
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter I-B &ndash; Host Enterprise</span><span class="r">Fitya School &middot; Ben Telha,
+        Baraki</span></div>
+    <h1 class="ch">I-B. Host Enterprise &mdash; Fitya School</h1>
+
+    <h2 class="sh">1. Overview &amp; History</h2>
+    <p>
+      Founded in <strong>2005</strong>, <strong>Fitya School</strong> is a leading Algerian private educational
+      institution
+      situated in the <strong>Ben Telha district of Baraki, Algiers</strong>. Over two decades of continuous operation,
+      the school has grown into a well-regarded academic community serving hundreds of students each year across two
+      educational cycles. Its name &mdash; <em>Fitya</em> (فتية), meaning
+      &ldquo;youth&rdquo; in Arabic &mdash; reflects the institution&rsquo;s deep commitment to nurturing the next
+      generation with both academic rigour and strong ethical values.
+    </p>
+    <p>
+      Fitya School has earned a strong regional reputation for its <strong>dual-track pedagogical philosophy</strong>:
+      combining the formal Algerian national curriculum with a dedicated programme of moral, civic, and Islamic
+      education.
+      This holistic approach equips students not only with academic knowledge but with the discipline, character, and
+      social responsibility needed to thrive in modern society.
+    </p>
+
+    <h2 class="sh">2. Educational Specialties</h2>
+    <div class="spec-grid">
+      <div class="spec-card">
+        <div class="sc-icon">&#127979;</div>
+        <div class="sc-title">Primary Education (&Eacute;cole Primaire)</div>
+        <div class="sc-desc">Covering grades 1 through 5, the primary cycle focuses on foundational literacy,
+          numeracy, and a structured introduction to Arabic, French, and Islamic studies, following the official
+          national programme.</div>
+      </div>
+      <div class="spec-card">
+        <div class="sc-icon">&#128218;</div>
+        <div class="sc-title">Middle School (CEM)</div>
+        <div class="sc-desc">The Coll&egrave;ge d&rsquo;Enseignement Moyen (CEM) cycle (grades 6&ndash;9)
+          deepens scientific, literary, and civic education. Students are prepared for the Brevet national
+          examination with intensive academic tracking.</div>
+      </div>
+      <div class="spec-card">
+        <div class="sc-icon">&#128332;</div>
+        <div class="sc-title">Moral &amp; Religious Education</div>
+        <div class="sc-desc">A distinctive pillar of Fitya&rsquo;s identity: Quranic studies, Islamic ethics,
+          and character-building are integrated throughout both cycles, shaping disciplined and respectful
+          students from an early age.</div>
+      </div>
+      <div class="spec-card">
+        <div class="sc-icon">&#127760;</div>
+        <div class="sc-title">Multilingual Programme</div>
+        <div class="sc-desc">Arabic as the primary language of instruction, with French systematically
+          introduced from primary level, reflecting the bilingual reality of Algerian academic and professional
+          life.</div>
+      </div>
+      <div class="spec-card">
+        <div class="sc-icon">&#128208;</div>
+        <div class="sc-title">STEM Focus</div>
+        <div class="sc-desc">Mathematics and Sciences receive heightened attention through regular assessments,
+          competitions, and intensive revision sessions, consistently producing high-performing graduates at
+          the CEM exit exam.</div>
+      </div>
+      <div class="spec-card">
+        <div class="sc-icon">&#128187;</div>
+        <div class="sc-title">Digitalization Initiative</div>
+        <div class="sc-desc">As of 2026, Fitya is actively transitioning its entire administrative and
+          pedagogical infrastructure to a digital-first model &mdash; the primary mission behind the
+          <strong>SchoolHub</strong> internship project.
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sh">3. Organisational Structure</h2>
+    <p>
+      Fitya School operates under a clear hierarchical structure ensuring tight coordination between academic,
+      administrative, and financial departments. Governance flows from the <strong>Owner</strong> at the apex,
+      through the <strong>General Manager</strong>, and branches into four main operational pillars: Directors,
+      Secretariat, Digitalization, and Accounting.
+    </p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        graph TD
+        A["Owner"]
+        B["General Manager"]
+        C["Directors"]
+        D["Teachers"]
+        E["Supervisors"]
+        F["Secretariat"]
+        G["Digitalization Manager"]
+        H["Mechta Abdelmoumen - Intern Developer"]
+        I["Accountant"]
+
+        A --> B
+        B --> C
+        B --> F
+        B --> G
+        B --> I
+        C --> D
+        C --> E
+        G --> H
+
+        style A fill:#1a3a6b,stroke:#1a3a6b,color:#fff
+        style B fill:#1e4d8c,stroke:#1e4d8c,color:#fff
+        style C fill:#2563a8,stroke:#2563a8,color:#fff
+        style D fill:#2563a8,stroke:#1e4d8c,color:#fff
+        style E fill:#2563a8,stroke:#1e4d8c,color:#fff
+        style F fill:#2563a8,stroke:#2563a8,color:#fff
+        style G fill:#065f46,stroke:#065f46,color:#fff
+        style H fill:#f59e0b,stroke:#d97706,color:#fff
+        style I fill:#2563a8,stroke:#2563a8,color:#fff
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 1:</strong> Fitya School &mdash; Organisational Chart. The intern
+      (highlighted in amber) was positioned under the Digitalization Manager with direct cross-departmental access at
+      all levels.</div>
+
+    <h2 class="sh">4. My Role &amp; Position</h2>
+    <div class="role-box">
+      <div class="rb-title">&#11088; Intern Developer &mdash; Digitalization Department</div>
+      <p>
+        Although formally placed under the <strong>Digitalization Manager</strong>, the nature of the SchoolHub
+        project demanded constant, direct interaction with every branch of the school&rsquo;s hierarchy.
+        Requirements were gathered directly from Directors, Supervisors, Secretariat staff, and the Accountant.
+        Crucially, I maintained <strong>direct communication with the General Manager</strong> throughout the
+        entire project &mdash; bypassing bureaucratic layers and enabling rapid, autonomous decision-making
+        without requiring intermediate approvals. This trust reflected the school&rsquo;s recognition of the
+        project&rsquo;s strategic importance to the institution&rsquo;s digital future.
+      </p>
+    </div>
+    <p>
+      This privileged cross-departmental access was essential: designing a system that correctly models seven
+      distinct user roles demanded first-hand understanding of each actor&rsquo;s daily workflow, pain points,
+      and data needs. The trust placed in me by the school&rsquo;s leadership translated directly into a platform
+      that genuinely reflects the institution&rsquo;s operational reality rather than a generic, off-the-shelf
+      solution.
+    </p>
+    <table class="rt" style="margin-top:14px;">
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Host Institution</strong></td>
+          <td>Fitya School &mdash; Private Educational Institution</td>
+        </tr>
+        <tr>
+          <td><strong>Location</strong></td>
+          <td>Ben Telha, Baraki, Algiers, Algeria</td>
+        </tr>
+        <tr>
+          <td><strong>Founded</strong></td>
+          <td>2005</td>
+        </tr>
+        <tr>
+          <td><strong>Educational Cycles</strong></td>
+          <td>Primary (Grades 1&ndash;5) &amp; CEM / Middle School (Grades 6&ndash;9)</td>
+        </tr>
+        <tr>
+          <td><strong>My Department</strong></td>
+          <td>Digitalization Department</td>
+        </tr>
+        <tr>
+          <td><strong>Direct Supervisor</strong></td>
+          <td>Digitalization Manager</td>
+        </tr>
+        <tr>
+          <td><strong>Key Stakeholder Contact</strong></td>
+          <td>General Manager (direct line of communication throughout)</td>
+        </tr>
+        <tr>
+          <td><strong>Internship Period</strong></td>
+          <td>February 2026 &ndash; July 2026 (5 months)</td>
+        </tr>
+        <tr>
+          <td><strong>Autonomy Level</strong></td>
+          <td>High &mdash; cross-departmental access, no intermediate approval required</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 5 — REQUIREMENTS ANALYSIS
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter II – Requirements Analysis</span><span class="r">SchoolHub</span></div>
+    <h1 class="ch">II. Requirements Analysis</h1>
+
+    <h2 class="sh">1. System Actors</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Actor</th>
+          <th>Role</th>
+          <th>Primary Interface</th>
+          <th>Access Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Administrator</strong></td>
+          <td>Full system management</td>
+          <td>Web Dashboard</td>
+          <td>Full access</td>
+        </tr>
+        <tr>
+          <td><strong>Director</strong></td>
+          <td>Global supervision &amp; reports</td>
+          <td>Web Dashboard</td>
+          <td>Read-only global</td>
+        </tr>
+        <tr>
+          <td><strong>Supervisor</strong></td>
+          <td>Level-specific class supervision</td>
+          <td>Web</td>
+          <td>Own level access</td>
+        </tr>
+        <tr>
+          <td><strong>Teacher</strong></td>
+          <td>Enter grades (own classes only)</td>
+          <td>Web &amp; Mobile</td>
+          <td>Own classes only</td>
+        </tr>
+        <tr>
+          <td><strong>Parent</strong></td>
+          <td>Monitor child's academic progress</td>
+          <td>Mobile App</td>
+          <td>Own children only</td>
+        </tr>
+        <tr>
+          <td><strong>Secretariat</strong></td>
+          <td>Student &amp; administrative management (full control)</td>
+          <td>Web</td>
+          <td>Full student data access</td>
+        </tr>
+        <tr>
+          <td><strong>Accountant</strong></td>
+          <td>Financial management</td>
+          <td>Web</td>
+          <td>Financial module only</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">2. Functional Requirements</h2>
+    <p>Functional requirements were gathered through stakeholder interviews and analysed as user stories, grouped into
+      eight functional modules:</p>
+    <div class="mg">
+      <div class="mc">
+        <div class="mt"> User &amp; Auth Management</div>
+        <ul>
+          <li>Multi-role account creation &amp; activation</li>
+          <li>Token-based authentication per role</li>
+          <li>Password management &amp; RBAC enforcement</li>
+          <li>Data visibility restricted by assigned level for Directors and Supervisors</li>
+        </ul>
+      </div>
+      <div class="mc">
+        <div class="mt"> Student Management</div>
+        <ul>
+          <li>Full student profile (personal &amp; medical)</li>
+          <li>Class assignment &amp; parent linking</li>
+          <li>Unique student code generation</li>
+          <li>Students assignments tracking</li>
+        </ul>
+      </div>
+      <div class="mc">
+        <div class="mt"> Teacher Management</div>
+        <ul>
+          <li>Teacher profiles with specialisations</li>
+          <li>Weekly availability management</li>
+          <li>Contract type &amp; workload tracking</li>
+          <li>Teacher assignments distribution</li>
+        </ul>
+      </div>
+      <div class="mc">
+        <div class="mt"> Classes &amp; Subjects</div>
+        <ul>
+          <li>Levels management and Multi-level class organisation</li>
+          <li>Class–Subject–Teacher pivot assignments</li>
+          <li>Subject coefficients per level</li>
+        </ul>
+      </div>
+      <div class="mc">
+        <div class="mt"> Grading &amp; Report Cards</div>
+        <ul>
+          <li>Multiple exam types with bulk entry</li>
+          <li>Weighted average computation</li>
+          <li>Class ranking &amp; report cards</li>
+          <li>Comprehensive grades report generation</li>
+        </ul>
+      </div>
+      <div class="mc">
+        <div class="mt"> Attendance Tracking</div>
+        <ul>
+          <li>Session-level daily tracking</li>
+          <li>Statuses: present / absent / late / excused</li>
+          <li>Per-student &amp; per-class statistics</li>
+        </ul>
+      </div>
+      <div class="mc">
+        <div class="mt"> Payments &amp; Contracts</div>
+        <ul>
+          <li>Fee configuration by admin</li>
+          <li>Parent–school contract with auto-billing</li>
+          <li>Partial payments, advances, refunds</li>
+        </ul>
+      </div>
+      <div class="mc">
+        <div class="mt"> Schedule Management</div>
+        <ul>
+          <li>Automatic constraint-based generation</li>
+          <li>Manual conflict detection</li>
+          <li>Weekly view per class / teacher</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 class="sh">3. Non-Functional Requirements</h2>
+    <ul>
+      <li><strong>Security:</strong> Token-based auth (Laravel Sanctum), bcrypt password hashing, SQL injection
+        prevention via Eloquent ORM, CSRF protection, input validation via FormRequests.</li>
+      <li><strong>Performance:</strong> Paginated responses, optimised DB indexes on critical columns, API responses
+        under 200 ms for standard queries.</li>
+      <li><strong>Maintainability:</strong> PSR-12 coding standards, separation of concerns (Controllers / Services /
+        Models), 100 KB+ of Markdown documentation.</li>
+      <li><strong>Portability:</strong> API compatible with SQLite, MySQL, and PostgreSQL; mobile app targets Android
+        and iOS.</li>
+      <li><strong>Multi-language:</strong> Mobile app supports Arabic (RTL), French, and English.</li>
+    </ul>
+
+    <h2 class="sh">4. Project Management &amp; Methodology</h2>
+    <h3 class="ssh">Agile &amp; Scrum Workflow</h3>
+    <p>To ensure the successful and timely delivery of a system of this magnitude, a rigorous Agile software development
+      lifecycle (SDLC) was adopted. The project management was orchestrated using GitHub Projects, functioning as a
+      Kanban board to continuously track sprint progress, backlog items, and bug fixes. Before writing a single line of
+      code, the entire system was mapped out using a Work Breakdown Structure (WBS), which systematically deconstructed
+      complex deliverables into manageable, verifiable tasks.</p>
+    <p>This WBS was subsequently translated into a highly detailed GANTT chart, dictating sprint deadlines, milestones,
+      and integration phases. Through disciplined adherence to this Agile methodology and daily progress tracking, I was
+      able to entirely avoid the common pitfall of scope creep. The predicted timeline was perfectly respected without a
+      single day of delay. To visually corroborate this precise time management, the original projected GANTT chart
+      alongside the actual executed timeline are presented both at the beginning and the end of this report.</p>
+
+    <div class="fig" style="margin-top: 20px; margin-bottom: 20px;">
+      <img src="schoolhubGantt.png" alt="Gantt Chart" />
+      <div class="fig-cap"><strong>Figure 2:</strong> Gantt Chart showing the temporal planning and critical path tasks
+        from February to July 2026.</div>
+    </div>
+
+    <h3 class="ssh">Version Control &amp; Branching Strategy</h3>
+    <p>Professional Git version control was a non-negotiable requirement for maintaining codebase integrity across the
+      API, Web Dashboard, and Mobile App. GitHub served as the central hub for all source code. A strict
+      feature-branching strategy was enforced: every new feature, bug fix, or architectural change was developed in
+      absolute isolation on a dedicated branch.</p>
+    <p>Only after thorough local testing was a branch permitted to be merged. To facilitate continuous delivery and safe
+      deployment for the school's administration, the project architecture was split into two strictly isolated main
+      repositories:</p>
+    <ul>
+      <li><strong>Beta Repository (Production):</strong> The highly stable, deployed version of the application. This is
+        the live environment currently being utilised by Fitya School's administration for daily operations. Code only
+        enters this repository after passing all validation checks.</li>
+      <li><strong>Main Repository (Development):</strong> The complete, bleeding-edge project containing all source
+        code, experimental features, comprehensive documentation, and the latest integrated components waiting for the
+        next release cycle.</li>
+    </ul>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 6 — ARCHITECTURE + USE CASE
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – System Design &amp; Conception</span><span class="r">SchoolHub</span></div>
+
+    <h1 class="ch">III. System Design &amp; Conception</h1>
+
+    <h2 class="sh">1. Global Architecture</h2>
+    <p>SchoolHub follows a <strong>3-Tier architecture</strong> with a strict separation between presentation
+      (Web/Mobile clients), business logic (REST API), and data persistence (relational database).</p>
+
+    <div class="arch">
+      <div class="ac">
+        <div class="ai"></div>
+        <div class="an">Presentation Layer</div>
+        <div class="at"><strong>Web Admin:</strong> Vue.js 3, PrimeVue, TypeScript, Vite<br><br><strong>Mobile:</strong>
+          Flutter 3, Dart, Provider</div>
+      </div>
+      <div class="ac">
+        <div class="ai"></div>
+        <div class="an">Business Layer (API)</div>
+        <div class="at"><strong>Framework:</strong> Laravel 12 (PHP 8.3)<br><strong>Pattern:</strong> MVC + Service
+          Layer<br><strong>Auth:</strong> Laravel Sanctum<br><strong>Format:</strong> RESTful JSON</div>
+      </div>
+      <div class="ac">
+        <div class="ai"></div>
+        <div class="an">Data Layer</div>
+        <div class="at"><strong>DBMS:</strong> SQLite / MySQL / PostgreSQL<br><strong>ORM:</strong>
+          Eloquent<br><strong>Migrations:</strong> 48 files<br><strong>Models:</strong> 26 Eloquent models</div>
+      </div>
+    </div>
+
+    <h2 class="sh">2. Use Case Diagrams</h2>
+
+    <h3 class="ssh">Core Use Case Diagram</h3>
+    <p>The basic use case diagram identifies the core actors interacting with the system: the Administrator, Teacher,
+      and Parent.</p>
+    <div class="fig">
+      <img src="use case basic.png" alt="Basic Use Case Diagram">
+      <div class="fig-cap"><strong>Figure 3:</strong> Basic Use Case Diagram — Core actors (Administrator, Teacher,
+        Parent) and their primary system interactions.</div>
+    </div>
+
+    <h3 class="ssh">Detailed Use Case Diagram</h3>
+    <p>The detailed use case diagram expands upon the core roles to encompass all system actors, including Directors,
+      Secretariat, Accountants, and Supervisors, grouped by their operational domains.</p>
+    <div class="fig">
+      <img src="use case detailed.png" alt="Detailed Use Case Diagram">
+      <div class="fig-cap"><strong>Figure 4:</strong> Detailed Use Case Diagram — Comprehensive view of all actors and
+        use cases structured by domain.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 7 — CLASS DIAGRAM
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Class Diagram</span><span class="r">SchoolHub</span></div>
+
+    <h2 class="sh">3. Data Modeling (MCD & MLD)</h2>
+    <p>To ensure a robust and normalized database architecture, the system's data structure was designed using the
+      Merise methodology, starting with a Conceptual Data Model (MCD) and translating it into a Logical Data Model
+      (MLD).</p>
+
+    <h3 class="ssh">Conceptual Data Model (MCD)</h3>
+    <p>The <strong>Conceptual Data Model (MCD)</strong> defines the high-level business entities (such as Students,
+      Teachers, Classes, and Contracts) and the semantic relationships between them without concerning itself with
+      technical database implementation details. It maps out cardinalities (e.g., 1,n or 1,1) to establish business
+      rules.</p>
+    <div class="fig">
+      <img src="MCD.PNG" alt="Modèle Conceptuel de Données (MCD)">
+      <div class="fig-cap"><strong>Figure 5:</strong> Conceptual Data Model (MCD) — Illustrating core business entities
+        and their semantic relationships.</div>
+    </div>
+
+    <h3 class="ssh">Logical Data Model (MLD)</h3>
+    <p>The <strong>Logical Data Model (MLD)</strong> translates the MCD into a relational database schema. It resolves
+      many-to-many relationships into junction tables (e.g., <code>teachers_classes_subject</code>), assigns strict data
+      types, and defines primary keys (PK) and foreign keys (FK) to maintain referential integrity.</p>
+    <div class="fig">
+      <img src="MLD.PNG" alt="Modèle Logique de Données (MLD)">
+      <div class="fig-cap"><strong>Figure 6:</strong> Logical Data Model (MLD) — Representing the strict relational
+        schema with foreign keys and junction tables.</div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 8 — DATABASE SCHEMA
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Database Schema</span><span class="r">SchoolHub</span></div>
+
+    <h2 class="sh">4. Database Schema</h2>
+    <p>The relational database is strictly aligned with the MLD, consisting of <strong>25 core tables</strong> designed
+      to ensure normalization and data integrity. The schema below details these tables and their key relationships:</p>
+
+    <table class="rt" style="width: 100%; table-layout: fixed; word-wrap: break-word; font-size: 8pt; margin: 14px 0;">
+      <thead>
+        <tr>
+          <th style="width: 15%;">Table</th>
+          <th style="width: 45%;">Key Columns</th>
+          <th style="width: 20%;">Primary FK</th>
+          <th style="width: 20%;">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="fn">users</td>
+          <td class="ft">id, username, email, password, role, is_active</td>
+          <td class="fpk">—</td>
+          <td>Roles: admin, teacher, parent, supervisor, secretariat, accountant, director</td>
+        </tr>
+        <tr>
+          <td class="fn">teachers</td>
+          <td class="ft">id, first_name, last_name, specialization, salary, contract_type, weekly_hours</td>
+          <td class="fpk">ID_user → users</td>
+          <td>Teacher profile</td>
+        </tr>
+        <tr>
+          <td class="fn">parents</td>
+          <td class="ft">id, first_name, last_name, address</td>
+          <td class="fpk">ID_user → users</td>
+          <td>Parent profile</td>
+        </tr>
+        <tr>
+          <td class="fn">supervisor</td>
+          <td class="ft">id, first_name, last_name</td>
+          <td class="fpk">ID_user → users</td>
+          <td>Supervisor profile</td>
+        </tr>
+        <tr>
+          <td class="fn">levels</td>
+          <td class="ft">id, cycle, year_number, track, name, sort_order</td>
+          <td class="fpk">—</td>
+          <td>Educational levels</td>
+        </tr>
+        <tr>
+          <td class="fn">classes</td>
+          <td class="ft">id, name, level, academic_year, capacity, is_active</td>
+          <td class="fpk">ID_levels, ID_supervisor</td>
+          <td>Class organization</td>
+        </tr>
+        <tr>
+          <td class="fn">students</td>
+          <td class="ft">id, first_name, last_name, code, birth_date, gender, enrollment_date, is_active</td>
+          <td class="fpk">ID_classes, ID_parents</td>
+          <td>Student records</td>
+        </tr>
+        <tr>
+          <td class="fn">student_history</td>
+          <td class="ft">id, academic_year, enrolled_at, left_at</td>
+          <td class="fpk">ID_students, ID_classes</td>
+          <td>Academic tracking</td>
+        </tr>
+        <tr>
+          <td class="fn">student_averages</td>
+          <td class="ft">id, academic_year, trimester, average</td>
+          <td class="fpk">ID_students, ID_classes</td>
+          <td>Trimester averages</td>
+        </tr>
+        <tr>
+          <td class="fn">subjects</td>
+          <td class="ft">id, name, code, description</td>
+          <td class="fpk">—</td>
+          <td>Course subjects</td>
+        </tr>
+        <tr>
+          <td class="fn">level_subjects</td>
+          <td class="ft">coefficient, weekly_sessions_required</td>
+          <td class="fpk">ID_levels, ID_subjects</td>
+          <td>Subject weights per level</td>
+        </tr>
+        <tr>
+          <td class="fn">teachers_classes_subject</td>
+          <td class="ft">id, academic_year</td>
+          <td class="fpk">ID_teachers, ID_classes, ID_subjects</td>
+          <td><strong>Central pivot</strong> for assignments</td>
+        </tr>
+        <tr>
+          <td class="fn">schedule</td>
+          <td class="ft">id, day, start_time, end_time, room, academic_year</td>
+          <td class="fpk">ID_teachers_classes_subject</td>
+          <td>Class timetable</td>
+        </tr>
+        <tr>
+          <td class="fn">teacher_availabilities</td>
+          <td class="ft">id, day, start_time, end_time</td>
+          <td class="fpk">ID_teachers</td>
+          <td>Teacher time slots</td>
+        </tr>
+        <tr>
+          <td class="fn">exam</td>
+          <td class="ft">id, type, max_grade, semester, academic_year</td>
+          <td class="fpk">ID_subjects, ID_teachers</td>
+          <td>Exams / Assessments</td>
+        </tr>
+        <tr>
+          <td class="fn">exercise_exam</td>
+          <td class="ft">id, max_grade, exercise_name</td>
+          <td class="fpk">ID_exam</td>
+          <td>Exam subdivisions</td>
+        </tr>
+        <tr>
+          <td class="fn">grades</td>
+          <td class="ft">id, grade, comment</td>
+          <td class="fpk">ID_students, ID_subjects, ID_teachers, ID_exam</td>
+          <td>Student grades</td>
+        </tr>
+        <tr>
+          <td class="fn">exercise_grades</td>
+          <td class="ft">id, grade</td>
+          <td class="fpk">ID_grades, ID_exercise_exam</td>
+          <td>Grades per exercise</td>
+        </tr>
+        <tr>
+          <td class="fn">attendances</td>
+          <td class="ft">id, date, time, status, reason</td>
+          <td class="fpk">ID_teachers, ID_subjects, ID_students, ID_schedule</td>
+          <td>Absence/Tardiness records</td>
+        </tr>
+        <tr>
+          <td class="fn">contracts</td>
+          <td class="ft">id, contract_number, academic_year, total_fees, balance, status</td>
+          <td class="fpk">ID_parents</td>
+          <td>Financial agreements</td>
+        </tr>
+        <tr>
+          <td class="fn">bills</td>
+          <td class="ft">id, month_year, amount_due, amount_paid, balance, status</td>
+          <td class="fpk">ID_contracts</td>
+          <td>Monthly invoices</td>
+        </tr>
+        <tr>
+          <td class="fn">payments</td>
+          <td class="ft">id, amount, due_date, paid_date, payment_type</td>
+          <td class="fpk">ID_contracts</td>
+          <td>Received payments</td>
+        </tr>
+        <tr>
+          <td class="fn">payments_allocation</td>
+          <td class="ft">—</td>
+          <td class="fpk">ID_bills, ID_payments</td>
+          <td>Payment-to-bill mapping</td>
+        </tr>
+        <tr>
+          <td class="fn">fees</td>
+          <td class="ft">id, name, description, base_amount, academic_year, is_active</td>
+          <td class="fpk">—</td>
+          <td>School fee definitions</td>
+        </tr>
+        <tr>
+          <td class="fn">parents_fee</td>
+          <td class="ft">—</td>
+          <td class="fpk">ID_parents, ID_students, ID_fees</td>
+          <td>Applicable fees per student</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="ib">
+      <p><strong>Key Design Decision:</strong> The <code>class_subject_teacher</code> pivot table is the backbone of the
+        academic system — it links a class, a subject, and a teacher for a given academic year. All schedules, grades
+        (via exams), and attendance records trace back to this pivot.</p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 9 — ACTIVITY DIAGRAM 1: Schedule Generation
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Activity Diagrams</span><span class="r">SchoolHub</span></div>
+
+    <h2 class="sh">5. Activity Diagrams</h2>
+
+    <h3 class="ssh">Activity Diagram 1 — Automatic Schedule Generation</h3>
+    <p>The schedule generation algorithm is the most complex feature of SchoolHub. It resolves a constraint-satisfaction
+      problem to assign teaching sessions to time slots without conflicts. The algorithm operates through the following
+      core phases:</p>
+    <ul>
+      <li><strong>1. Initialization & Priority Sorting:</strong> It fetches all <code>ClassSubjectTeacher</code> demands
+        and sorts them. Permanent teachers and high-coefficient subjects (e.g., Mathematics, Physics) are scheduled
+        first to ensure they get the best available time slots.</li>
+      <li><strong>2. Special Case Handling:</strong> Certain subjects like "Sport" require consecutive 2-hour blocks
+        rather than single sessions. The algorithm identifies these and searches for contiguous free blocks exclusively.
+      </li>
+      <li><strong>3. Hard Constraints:</strong> Every potential slot is filtered through strict, non-negotiable rules. A
+        slot is instantly rejected if the teacher is already booked, the class is occupied, it falls outside the
+        teacher's availability, or it exceeds the daily session limit for the class.</li>
+      <li><strong>4. Soft Scoring System:</strong> For slots that pass all hard constraints, a scoring system determines
+        the optimal choice. It awards points for ideal placements (e.g., +50 points for placing a major subject in the
+        morning) and penalizes poor placements (e.g., -40 points if a teacher is assigned too many consecutive hours).
+      </li>
+      <li><strong>5. Fallback Strategy:</strong> If no slot satisfies the optimal conditions, the system enters a
+        fallback mode, slightly relaxing soft constraints to ensure the class is scheduled before ultimately marking a
+        session as "unfilled" for manual review.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        flowchart TD
+        A([▶ START]) --> B["Fetch all ClassSubjectTeacher\nassignments for academic year"]
+        B --> C["Sort by: Teacher contract type\nthen Subject coefficient desc"]
+        C --> D{More assignments\nto schedule?}
+        D -- No --> Z([✓ END — Save or Preview])
+        D -- Yes --> E["Get next assignment demand"]
+        E --> F{Is subject Sport\nAND required = 2h?}
+        F -- Yes --> G["Search for 2 consecutive\nfree 1-hour slots\nfor teacher + class"]
+        G --> H{Block found?}
+        H -- Yes --> I["Allocate both hours\nupdate tracking arrays"]
+        H -- No --> J["Mark as UNFILLED\ncall diagnoseUnfilledReason()"]
+        J --> D
+
+        F -- No --> K{Remaining required\nsessions > 0?}
+        K -- No --> D
+        K -- Yes --> L["Evaluate all days & slots\nvia findBestSlotForDemand()"]
+
+        subgraph Constraints["Hard Constraints (Must Pass)"]
+        direction LR
+        HC1["✗ Teacher already booked"]
+        HC2["✗ Class already booked"]
+        HC3["✗ Teacher outside availability"]
+        HC4["✗ Class has 7+ sessions today"]
+        HC5["✗ Internal schedule gap"]
+        end
+
+        subgraph Scoring["Soft Scoring System"]
+        direction LR
+        S1["+50 Important subject in morning"]
+        S2["-20 Important subject in afternoon"]
+        S3["+10 Perm. teacher under 4h today"]
+        S4["-40 Perm. teacher at 6h+ today"]
+        S5["-30 Contract teacher at 6h+ today"]
+        end
+
+        L --> M{Constraints passed?}
+        M -- No --> N[Skip this slot]
+        N --> L
+        M -- Yes --> O["Compute score\nvia Scoring System"]
+        O --> P{Best slot found?}
+        P -- No --> Q["Try Fallback Mode\nignore 'important subject' daily limit"]
+        Q --> R{Fallback slot found?}
+        R -- Yes --> S["Allocate 1-hour session\nupdate tracking arrays"]
+        R -- No --> J
+        P -- Yes --> S
+        S --> D
+        I --> D
+
+        style A fill:#1a3a6b,color:#fff,stroke:#1a3a6b
+        style Z fill:#065f46,color:#fff,stroke:#065f46
+        style J fill:#991b1b,color:#fff,stroke:#991b1b
+        style Constraints fill:#fef2f2,stroke:#fca5a5
+        style Scoring fill:#f0fdf4,stroke:#86efac
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 7:</strong> Activity Diagram — Automatic Schedule Generation Algorithm
+      (ScheduleController). Shows constraint checking, scoring system, and fallback strategy.</div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 10 — ACTIVITY DIAGRAM 2: Payment Processing
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Activity Diagrams (continued)</span><span class="r">SchoolHub</span></div>
+
+    <h3 class="ssh">Activity Diagram 2 — Payment Processing Workflow</h3>
+    <p>The payment system uses an automatic allocation engine that distributes a received payment across unpaid monthly
+      bills in chronological order. Key steps include:</p>
+    <ul>
+      <li><strong>Validation:</strong> The system verifies the contract and creates a base payment record.</li>
+      <li><strong>Bill Allocation:</strong> Unpaid bills are fetched chronologically. The system applies the payment to
+        fully or partially pay off the oldest bills first.</li>
+      <li><strong>Handling Overpayments:</strong> If the payment amount exceeds the total due across all bills, the
+        remainder is stored as a positive balance (credit) on the contract for future use.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        flowchart TD
+        A([▶ START: Admin submits payment]) --> B["Validate request\ncontract_id, amount, payment_type"]
+        B --> C{Contract exists\nand is active?}
+        C -- No --> ERR1["Return 404\n'Contract not found'"]
+        C -- Yes --> D["Create Payment record\nstatus = 'completed'"]
+        D --> E["Fetch unpaid bills\nordered by due_date ASC"]
+        E --> F["Set remaining = payment.amount"]
+        F --> G{Remaining > 0\nAND unpaid bills exist?}
+        G -- No --> H{remaining > 0?}
+        H -- Yes --> I["Store as contract.balance\nCredit for future use"]
+        H -- No --> J["Update contract totals\npaid_amount += amount\nremaining_amount -= amount"]
+        I --> J
+        G -- Yes --> K["Take next unpaid bill"]
+        K --> L{remaining >= bill.balance?}
+        L -- Yes --> M["Fully pay this bill\nbill.status = 'paid'\nbill.amount_paid = bill.amount_due"]
+        L -- No --> N["Partially pay this bill\nbill.status = 'partial'\nbill.amount_paid += remaining"]
+        M --> O["remaining -= bill.balance\nCreate PaymentAllocation record"]
+        N --> O2["remaining = 0\nCreate PaymentAllocation record"]
+        O --> G
+        O2 --> G
+        J --> Z([✓ Return payment with allocations])
+
+        style A fill:#1a3a6b,color:#fff,stroke:#1a3a6b
+        style Z fill:#065f46,color:#fff,stroke:#065f46
+        style ERR1 fill:#991b1b,color:#fff,stroke:#991b1b
+        style I fill:#f59e0b,color:#fff,stroke:#b45309
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 8:</strong> Activity Diagram — Payment Processing & Automatic Bill
+      Allocation Engine. Handles full, partial, advance, and overpayment scenarios.</div>
+
+    <h3 class="ssh">Activity Diagram 3 — Contract Creation</h3>
+    <p>This workflow maps out how financial agreements are established between the school and parents at the beginning
+      of the academic year:</p>
+    <ul>
+      <li><strong>Fee Selection:</strong> The admin selects applicable fees (tuition, transport, canteen, etc.) and the
+        system calculates the base total.</li>
+      <li><strong>Discounts:</strong> Any fixed or percentage-based discounts are applied to determine the final total
+        fees.</li>
+      <li><strong>Installment Generation:</strong> The final total is divided across the academic months, automatically
+        generating individual monthly bills (e.g., 10 bills for a 10-month school year) tied to the new contract.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        flowchart LR
+        A([▶ Admin creates contract]) --> B["Select parent &\nfee_ids for academic year"]
+        B --> C["Calculate total_fees\nfrom selected fees"]
+        C --> D{Discount\napplied?}
+        D -- Yes --> E["Apply discount\npercentage or fixed"]
+        D -- No --> F
+        E --> F["Compute monthly_amount\n= final_total / num_months"]
+        F --> G["Create Contract record\nwith unique contract_number"]
+        G --> H["Create parents_fees\njunction records"]
+        H --> I{For each month\nfrom start_date to end_date}
+        I -- More months --> J["Generate Bill record\nmonth_year, amount_due, due_date"]
+        J --> I
+        I -- Done --> K(["✓ Return contract + bills\n10 monthly bills generated"])
+
+        style A fill:#1a3a6b,color:#fff,stroke:#1a3a6b
+        style K fill:#065f46,color:#fff,stroke:#065f46
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 9:</strong> Activity Diagram — Contract Creation and Automatic Monthly Bill
+      Generation Workflow.</div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 11 — SEQUENCE DIAGRAM 1: Authentication
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Sequence Diagrams</span><span class="r">SchoolHub</span></div>
+
+    <h2 class="sh">6. Sequence Diagrams</h2>
+
+    <h3 class="ssh">Sequence Diagram 1 — User Authentication Flow</h3>
+    <p>This diagram illustrates the complete authentication flow for any user (admin, teacher, or parent) across both
+      the Web dashboard and the Mobile application.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        sequenceDiagram
+        actor User as User
+        participant Client as Web/Mobile Client
+        participant API as Laravel API
+        participant DB as Database
+        participant Auth as Sanctum Auth
+
+        User->>Client: Enter email & password
+        Client->>API: POST /api/login\n{email, password}
+        API->>DB: Query users WHERE email = ?
+        DB-->>API: Return User record
+
+        alt User not found
+        API-->>Client: 401 Unauthorized\n"Invalid credentials"
+        Client-->>User: Show error message
+        else User found but inactive
+        API-->>Client: 403 Forbidden\n"Account deactivated"
+        Client-->>User: Show "Account disabled"
+        else Valid credentials
+        API->>Auth: Hash & compare password (bcrypt)
+        Auth-->>API: Password valid ✓
+        API->>Auth: Create Sanctum token\n(expiry depends on role)
+        Auth-->>API: Bearer token
+
+        API->>DB: Log token in personal_access_tokens
+        DB-->>API: Token saved
+
+        API-->>Client: 200 OK\n{token, user{id,role,email,...}}
+        Client->>Client: Store token (localStorage / SecureStorage)
+        Client-->>User: Redirect to role-specific dashboard
+        end
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 10:</strong> Sequence Diagram — User Authentication Flow with Sanctum token
+      generation and role-based routing.</div>
+
+    <h3 class="ssh">Sequence Diagram 2 — Teacher Submits Grades (Bulk)</h3>
+    <p>This sequence illustrates the process of bulk grade submission, emphasizing the role-based security and data
+      validation layers:</p>
+    <ul>
+      <li><strong>Access Control:</strong> The system verifies the teacher's identity and ensures they are only
+        accessing classes they are explicitly assigned to teach.</li>
+      <li><strong>Data Retrieval:</strong> The API fetches the list of students enrolled in the specific class.</li>
+      <li><strong>Bulk Submission & Validation:</strong> The teacher submits an array of grades. The API validates each
+        grade (e.g., ensuring it does not exceed the exam's maximum grade) before performing a bulk database insert for
+        performance efficiency.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        sequenceDiagram
+        actor T as Teacher
+        participant Web as Web Dashboard
+        participant API as Laravel API
+        participant MW as Role Middleware
+        participant DB as Database
+
+        T->>Web: Navigate to My Class > Enter Grades
+        Web->>API: GET /api/teacher/classes\nAuthorization: Bearer {token}
+        API->>MW: Check role = teacher ✓
+        MW->>DB: Fetch teacher's assigned classes
+        DB-->>Web: Return class list
+
+        T->>Web: Select class + subject + exam type
+        Web->>API: GET /api/classes/{id}/students
+        DB-->>Web: Return student list
+
+        T->>Web: Fill grade form for all students
+        Web->>API: POST /api/grades/bulk\n{grades:[{student_id, exam_id, grade},...]}
+        API->>MW: Check role in [teacher, admin] ✓
+        API->>API: Validate each grade entry\n(max_grade, student belongs to class)
+
+        alt Validation fails
+        API-->>Web: 422 Unprocessable Entity\n{errors: {...}}
+        Web-->>T: Show field errors
+        else Validation passes
+        API->>DB: Bulk insert Grade records
+        DB-->>API: N records created
+        API-->>Web: 201 Created\n{success:true, count: N}
+        Web-->>T: "Grades saved successfully ✓"
+        end
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 11:</strong> Sequence Diagram — Teacher bulk grade submission with RBAC
+      middleware validation.</div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 12 — SEQUENCE DIAGRAMS 3 & 4
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Sequence Diagrams (continued)</span><span class="r">SchoolHub</span></div>
+
+    <h3 class="ssh">Sequence Diagram 3 — Parent Views Child's Report Card</h3>
+    <p>This flow shows how the mobile app retrieves a child's full academic report card, demonstrating the
+      parent-specific access control:</p>
+    <ul>
+      <li><strong>Ownership Verification:</strong> The middleware strictly queries the database to confirm that the
+        requested student ID physically belongs to the authenticated parent.</li>
+      <li><strong>Data Aggregation:</strong> Once access is granted, the database calculates weighted averages,
+        aggregates grades by subject, and determines the student's overall rank.</li>
+      <li><strong>Presentation:</strong> The structured data is returned to the Flutter mobile app, which renders
+        intuitive visual charts for the parent.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        sequenceDiagram
+        actor Parent as Parent
+        participant App as Flutter Mobile App
+        participant API as Laravel API
+        participant MW as Role Middleware
+        participant DB as Database
+
+        Parent->>App: Open "My Children" screen
+        App->>API: GET /api/parent/students\nBearer {token}
+        API->>MW: Verify role = parent ✓
+        MW->>DB: WHERE parent_id = auth()->user()->parent->id
+        DB-->>App: [{student_id, name, class, ...}]
+
+        Parent->>App: Tap child's name
+        App->>API: GET /api/parent/students/{id}/report-card\nBearer {token}
+        API->>MW: Verify role = parent ✓
+        MW->>DB: Verify student.parent_id == auth parent
+
+        alt Student not owned by this parent
+        DB-->>API: No record
+        API-->>App: 403 Forbidden\n"Access denied"
+        App-->>Parent: "You cannot view this student"
+        else Access granted
+        DB->>DB: Aggregate grades by subject\nCalculate weighted averages\nGenerate class ranking
+        DB-->>API: Report card data
+        API-->>App: 200 OK\n{student, subjects:[{name, grades, average}], overall_average, rank}
+        App->>App: Render report card UI\nwith charts (FL Chart)
+        App-->>Parent: Display full report card
+        end
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 12:</strong> Sequence Diagram — Parent accesses child's report card with
+      ownership verification.</div>
+
+    <h3 class="ssh">Sequence Diagram 4 — Admin Processes a Payment</h3>
+    <p>This diagram breaks down the technical execution of a payment transaction at the API level:</p>
+    <ul>
+      <li><strong>API Request & Validation:</strong> The admin submits the payment details, which are sanitized and
+        validated by Laravel FormRequests.</li>
+      <li><strong>Service Delegation:</strong> The controller delegates the heavy lifting to a dedicated
+        <code>PaymentService</code> class to keep the controller clean.</li>
+      <li><strong>Database Transactions:</strong> The service loops through unpaid bills, updating statuses and
+        inserting pivot records (allocations) in a single transaction loop to ensure data consistency.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        sequenceDiagram
+        actor Admin as Admin
+        participant Web as Web Dashboard
+        participant API as Laravel API
+        participant PaySvc as PaymentService
+        participant DB as Database
+
+        Admin->>Web: Open contract, enter payment amount
+        Web->>API: POST /api/payments\n{contract_id, amount, payment_type, paid_date}
+        API->>API: Validate request (FormRequest)
+        API->>DB: Fetch Contract + all unpaid Bills (ordered by due_date)
+        DB-->>API: Contract & Bill list
+
+        API->>PaySvc: allocatePayment(payment, bills)
+
+        loop For each unpaid bill while remaining > 0
+        PaySvc->>DB: Update Bill (amount_paid, status)
+        PaySvc->>DB: Insert PaymentAllocation record
+        DB-->>PaySvc: OK
+        end
+
+        alt Overpayment
+        PaySvc->>DB: Update contract.balance += overpayment
+        end
+
+        PaySvc->>DB: Update Contract (paid_amount, remaining_amount)
+        DB-->>API: Contract updated
+        API-->>Web: 201 Created\n{payment, allocations:[...], overpayment}
+        Web-->>Admin: Show payment receipt with bill breakdown
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 13:</strong> Sequence Diagram — Admin payment processing with automatic bill
+      allocation service.</div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 13-A — GRADES REPORT & REPORT CARD SYSTEM
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Feature Deep-Dive: Grading System</span><span class="r">SchoolHub</span></div>
+    <h2 class="sh">7. Feature Deep-Dive: Grades Report &amp; Report Card Generation</h2>
+
+    <h3 class="ssh">Overview</h3>
+    <p>The grading system is one of the most intricate academic modules in SchoolHub. It operates across three exam
+      types (<code>evaluation_continue</code> — continuous assessment, <code>devoir</code> — written test, and
+      <code>composition</code> — trimester exam), computes weighted subject averages using level-specific coefficients,
+      and generates individual academic report cards as well as class-level analytics reports with full statistical
+      breakdowns.</p>
+
+    <h3 class="ssh">How Averages &amp; Report Cards Are Built</h3>
+    <p>Grades are <strong>never stored as pre-calculated averages</strong>. Each raw grade is stored individually
+      against the exam that produced it. The <code>GradingService</code> is responsible for computing averages on demand
+      using the following formula:</p>
+
+    <div
+      style="background:#eef2ff;border-left:5px solid #4f46e5;padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0;font-size:9.5pt;">
+      <strong style="color:#1a3a6b;">Subject Average Formula:</strong><br><br>
+      <code
+        style="font-size:9pt;">subject_avg = (CC_grade/CC_max × 20 × 1) + (Devoir_grade/Devoir_max × 20 × 1) + (Composition_grade/Comp_max × 20 × 2)</code><br>
+      <code
+        style="font-size:9pt;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ÷ 4</code><br><br>
+      <strong style="color:#1a3a6b;">Weighted Overall Average:</strong><br>
+      <code style="font-size:9pt;">overall_avg = Σ(subject_avg × coefficient) / Σ(coefficients)</code><br><br>
+      <em style="color:#555;">All raw grades are normalised to /20 using: <code>(grade / max_grade) × 20</code></em>
+    </div>
+
+    <p>Computed averages are cached in the <code>student_averages</code> table (keyed by <code>student_id</code>,
+      <code>subject_id</code>, <code>trimester</code>, <code>academic_year</code>, <code>record_type</code>) and are
+      invalidated whenever a grade is created, updated, or deleted via Laravel Model Observers.</p>
+
+    <h3 class="ssh">Sequence Diagram — Grades Report Card Generation</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        sequenceDiagram
+        actor Admin as 🖥 Admin / Teacher
+        participant Web as Vue.js Dashboard
+        participant API as Laravel API
+        participant GS as GradingService
+        participant DB as Database
+
+        Admin->>Web: Select Class → Semester → Generate Report Card
+        Web->>API: GET /api/students/{id}/report-card?semester=S1&academic_year=2025-2026
+        API->>DB: Fetch StudentAverages (record_type = subject & overall)
+        DB-->>API: Pre-computed averages per subject
+        API->>DB: Fetch raw Grades grouped by subject_id
+        DB-->>API: Raw grade records with exam details
+        API->>DB: Fetch LevelSubject coefficients for student's level
+        DB-->>API: {subject_id, coefficient} per subject
+
+        API->>GS: formatSubjects(averages, rawGrades, coefficients)
+        GS->>GS: Normalise each grade to /20\nMap CC / Devoir / Composition per subject\nCompute weighted_average = avg × coefficient
+
+        GS-->>API: [{subject, teacher, CC, devoir, composition,\naverage, coefficient, weighted_average}]
+        API-->>Web: 200 OK {student, subjects[], overall_average}
+
+        Web->>Web: Render report card table\nwith Chart.js bar chart (averages per subject)
+        Web-->>Admin: Display printable report card
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 14:</strong> Sequence Diagram — Full report card generation flow from
+      database fetch to formatted output.</div>
+
+    <h3 class="ssh">Grades Analytics Overview Endpoint</h3>
+    <p>In addition to individual report cards, SchoolHub provides a powerful analytics endpoint
+      (<code>GET /api/grades/analytics/overview</code>) that computes aggregated statistics for any combination of
+      class, subject, semester, teacher, or exam type. This endpoint powers the <code>GradeAnalytics.vue</code>
+      dashboard view (137 KB — the largest component in the project).</p>
+
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>SQL Aggregation</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Overall Average</strong></td>
+          <td><code>AVG((grade/max_grade)×20)</code></td>
+          <td>Class-wide performance baseline</td>
+        </tr>
+        <tr>
+          <td><strong>Pass Rate</strong></td>
+          <td><code>AVG(CASE WHEN normalised ≥ 10 THEN 1 ELSE 0 END) × 100</code></td>
+          <td>Percentage of students above 10/20</td>
+        </tr>
+        <tr>
+          <td><strong>Excellence Rate</strong></td>
+          <td><code>AVG(CASE WHEN normalised ≥ 16 THEN 1 ELSE 0 END) × 100</code></td>
+          <td>Percentage of high performers</td>
+        </tr>
+        <tr>
+          <td><strong>Standard Deviation</strong></td>
+          <td><code>STDDEV_POP(normalised)</code></td>
+          <td>Measure of grade spread/consistency</td>
+        </tr>
+        <tr>
+          <td><strong>Per-Subject Breakdown</strong></td>
+          <td>GROUP BY subject_id with avg, min, max, pass_rate</td>
+          <td>Identify weak/strong subjects across a class</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Results are cached for 10 minutes using Laravel's Cache facade (keyed by an MD5 hash of all filter parameters),
+      reducing repeated DB load during busy report periods.</p>
+
+    <h3 class="ssh">Class Ranking</h3>
+    <p>The class ranking (<code>GET /api/classes/{id}/ranking</code>) is generated by reading from the
+      <code>student_averages</code> table (overall record), ordering by average descending, and assigning sequential
+      rank positions. This allows teachers and directors to instantly identify top-performing and at-risk students.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        flowchart LR
+        A(["Teacher / Admin request ranking"]) --> B["GET /api/classes/42/ranking\n?semester=S1 and
+        academic_year=2025-2026"]
+        B --> C["Query student_averages\nWHERE class_id=42\nAND record_type='overall'\nAND trimester='S1'\nORDER BY
+        average DESC"]
+        C --> D["Map results:\nrank = index + 1\nstudent.name, student.code,\noverall_average"]
+        D --> E["Return ranked list\nrankings: student, average, rank"]
+
+        style A fill:#1a3a6b,color:#fff
+        style E fill:#065f46,color:#fff
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 15:</strong> Activity Diagram — Class ranking generation from pre-computed
+      student averages table.</div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 13-B — LEVELS MANAGEMENT & DIRECTOR VISIBILITY
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Feature Deep-Dive: Levels &amp; RBAC Visibility</span><span
+        class="r">SchoolHub</span></div>
+    <h2 class="sh">8. Feature Deep-Dive: Levels Management &amp; Role-Scoped Data Visibility</h2>
+
+    <h3 class="ssh">Levels Management</h3>
+    <p>The <strong>Level</strong> entity is the structural backbone of the school's academic hierarchy. A level
+      represents an educational grade (e.g., <em>1ère Année Primaire</em>, <em>5ème Année Primaire</em>, <em>1ère
+        CEM</em>), and belongs to one of two <strong>cycles</strong>: <code>primaire</code> (primary school) or
+      <code>cem</code> (middle school). Each level contains multiple classes, defines the subjects taught within it, and
+      sets the coefficient for each subject via the <code>level_subjects</code> pivot table.</p>
+
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>levels Table Column</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>id</code></td>
+          <td>INT PK</td>
+          <td>Auto-incremented primary key</td>
+        </tr>
+        <tr>
+          <td><code>cycle</code></td>
+          <td>ENUM('primaire', 'cem')</td>
+          <td>Educational cycle this level belongs to</td>
+        </tr>
+        <tr>
+          <td><code>year_number</code></td>
+          <td>INT</td>
+          <td>Year within the cycle (1–5 for primary, 1–4 for CEM)</td>
+        </tr>
+        <tr>
+          <td><code>track</code></td>
+          <td>VARCHAR nullable</td>
+          <td>Academic track (e.g., Sciences, Lettres — used in CEM final year)</td>
+        </tr>
+        <tr>
+          <td><code>name</code></td>
+          <td>VARCHAR</td>
+          <td>Display name (e.g., "5ème Année Primaire")</td>
+        </tr>
+        <tr>
+          <td><code>sort_order</code></td>
+          <td>INT</td>
+          <td>Custom sort order for display in UI lists</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The <code>level_subjects</code> pivot ties subjects to levels with a coefficient and a
+      <code>weekly_sessions_required</code> field used by the schedule generator. The <code>LevelController</code>
+      exposes CRUD endpoints to manage levels, and a dedicated <code>SubjectCoefficientController</code> manages the
+      per-level subject coefficient assignments.</p>
+
+    <div class="ib">
+      <p><strong>Design Insight:</strong> Separating the subject coefficient from the subject itself (via
+        <code>level_subjects</code>) allows the same subject — e.g., "Mathematics" — to carry different weights at
+        different levels. For example, Math might have a coefficient of 5 in 5ème Primaire but 7 in 3ème CEM, without
+        duplicating subject records.</p>
+    </div>
+
+    <h3 class="ssh">How Director-Level Data Scoping Works</h3>
+    <p>SchoolHub implements a two-tier directorial role: the <strong>Admin</strong> has global access to all data, while
+      a <strong>Director</strong> is scoped exclusively to their assigned cycle (<code>primaire</code> or
+      <code>cem</code>). This scoping is enforced transparently at the API query level — the Director doesn't need to
+      pass any filter; the middleware applies it automatically.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        flowchart TD
+        A(["Director sends API request"]) --> B{"Is user a Director?"}
+        B -- No --> C["Execute query normally\nAll data returned"]
+        B -- Yes --> D["Call user directorCycle()\nReturns: primaire OR cem"]
+        D --> E["Inject automatic WHERE clause\nWHERE levels.cycle = primaire\nvia whereHas on
+        student.class.levelProfile"]
+        E --> F["Execute filtered query"]
+        F --> G["Return ONLY data belonging\nto the Director's cycle"]
+
+        style A fill:#1a3a6b,color:#fff
+        style C fill:#065f46,color:#fff
+        style G fill:#065f46,color:#fff
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 16:</strong> Activity Diagram — Automatic cycle-based data scoping for
+      Director role across all grade, student, and analytics queries.</div>
+
+    <h3 class="ssh">Technical Implementation — Director Scoping</h3>
+    <p>The scoping logic lives inside the <code>applyGradeFilters()</code> private method of
+      <code>GradeController</code>. It checks whether the authenticated user has the <code>isDirector()</code> method,
+      then automatically chaines a <code>whereHas</code> constraint on the Eloquent query to filter by cycle:</p>
+
+    <div
+      style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:14px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:8.5pt;color:#1a3a6b;line-height:1.7;">
+      <span style="color:#7c3aed;">private function</span> <span
+        style="color:#1a3a6b;font-weight:700;">applyGradeFilters</span>(Builder $query, Request $request): Builder {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;$user = $request-&gt;user();<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#7c3aed;">if</span> ($user &amp;&amp; $user-&gt;<span
+        style="color:#1a3a6b;">isDirector</span>()) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$cycle = $user-&gt;<span
+        style="color:#1a3a6b;">directorCycle</span>(); <span style="color:#888;">// 'primaire' or 'cem'</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$query-&gt;<span style="color:#2563a8;">whereHas</span>(<span
+        style="color:#065f46;">'student.class.levelProfile'</span>, <span style="color:#7c3aed;">function</span> ($q)
+      use ($cycle) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$q-&gt;<span
+        style="color:#2563a8;">where</span>(<span style="color:#065f46;">'cycle'</span>, $cycle);<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;});<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#888;">// ... additional optional filters (student_id, subject_id,
+        semester, etc.) ...</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#7c3aed;">return</span> $query;<br>
+      }
+    </div>
+
+    <p>This same pattern is replicated in the analytics overview endpoint, the exercise-averages aggregation, and the
+      supervisor panel — ensuring that <strong>no single query leaks data across cycle boundaries</strong>, regardless
+      of which endpoint is called.</p>
+
+    <h3 class="ssh">Role Visibility Matrix</h3>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Students</th>
+          <th>Grades/Analytics</th>
+          <th>Attendance</th>
+          <th>Payments</th>
+          <th>Scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Admin</strong></td>
+          <td>✅ All</td>
+          <td>✅ All</td>
+          <td>✅ All</td>
+          <td>✅ All</td>
+          <td>Global (unrestricted)</td>
+        </tr>
+        <tr>
+          <td><strong>Director (Primaire)</strong></td>
+          <td>✅ Primaire only</td>
+          <td>✅ Primaire only</td>
+          <td>✅ Primaire only</td>
+          <td>❌ No access</td>
+          <td>Auto-filtered by cycle = primaire</td>
+        </tr>
+        <tr>
+          <td><strong>Director (CEM)</strong></td>
+          <td>✅ CEM only</td>
+          <td>✅ CEM only</td>
+          <td>✅ CEM only</td>
+          <td>❌ No access</td>
+          <td>Auto-filtered by cycle = cem</td>
+        </tr>
+        <tr>
+          <td><strong>Supervisor</strong></td>
+          <td>✅ Own level</td>
+          <td>❌ No access</td>
+          <td>✅ Own level</td>
+          <td>❌ No access</td>
+          <td>Filtered by supervisor's assigned level_id</td>
+        </tr>
+        <tr>
+          <td><strong>Teacher</strong></td>
+          <td>✅ Own classes</td>
+          <td>✅ Own classes only</td>
+          <td>❌ No access</td>
+          <td>❌ No access</td>
+          <td>Filtered by teacher_id</td>
+        </tr>
+        <tr>
+          <td><strong>Parent</strong></td>
+          <td>✅ Own children</td>
+          <td>✅ Own children only</td>
+          <td>✅ Own children</td>
+          <td>✅ Own contracts</td>
+          <td>Filtered by parent_id + student ownership check</td>
+        </tr>
+        <tr>
+          <td><strong>Secretariat</strong></td>
+          <td>✅ Full control</td>
+          <td>❌ No access</td>
+          <td>❌ No access</td>
+          <td>❌ No access</td>
+          <td>Full student data management only</td>
+        </tr>
+        <tr>
+          <td><strong>Accountant</strong></td>
+          <td>❌ No access</td>
+          <td>❌ No access</td>
+          <td>❌ No access</td>
+          <td>✅ Full access</td>
+          <td>Financial module only</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 13-C — STUDENT & TEACHER ASSIGNMENTS
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Feature Deep-Dive: Assignments</span><span class="r">SchoolHub</span></div>
+    <h2 class="sh">9. Feature Deep-Dive: Student Assignments &amp; Teacher Assignments</h2>
+
+    <h3 class="ssh">9.1 — The Central Pivot: ClassSubjectTeacher (CST)</h3>
+    <p>Both student assignments and teacher assignments converge on a single, central database pivot: the
+      <strong><code>teachers_classes_subject</code></strong> table (modelled as <code>ClassSubjectTeacher</code> in
+      Eloquent). This pivot is the engine that connects every academic entity together and serves as the anchor for
+      schedules, grades, and attendance records.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a3a6b', 'primaryTextColor': '#000000',
+        'primaryBorderColor': '#1a3a6b', 'lineColor': '#2563a8', 'secondaryColor': '#eff6ff',
+        'attributeBackgroundColorEven': '#f0f4ff', 'attributeBackgroundColorOdd': '#e0eaff', 'fontFamily': 'Inter,
+        sans-serif'}}}%%
+        erDiagram
+        TEACHER ||--o{ CST : "teaches"
+        CLASSES ||--o{ CST : "has sessions in"
+        SUBJECTS ||--o{ CST : "taught via"
+        CST ||--o{ SCHEDULE : "generates"
+        CST ||--o{ EXAM : "produces"
+        EXAM ||--o{ GRADE : "is graded by"
+        GRADE }o--|| STUDENT : "belongs to"
+        STUDENT }o--|| CLASSES : "enrolled in"
+
+        CST {
+        int id
+        int teacher_id
+        int class_id
+        int subject_id
+        string academic_year
+        }
+        SCHEDULE {
+        int id
+        int cst_id
+        enum day
+        time start_time
+        time end_time
+        string room
+        }
+        EXAM {
+        int id
+        int subject_id
+        int teacher_id
+        enum exam_type
+        decimal max_grade
+        string semester
+        }
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 17:</strong> Entity-Relationship Diagram — The ClassSubjectTeacher (CST)
+      pivot as the academic system backbone connecting teachers, classes, subjects, schedules, exams, and grades.</div>
+
+    <h3 class="ssh">9.2 — Teacher Assignments</h3>
+    <p>When an administrator assigns a teacher to teach a specific subject in a specific class for an academic year, a
+      <code>ClassSubjectTeacher</code> record is created. This assignment is handled via the
+      <code>ClassSubjectTeacherController</code> and enforces the following business rules:</p>
+    <ul>
+      <li><strong>No double assignment:</strong> A teacher cannot be assigned the same subject in the same class twice
+        for the same academic year (unique constraint on
+        <code>[class_id, subject_id, teacher_id, academic_year]</code>).</li>
+      <li><strong>Subject eligibility:</strong> Only subjects that exist in the class's level's
+        <code>level_subjects</code> table can be assigned, ensuring pedagogical coherence.</li>
+      <li><strong>Workload tracking:</strong> Each teacher's total assigned weekly sessions are aggregated from the
+        schedule records tied to their CST entries, allowing the admin to monitor and balance teacher workloads.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        sequenceDiagram
+        actor Admin as 🖥 Admin
+        participant Web as Vue.js Dashboard
+        participant API as Laravel API
+        participant DB as Database
+
+        Admin->>Web: Classes → Select Class → Assign Teacher to Subject
+        Web->>API: GET /api/teachers (fetch available teachers)
+        DB-->>Web: [{teacher_id, name, specialization, weekly_hours}]
+
+        Admin->>Web: Select Teacher + Subject + click "Assign"
+        Web->>API: POST /api/class-subject-teachers\n{class_id, teacher_id, subject_id, academic_year}
+
+        API->>DB: Check duplicate: WHERE class_id + subject_id + academic_year
+        alt Already assigned
+        DB-->>API: Record exists
+        API-->>Web: 422 "This subject is already assigned in this class"
+        else Not yet assigned
+        API->>DB: INSERT INTO teachers_classes_subject
+        DB-->>API: New CST record (id: 87)
+        API-->>Web: 201 Created {cst_id, teacher, class, subject}
+        Web-->>Admin: "Assignment saved ✓ — Schedule can now be generated"
+        end
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 18:</strong> Sequence Diagram — Admin assigns a teacher to teach a subject
+      in a class (CST creation flow).</div>
+
+    <h3 class="ssh">9.3 — Student Assignments (Enrolling Students in Classes)</h3>
+    <p>Student assignment refers to the process of enrolling a student into a school class for an academic year. This is
+      managed via the <code>StudentController</code> and the <code>student_history</code> table, which maintains a full
+      audit trail of every class the student has attended across academic years.</p>
+
+    <ul>
+      <li><strong>Initial enrollment:</strong> When a student is created, they are assigned to a <code>class_id</code>
+        directly on the <code>students</code> table (the "current" class).</li>
+      <li><strong>Class transfer:</strong> When a student is moved to a different class (e.g., promoted or transferred),
+        the old record in <code>student_history</code> is closed with a <code>left_at</code> timestamp, and a new
+        history record is opened for the new class.</li>
+      <li><strong>Capacity validation:</strong> The API checks the destination class's <code>capacity</code> before
+        allowing an enrollment to prevent over-filled classrooms.</li>
+      <li><strong>Parent linking:</strong> Every student is linked to a <code>parent_id</code>, which is the parent
+        profile that will be able to access the student's data via the mobile app.</li>
+    </ul>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+        flowchart TD
+        A(["Admin creates or transfers a Student"]) --> B{"New student or transfer?"}
+        B -- New Student --> C["POST /api/students\nfirst_name, last_name, class_id,\nparent_id, birth_date, gender"]
+        C --> D{"class.capacity reached?"}
+        D -- Yes --> ERR["422 Class is full"]
+        D -- No --> E["INSERT students record\nGenerate unique student code\nFormat: SCH-YYYY-XXXXXX"]
+        E --> F["INSERT student_history record\nstudent_id, class_id, academic_year,\nenrolled_at = today"]
+        F --> G["201 Created - Student enrolled"]
+
+        B -- Transfer --> H["PATCH /api/students/id\nnew class_id"]
+        H --> D2{"New class capacity OK?"}
+        D2 -- No --> ERR
+        D2 -- Yes --> I["UPDATE students.class_id"]
+        I --> J["CLOSE old student_history\nleft_at = today"]
+        J --> K["OPEN new student_history\nclass_id = new, enrolled_at = today"]
+        K --> G
+
+        style A fill:#1a3a6b,color:#fff
+        style G fill:#065f46,color:#fff
+        style ERR fill:#991b1b,color:#fff
+      </div>
+    </div>
+    <div class="diagram-cap"><strong>Figure 19:</strong> Activity Diagram — Student enrollment and class transfer flow
+      with history tracking and capacity validation.</div>
+
+    <h3 class="ssh">API Endpoints for Assignments</h3>
+    <ul class="epl">
+      <li><span class="mth get">GET</span><span class="ep">/api/class-subject-teachers</span><span class="epd">List all
+          CST assignments (filter by class_id, teacher_id, academic_year)</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/class-subject-teachers</span><span class="epd">Create
+          a new teacher→subject→class assignment (CST record)</span></li>
+      <li><span class="mth del">DEL</span><span class="ep">/api/class-subject-teachers/{id}</span><span
+          class="epd">Remove a teacher assignment (cascades to schedule if not yet published)</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/teachers/{id}/classes</span><span class="epd">Get all
+          classes a specific teacher is currently assigned to</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/classes/{id}/students</span><span class="epd">Get the
+          full student roster for a class</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/students</span><span class="epd">Enroll a new student
+          (auto-generates unique student code + history record)</span></li>
+      <li><span class="mth put">PUT</span><span class="ep">/api/students/{id}</span><span class="epd">Transfer student
+          to a new class (closes old history, opens new)</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/students/{id}/history</span><span class="epd">Full
+          academic history of a student (all classes attended across years)</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/levels</span><span class="epd">List all levels with
+          their cycle, year_number, and name</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/levels/{id}/subjects</span><span class="epd">Assign a
+          subject to a level with a coefficient</span></li>
+      <li><span class="mth put">PUT</span><span class="ep">/api/levels/{id}/subjects/{subject_id}</span><span
+          class="epd">Update subject coefficient for a level</span></li>
+    </ul>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 13-D — DASHBOARD ANALYTICS & ATTENDANCE
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Feature Deep-Dive: Analytics</span><span class="r">SchoolHub</span></div>
+    <h2 class="sh">10. Feature Deep-Dive: Dashboard Analytics &amp; Attendance</h2>
+
+    <h3 class="ssh">10.1 — Dashboard KPIs &amp; Metric Aggregation</h3>
+    <p>The system features a centralized dashboard that provides administrators and directors with a real-time overview
+      of the school's operational health. The <code>DashboardController</code> aggregates metrics across four key
+      pillars:</p>
+    <ul>
+      <li><strong>Overview:</strong> Total active students, teachers, and active classes.</li>
+      <li><strong>Financials:</strong> Total revenue collected, pending payments, late payments, and the overall payment
+        collection rate.</li>
+      <li><strong>Academics:</strong> The school-wide average grade across all subjects and exams for the current
+        academic year.</li>
+      <li><strong>Attendance:</strong> A 30-day rolling aggregate of attendance rates, breaking down occurrences of
+        "present", "absent", "late", and "excused".</li>
+    </ul>
+
+    <h3 class="ssh">10.2 — Director Scoping in Analytics</h3>
+    <p>The powerful cycle-based visibility logic (discussed in Section 8) extends deeply into the analytics engine. When
+      a Director requests dashboard metrics, the system automatically intervenes at the query level:</p>
+    <ul>
+      <li><strong>Metric Isolation:</strong> A Director of the <em>Primaire</em> cycle will only see the total student
+        count, average grade, and attendance rate <strong>specifically for primary students</strong>. The system
+        automatically chains
+        <code>whereHas('class.levelProfile', function ($q) { $q->where('cycle', 'primaire'); })</code> to every
+        aggregate query.</li>
+      <li><strong>Financial Restriction:</strong> Directors are fundamentally academic supervisors, not financial
+        officers. The dashboard logic recognizes the Director role and <strong>forces all financial metrics (revenue,
+          pending payments) to zero</strong> while hiding the recent payments feed, ensuring strict separation of
+        concerns.</li>
+    </ul>
+
+    <h3 class="ssh">10.3 — Bulk Attendance Processing</h3>
+    <p>To accommodate the reality of classroom management, where teachers mark attendance for 30-40 students
+      simultaneously in a span of minutes, the system avoids generating dozens of individual API calls. Instead, it
+      utilizes a highly optimized <code>bulkStore</code> transaction:</p>
+
+    <div
+      style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:14px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:8.5pt;color:#1a3a6b;line-height:1.7;">
+      <span style="color:#7c3aed;">public function</span> <span
+        style="color:#1a3a6b;font-weight:700;">bulkStore</span>(Request $request)<br>
+      {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;$records = $request->input('records', []);<br>
+      <br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#7c3aed;">return</span> \DB::transaction(<span
+        style="color:#7c3aed;">function</span> () <span style="color:#7c3aed;">use</span> ($records) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6b7280;">// Iterates over the payload and
+        processes updates or inserts</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6b7280;">// within a single atomic database
+        transaction. If any record fails</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6b7280;">// validation or database
+        constraints, the entire batch rolls back,</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#6b7280;">// preventing corrupted or partial
+        attendance states.</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;});<br>
+      }
+    </div>
+
+    <p>This approach minimizes database connections and dramatically improves API response times during the morning
+      attendance rush hour, a critical non-functional requirement for the school.</p>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 13-E — FINANCIAL SYSTEM & ALGERIAN MARKET APPROACH
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Feature Deep-Dive: Finance</span><span class="r">SchoolHub</span></div>
+    <h2 class="sh">11. Feature Deep-Dive: A Localized Financial System</h2>
+
+    <h3 class="ssh">11.1 — The Problem with Traditional Approaches</h3>
+    <p>Most traditional or open-source school management systems follow a generic financial model: a flat "Tuition Fee"
+      is directly attached to the <strong>Student</strong>, and it is usually billed upfront per semester or per year.
+      However, this approach completely fails in the Algerian private school market due to several local realities:</p>
+    <ul>
+      <li><strong>Family-Centric Billing:</strong> Parents do not want separate invoices for each of their children.
+        They expect a single, unified bill that covers all their enrolled siblings.</li>
+      <li><strong>A-la-carte Options:</strong> Fees are not flat. One sibling might use the school bus (Transport Fee)
+        and eat at the canteen (Canteen Fee), while another sibling might only pay basic tuition.</li>
+      <li><strong>Monthly Installments:</strong> Paying upfront is rare. The cultural standard is to negotiate an annual
+        total (often with a sibling discount applied) and spread it out evenly over 10 or 12 monthly payments.</li>
+    </ul>
+
+    <h3 class="ssh">11.2 — The SchoolHub Solution: Parent-Level Contracts</h3>
+    <p>To solve this, SchoolHub discards the "student-pays-tuition" model and introduces a robust <strong>Parent-Level
+        Contract</strong> system (<code>ContractController</code>). The architecture works as follows:</p>
+
+    <ol>
+      <li><strong>Contract Creation:</strong> The accountant creates a single <code>Contract</code> linked directly to
+        the <strong>Parent</strong> (<code>parent_id</code>).</li>
+      <li><strong>Sibling Fee Selection:</strong> Inside the contract creation wizard, the accountant assigns specific,
+        modular fees to each individual sibling. The payload looks like this:
+        <code>[{ student_id: 1, fee_ids: [Tuition, Canteen] }, { student_id: 2, fee_ids: [Tuition] }]</code>.</li>
+      <li><strong>Dynamic Aggregation &amp; Discounts:</strong> The system sums the base amounts of all selected fees
+        across all siblings. The accountant can then apply a global discount (e.g., a 10% sibling discount) to the grand
+        total.</li>
+      <li><strong>Automated Monthly Billing:</strong> The final discounted amount is divided by the duration of the
+        contract (e.g., 10 months). The system then automatically generates a <code>Bill</code> for each month (e.g.,
+        "September 2026", "October 2026").</li>
+    </ol>
+
+    <h3 class="ssh">11.3 — Implementation Highlights</h3>
+    <p>This localized approach is powered by the <code>ParentFee</code> pivot table, which creates a three-way junction
+      between the Parent, the Student, and the Fee. When a contract is generated, the backend automatically cascades the
+      generation of monthly bills:</p>
+
+    <div
+      style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:14px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:8.5pt;color:#1a3a6b;line-height:1.7;">
+      <span style="color:#6b7280;">// From ContractController.php -> store()</span><br>
+      $currentDate = $startDate->copy();<br>
+      <span style="color:#7c3aed;">while</span> ($currentDate <= $endDate) {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;Bill::create([<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2563a8;">'contract_id'</span> =>
+        $contract->id,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2563a8;">'month_year'</span> =>
+        $currentDate->format(<span style="color:#2563a8;">'F Y'</span>),<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2563a8;">'amount_due'</span> =>
+        $monthlyAmount,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2563a8;">'balance'</span> =>
+        $monthlyAmount,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#2563a8;">'status'</span> => <span
+          style="color:#2563a8;">'unpaid'</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;]);<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$currentDate->addMonth();<br>
+        }
+    </div>
+
+    <p>When the parent opens their mobile app, they don't see confusing, overlapping invoices for each child. They
+      simply see one active contract, and a clean list of 10 monthly bills they need to pay, perfectly aligning the
+      software with local administrative expectations.</p>
+
+    <h3 class="ssh">11.4 — Payment Allocation (FIFO) &amp; Overpayments</h3>
+    <p>Another major challenge is how parents physically pay. A parent might come to the administration desk and hand
+      over a bulk amount of cash (e.g., 60,000 DZD) without specifying exactly which month they are paying for. The
+      system must intelligently distribute this money.</p>
+    <p>SchoolHub uses a <strong>FIFO (First-In, First-Out) Waterfall Allocation</strong> algorithm located in the
+      <code>PaymentController</code>:</p>
+    <ul>
+      <li><strong>Waterfall Filling:</strong> The system fetches all unpaid or partially paid bills for the contract,
+        ordered by <code>due_date</code> (oldest first). It pours the payment amount into the first bill until it is
+        fully <code>paid</code>. If there is money left over, it spills over to the next bill, and so on.</li>
+      <li><strong>Allocation Tracking:</strong> Instead of just updating the bill's status, the system generates precise
+        <code>PaymentAllocation</code> junction records. This creates a rigorous audit trail proving exactly which
+        fractions of a single payment went to which specific bills.</li>
+      <li><strong>Overpayment Balance:</strong> If a parent pays <em>more</em> than the total sum of their currently due
+        bills (e.g., paying for the whole year in advance, or just rounding up the cash amount), the remainder does not
+        vanish. The loop safely exits, and the remaining amount is deposited into the <code>balance</code> column on the
+        <code>Contract</code> model. This acts as a localized credit wallet, ensuring financial integrity and trust.
+      </li>
+    </ul>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 13-F — ATTENDANCE MODEL DEEP DIVE
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III – Feature Deep-Dive: Operations</span><span class="r">SchoolHub</span></div>
+    <h2 class="sh">12. Feature Deep-Dive: Attendance Tracking System</h2>
+
+    <h3 class="ssh">12.1 — A Multi-Dimensional Tracking Model</h3>
+    <p>School attendance is often oversimplified as a boolean "present" or "absent" flag on a student for a given day.
+      However, in a middle school (CEM) environment, students move between different classrooms, subjects, and teachers
+      throughout the day. To accommodate this, SchoolHub uses a multi-dimensional <code>Attendance</code> model.</p>
+
+    <p>Rather than simply linking a student to a date, an attendance record in SchoolHub acts as a <strong>4-way
+        junction</strong> connecting four distinct entities simultaneously:</p>
+
+    <div class="mermaid">
+      %%{init: {"themeVariables": {"primaryTextColor": "#000000"}}}%%
+      erDiagram
+      STUDENT ||--o{ ATTENDANCE : "has"
+      TEACHER ||--o{ ATTENDANCE : "records"
+      SUBJECT ||--o{ ATTENDANCE : "involves"
+      SCHEDULE ||--o{ ATTENDANCE : "during"
+
+      ATTENDANCE {
+      int id PK
+      int student_id FK
+      int teacher_id FK
+      int subject_id FK
+      int schedule_id FK
+      date date
+      time time
+      string status "present | absent | late | excused"
+      string reason
+      }
+    </div>
+
+    <h3 class="ssh">12.2 — Why This Architecture?</h3>
+    <p>By enforcing these foreign keys (<code>student_id</code>, <code>teacher_id</code>, <code>subject_id</code>, and
+      <code>schedule_id</code>), the system unlocks incredibly granular analytical capabilities:</p>
+    <ul>
+      <li><strong>Subject-Specific Truancy:</strong> We can query if a student is consistently skipping
+        <em>Mathematics</em> but attending <em>History</em> (filtering by <code>subject_id</code>).</li>
+      <li><strong>Time-Based Trends:</strong> By filtering via <code>schedule_id</code>, the administration can identify
+        if lateness (<code>status = 'late'</code>) is overwhelmingly concentrated in the first period of the morning
+        (8:00 AM).</li>
+      <li><strong>Classroom &amp; Teacher Context:</strong> The <code>teacher_id</code> records who was supposed to be
+        teaching the class. The director can query this to see if a specific teacher's classes have unusually high
+        absenteeism, which might indicate a problem with classroom management.</li>
+    </ul>
+
+    <h3 class="ssh">12.3 — Efficient Data Capture by Supervisors</h3>
+    <p>In Algerian middle schools, teachers do not typically take attendance—this is the strict responsibility of the
+      <strong>Supervisors</strong> (Surveillants). To capture this complex web of data quickly, the supervisor uses the
+      <strong>web administration dashboard</strong> (often on a tablet or computer), which pulls the
+      <code>schedule_id</code>, <code>subject_id</code>, and <code>teacher_id</code> automatically from the active
+      timetable for the specific classroom they are inspecting. The supervisor simply clicks the names of students who
+      are absent or late. The backend then utilizes a <code>bulkStore</code> database transaction (as highlighted in
+      Section 10.3) to instantly generate all 30+ multi-dimensional records in a fraction of a second, ensuring the
+      morning rush hour does not overwhelm the server.</p>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE — TECHNOLOGY JUSTIFICATION
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter III-B &ndash; Technology Choices</span><span class="r">SchoolHub</span></div>
+    <h1 class="ch">III-B. Technology Choices &amp; Justification</h1>
+
+    <p>Before writing a single line of code, an evaluation of the available technology options was conducted for each
+      layer of the system. The selection criteria were: <strong>maturity</strong>, <strong>community support</strong>,
+      <strong>alignment with the school's operational constraints</strong>, <strong>cross-platform capability</strong>,
+      and <strong>long-term maintainability</strong>. The following section documents the alternatives considered and
+      the rationale behind each final choice.</p>
+
+    <h2 class="sh">1. Backend — Why Laravel 12 over alternatives?</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Framework</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Laravel 12</strong> (PHP 8.3)</td>
+          <td>Eloquent ORM, built-in Sanctum auth, rich ecosystem, Artisan CLI, excellent documentation</td>
+          <td>PHP perceived as legacy by some</td>
+          <td><span style="color:#16a34a;font-weight:700;">✔ Selected</span></td>
+        </tr>
+        <tr>
+          <td>Django (Python)</td>
+          <td>Fast prototyping, large community</td>
+          <td>Less opinionated on API structure; ORM less intuitive for complex pivots</td>
+          <td>Rejected</td>
+        </tr>
+        <tr>
+          <td>Node.js + Express</td>
+          <td>High concurrency, JavaScript everywhere</td>
+          <td>No built-in ORM; requires significant boilerplate for RBAC; less structured</td>
+          <td>Rejected</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">2. Web Frontend — Why Vue.js 3 over alternatives?</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Framework</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Vue.js 3 + TypeScript</strong></td>
+          <td>Composition API, excellent TypeScript support, PrimeVue UI library, lightweight bundle</td>
+          <td>Smaller ecosystem than React</td>
+          <td><span style="color:#16a34a;font-weight:700;">✔ Selected</span></td>
+        </tr>
+        <tr>
+          <td>React.js</td>
+          <td>Largest ecosystem, huge community</td>
+          <td>More boilerplate; no official opinionated structure; JSX learning curve</td>
+          <td>Rejected</td>
+        </tr>
+        <tr>
+          <td>Angular</td>
+          <td>Fully opinionated, enterprise-grade</td>
+          <td>Heavy, steep learning curve, overkill for a single-school dashboard</td>
+          <td>Rejected</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">3. Mobile — Why Flutter over alternatives?</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Framework</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Flutter (Dart)</strong></td>
+          <td>Single codebase for Android &amp; iOS, native performance, rich widget system, RTL support built-in</td>
+          <td>Dart is niche; large app size</td>
+          <td><span style="color:#16a34a;font-weight:700;">✔ Selected</span></td>
+        </tr>
+        <tr>
+          <td>React Native</td>
+          <td>JavaScript, large community</td>
+          <td>Bridge performance bottlenecks; inconsistent UI across platforms</td>
+          <td>Rejected</td>
+        </tr>
+        <tr>
+          <td>Native Android + iOS</td>
+          <td>Best performance, full platform APIs</td>
+          <td>Two separate codebases; 2× development time; unfeasible for a solo developer</td>
+          <td>Rejected</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">4. Database — Why MySQL over alternatives?</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Database</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>MySQL 8</strong></td>
+          <td>Industry standard, excellent Laravel ORM support, reliable relational integrity, free</td>
+          <td>Vertical scaling limitations at extreme scale</td>
+          <td><span style="color:#16a34a;font-weight:700;">✔ Selected</span></td>
+        </tr>
+        <tr>
+          <td>PostgreSQL</td>
+          <td>Advanced features, JSON support</td>
+          <td>Slightly more configuration overhead; no specific benefit for this use case</td>
+          <td>Rejected</td>
+        </tr>
+        <tr>
+          <td>MongoDB (NoSQL)</td>
+          <td>Flexible schema</td>
+          <td>No relational integrity; complex joins impossible; completely misaligned with the highly relational school
+            data model</td>
+          <td>Rejected</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">5. Hosting &amp; Deployment — Why DigitalOcean VPS?</h2>
+    <p>A managed cloud solution (e.g. Heroku, Railway) would have been simpler but offered less control and higher
+      monthly cost at scale. A <strong>DigitalOcean Droplet (VPS)</strong> was selected for its predictable pricing,
+      full root access for Nginx + PHP-FPM configuration, and the ability to host all three project components (API,
+      static dashboard build, SSL certificates) on a single server, keeping operational costs under <strong>10
+        USD/month</strong>.</p>
+
+    <div class="gb">
+      <p>All technology choices directly contributed to the project's success: the selected stack enabled a single
+        developer to independently build, test, and deploy a production-grade three-platform system within five months,
+        strictly on schedule.</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 14 — BACKEND API (1)
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter IV – Backend API (Laravel 12)</span><span class="r">SchoolHub</span></div>
+
+    <h1 class="ch">IV. Implementation – Backend API (Laravel 12)</h1>
+
+    <h2 class="sh">1. Project Structure</h2>
+    <div class="two"
+      style="font-size:9pt;font-family:'JetBrains Mono',monospace;background:#f8faff;border:1px solid #e0e7ff;border-radius:8px;padding:14px;margin:12px 0;">
+      <div>
+        <strong style="color:#1a3a6b;font-family:'Inter';">API/</strong><br>
+        ├── app/<br>
+        │&nbsp;&nbsp;├── <span style="color:#2563a8;">Http/Controllers/</span> (18 controllers)<br>
+        │&nbsp;&nbsp;├── <span style="color:#065f46;">Models/</span> (26 Eloquent models)<br>
+        │&nbsp;&nbsp;├── <span style="color:#7c3aed;">Services/</span> (business logic)<br>
+        │&nbsp;&nbsp;└── <span style="color:#b45309;">Observers/</span><br>
+        ├── database/<br>
+        │&nbsp;&nbsp;├── migrations/ (48 files)<br>
+        │&nbsp;&nbsp;├── seeders/<br>
+        │&nbsp;&nbsp;└── factories/
+      </div>
+      <div>
+        ├── routes/<br>
+        │&nbsp;&nbsp;└── <span style="color:#2563a8;">api.php</span><br>
+        ├── tests/Feature/<br>
+        └── docs/<br>
+        &nbsp;&nbsp;&nbsp;API_COMPLETE_REFERENCE.md (45KB)<br>
+        &nbsp;&nbsp;&nbsp;PAYMENT_SYSTEM_DOCUMENTATION.md (30KB)<br>
+        &nbsp;&nbsp;&nbsp;SCHEDULE_API_REFERENCE.md (8KB)
+      </div>
+    </div>
+
+    <h2 class="sh">2. Authentication &amp; RBAC</h2>
+    <p>Authentication is handled by <strong>Laravel Sanctum</strong> with role-dependent token lifetimes. A custom
+      <code>role</code> middleware guards every protected route group.</p>
+
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Token Expiry</th>
+          <th>Access Scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>admin</strong></td>
+          <td>8 hours</td>
+          <td>Full system access</td>
+        </tr>
+        <tr>
+          <td><strong>director</strong></td>
+          <td>7 days</td>
+          <td>Global read-only + statistics</td>
+        </tr>
+        <tr>
+          <td><strong>supervisor</strong></td>
+          <td>7 days</td>
+          <td>Own level classes</td>
+        </tr>
+        <tr>
+          <td><strong>teacher</strong></td>
+          <td>7 days</td>
+          <td>Own classes, grades, attendance</td>
+        </tr>
+        <tr>
+          <td><strong>parent</strong></td>
+          <td>7 days</td>
+          <td>Own children's data only</td>
+        </tr>
+        <tr>
+          <td><strong>secretariat</strong></td>
+          <td>8 hours</td>
+          <td>Administrative operations</td>
+        </tr>
+        <tr>
+          <td><strong>accountant</strong></td>
+          <td>8 hours</td>
+          <td>Financial module only</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">3. API Modules &amp; Key Endpoints</h2>
+    <p>The API exposes over <strong>80 RESTful endpoints</strong>. Selected endpoints per module:</p>
+
+    <ul class="epl">
+      <li><span class="mth post">POST</span><span class="ep">/api/login</span><span class="epd">Authenticate user →
+          return Bearer token + role</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/students</span><span class="epd">List students (filters:
+          class_id, gender, is_active)</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/grades/bulk</span><span class="epd">Bulk grade entry
+          for an entire class session</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/students/{id}/report-card</span><span class="epd">Full
+          academic report card with weighted averages</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/classes/{id}/ranking</span><span class="epd">Student
+          ranking by average for a class</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/attendances</span><span class="epd">Mark attendance
+          for a session (bulk or single)</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/schedules/check-conflicts</span><span
+          class="epd">Check scheduling conflicts before saving</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/schedule/generate</span><span
+          class="epd">Auto-generate full schedule via constraint algorithm</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/contracts</span><span class="epd">Create contract +
+          auto-generate 10 monthly bills</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/contracts/{id}/add-service</span><span
+          class="epd">Mid-year contract modification → new version created</span></li>
+      <li><span class="mth post">POST</span><span class="ep">/api/contracts/{id}/withdraw</span><span
+          class="epd">Process student withdrawal + compute refund</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/dashboard/stats</span><span class="epd">Full dashboard
+          KPIs (students, attendance, revenue)</span></li>
+      <li><span class="mth get">GET</span><span class="ep">/api/parent/students/{id}/report-card</span><span
+          class="epd">Parent-scoped: child's report card (ownership check)</span></li>
+    </ul>
+
+    <h2 class="sh">4. Payment System</h2>
+    <p>The financial module implements a <strong>contract-based allocation engine</strong> across 6 tables
+      (<code>fees</code>, <code>contracts</code>, <code>bills</code>, <code>payments</code>,
+      <code>payment_allocations</code>, <code>parents_fees</code>). It supports full payments, partial payments, advance
+      multi-month payments, overpayment credit, mid-year service additions, and student withdrawal refund calculations.
+    </p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 15 — WEB FRONTEND
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter V – Web Dashboard (Vue.js 3)</span><span class="r">SchoolHub</span></div>
+    <h1 class="ch">V. Implementation – Web Dashboard (Vue.js 3)</h1>
+
+    <h2 class="sh">1. Technology Stack</h2>
+    <div class="br">
+      <span class="bd">Vue.js 3.4</span><span class="bd">TypeScript 5.7</span><span class="bd">PrimeVue 4.5</span>
+      <span class="bd">Chart.js 3.3</span><span class="bd">Axios 1.13</span><span class="bd">Vite 5.3</span>
+      <span class="bd lt">Vue Router</span><span class="bd lt">Vue i18n</span><span class="bd lt">Tailwind CSS</span>
+    </div>
+
+    <h2 class="sh">2. Views Implemented (25 total)</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>View</th>
+          <th>Description</th>
+          <th>Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>GradeAnalytics.vue</code></td>
+          <td>Advanced grade analytics with charts, filters, rankings</td>
+          <td>137 KB</td>
+        </tr>
+        <tr>
+          <td><code>AdminAttendance.vue</code></td>
+          <td>Full attendance management per class/date/subject</td>
+          <td>57 KB</td>
+        </tr>
+        <tr>
+          <td><code>Classes.vue</code></td>
+          <td>Class CRUD, student assignment, subject management</td>
+          <td>67 KB</td>
+        </tr>
+        <tr>
+          <td><code>Teachers.vue</code></td>
+          <td>Teacher profiles, subject assignments, workload</td>
+          <td>63 KB</td>
+        </tr>
+        <tr>
+          <td><code>Students.vue</code></td>
+          <td>Student list, filters, profile management</td>
+          <td>43 KB</td>
+        </tr>
+        <tr>
+          <td><code>ContractCreate.vue</code></td>
+          <td>Multi-step contract creation wizard</td>
+          <td>26 KB</td>
+        </tr>
+        <tr>
+          <td><code>ScheduleGenerator.vue</code></td>
+          <td>Trigger schedule generation, view results by class</td>
+          <td>9 KB</td>
+        </tr>
+        <tr>
+          <td><code>SupervisorPanel.vue</code></td>
+          <td>Level supervisor: classes and attendance overview (no grade access)</td>
+          <td>36 KB</td>
+        </tr>
+        <tr>
+          <td><code>TeacherPortal.vue</code></td>
+          <td>Teacher-facing: my classes, grade entry, attendance</td>
+          <td>24 KB</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">3. Service &amp; Type Layer</h2>
+    <ul>
+      <li><strong>ApiService.ts</strong>: Centralised Axios HTTP client with request/response interceptors for JWT
+        injection and automatic 401 handling.</li>
+      <li><strong>DashboardService.ts</strong>: Abstraction layer for all dashboard data calls.</li>
+      <li><strong>src/types/index.ts</strong>: TypeScript interfaces for all 26 domain entities.</li>
+      <li><strong>useAsync.ts</strong>: Reusable Vue composable for async state (loading, error, data).</li>
+    </ul>
+
+    <h2 class="sh">4. Key Design Patterns</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Pattern</th>
+          <th>Usage in SchoolHub</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Composition API</strong></td>
+          <td>All components use <code>&lt;script setup lang="ts"&gt;</code></td>
+        </tr>
+        <tr>
+          <td><strong>Service Layer</strong></td>
+          <td>API calls abstracted from component logic</td>
+        </tr>
+        <tr>
+          <td><strong>Repository Pattern</strong></td>
+          <td>Data access centralised in service files</td>
+        </tr>
+        <tr>
+          <td><strong>Singleton Pattern</strong></td>
+          <td>ApiService as a single Axios instance</td>
+        </tr>
+        <tr>
+          <td><strong>Observer Pattern</strong></td>
+          <td>Vue 3 reactivity system for state changes</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">5. Internationalisation</h2>
+    <p>The web interface supports multiple languages via Vue i18n. A custom script <code>update_translations.js</code>
+      was developed to automate synchronisation of translation keys across language files, preventing missing-key errors
+      at runtime.</p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 16 — MOBILE APP
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter VI – Mobile Application (Flutter)</span><span class="r">SchoolHub</span></div>
+    <h1 class="ch">VI. Implementation – Mobile App (Flutter)</h1>
+
+    <h2 class="sh">1. Overview</h2>
+    <p>The <strong>SchoolHub Parent</strong> mobile application is built with Flutter (Dart 3.12) and targets both
+      Android and iOS. It serves <strong>parents</strong> and <strong>teachers</strong> as their primary interface to
+      the SchoolHub platform.</p>
+
+    <div class="br">
+      <span class="bd gn">Flutter 3.x</span><span class="bd gn">Dart 3.12</span>
+      <span class="bd lt">Provider 6.1</span><span class="bd lt">Dio 5.4</span>
+      <span class="bd lt">flutter_secure_storage</span><span class="bd lt">FL Chart 0.66</span>
+      <span class="bd lt">Google Fonts 6.1</span><span class="bd lt">intl 0.20</span><span class="bd lt">shimmer</span>
+    </div>
+
+    <h2 class="sh">2. Architecture — Provider Pattern</h2>
+    <div class="two"
+      style="font-size:9pt;font-family:'JetBrains Mono',monospace;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin:12px 0;">
+      <div>
+        <strong style="color:#065f46;font-family:'Inter';">Providers (State Management)</strong><br>
+        ├── AuthProvider.dart<br>
+        │&nbsp;&nbsp;&nbsp;(login, logout, checkAuth, role)<br>
+        ├── ChildrenProvider.dart<br>
+        │&nbsp;&nbsp;&nbsp;(fetchChildren, selected child)<br>
+        └── LocaleProvider.dart<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(AR / FR / EN switching)
+      </div>
+      <div>
+        <strong style="color:#065f46;font-family:'Inter';">Screens</strong><br>
+        ├── LoginScreen<br>
+        ├── HomeScreen (Parent)<br>
+        ├── grades/ (report cards)<br>
+        ├── attendance/ (history)<br>
+        ├── payments/ (contract status)<br>
+        ├── schedule/ (weekly timetable)<br>
+        ├── teacher/ (teacher portal)<br>
+        └── settings/ (language, theme)
+      </div>
+    </div>
+
+    <h2 class="sh">3. Feature Summary</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Key Features</th>
+          <th>Target</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Authentication</strong></td>
+          <td>Multi-role login, secure token storage (flutter_secure_storage), auto-login on restart</td>
+          <td>All</td>
+        </tr>
+        <tr>
+          <td><strong>My Children</strong></td>
+          <td>List of enrolled children with class and profile info</td>
+          <td>Parent</td>
+        </tr>
+        <tr>
+          <td><strong>Grades &amp; Reports</strong></td>
+          <td>Grades by subject &amp; semester, full report card with weighted averages</td>
+          <td>Parent</td>
+        </tr>
+        <tr>
+          <td><strong>Attendance</strong></td>
+          <td>Attendance history per subject, status breakdown, FL Chart visualisation</td>
+          <td>Parent</td>
+        </tr>
+        <tr>
+          <td><strong>Payments</strong></td>
+          <td>Contract summary, monthly bill status, payment history</td>
+          <td>Parent</td>
+        </tr>
+        <tr>
+          <td><strong>Schedule</strong></td>
+          <td>Weekly timetable of child's class</td>
+          <td>Parent</td>
+        </tr>
+        <tr>
+          <td><strong>Teacher Portal</strong></td>
+          <td>My classes, mark attendance, enter grades from mobile</td>
+          <td>Teacher</td>
+        </tr>
+        <tr>
+          <td><strong>Settings</strong></td>
+          <td>Language (AR/FR/EN), light/dark theme (system auto), profile management</td>
+          <td>All</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="sh">4. Multi-language &amp; Theming</h2>
+    <p>The app uses Flutter's built-in localisation (<code>flutter_localizations</code>) with generated
+      <code>AppLocalizations</code> delegates for Arabic (full RTL support), French, and English. The selected locale is
+      persisted across sessions via <code>shared_preferences</code>. Theming is system-adaptive:
+      <code>ThemeMode.system</code> switches between light and dark themes automatically.</p>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 17 — TESTING
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter VII – Testing &amp; Validation</span><span class="r">SchoolHub</span></div>
+    <h1 class="ch">VII. Testing &amp; Validation</h1>
+
+    <h2 class="sh">1. Testing Strategy</h2>
+    <p>A <strong>multi-level testing strategy</strong> was applied covering unit tests, integration (feature) tests, and
+      manual validation. The goal was to verify correctness of every API endpoint and enforce RBAC rules before final
+      delivery.</p>
+
+    <h2 class="sh">2. Backend Tests (PHPUnit)</h2>
+    <table class="rt">
+      <thead>
+        <tr>
+          <th>Test Suite</th>
+          <th>Type</th>
+          <th>Coverage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AuthenticationTest</strong></td>
+          <td>Feature</td>
+          <td>Login flow, token generation, role expiry, 401/403 responses</td>
+        </tr>
+        <tr>
+          <td><strong>StudentManagementTest</strong></td>
+          <td>Feature</td>
+          <td>CRUD operations, filters, validation rules, parent-child ownership</td>
+        </tr>
+        <tr>
+          <td><strong>GradeSystemTest</strong></td>
+          <td>Feature</td>
+          <td>Single &amp; bulk grade entry, report card generation, class ranking</td>
+        </tr>
+        <tr>
+          <td><strong>AttendanceTest</strong></td>
+          <td>Feature</td>
+          <td>Session marking, status transitions, statistics computation</td>
+        </tr>
+        <tr>
+          <td><strong>ScheduleConflictTest</strong></td>
+          <td>Feature</td>
+          <td>Teacher conflicts, room conflicts, class double-booking detection</td>
+        </tr>
+        <tr>
+          <td><strong>PaymentSystemTest</strong></td>
+          <td>Feature</td>
+          <td>Contract creation, full/partial/advance payments, overpayment credit, refunds</td>
+        </tr>
+        <tr>
+          <td><strong>RBACTest</strong></td>
+          <td>Feature</td>
+          <td>Verify every role can only access its authorised routes (403 for others)</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Tests run with <code>php artisan test</code> using an isolated SQLite in-memory database to avoid affecting
+      development data. Additionally, automated testing was established for the frontend (Vue.js and Flutter) to ensure
+      UI component stability.</p>
+
+    <h2 class="sh">3. API Testing &amp; Endpoint Verification</h2>
+    <p>Given that the Laravel API serves as the central nervous system for both the Web Dashboard and the Mobile App,
+      ensuring its absolute reliability was paramount. Before any integration with the frontend applications was
+      attempted, every single endpoint underwent rigorous, isolated manual and automated testing using industry-standard
+      API clients, specifically <strong>Postman</strong> and <strong>Insomnia</strong>.</p>
+    <p>This strategy allowed for the meticulous verification of JSON payload structures, HTTP status code accuracy
+      (e.g., ensuring 422 for validation errors, 401/403 for auth failures, and 200/201 for successes), and the correct
+      processing of Sanctum Bearer tokens. By simulating highly complex requests—such as bulk grade submissions and
+      intricate payment allocations—within Postman, I ensured the business logic was impenetrable before the UI was even
+      built.</p>
+
+    <h2 class="sh">4. Security Validation</h2>
+    <ul>
+      <li><strong>Role isolation:</strong> A parent account attempting to reach <code>/api/students</code> (admin-only)
+        receives an immediate HTTP 403.</li>
+      <li><strong>Token expiry:</strong> Expired tokens predictably return HTTP 401, seamlessly triggering re-login
+        flows on both web and mobile clients.</li>
+      <li><strong>Input sanitisation:</strong> All incoming API payloads are intercepted by Laravel FormRequests,
+        sanitising data and blocking malicious injections before any controller logic is executed.</li>
+      <li><strong>Cryptographic Ownership checks:</strong> Parent endpoints mathematically verify
+        <code>student.parent_id == auth()->user()->parent->id</code> at the middleware level, guaranteeing absolute data
+        privacy between families.</li>
+    </ul>
+
+    <h2 class="sh">5. Deployment, Hosting &amp; DevOps</h2>
+    <p>Transitioning the application from a local development environment to a live, internet-facing production server
+      marked the final, critical phase of the internship. The beta version of SchoolHub was successfully deployed and
+      provisioned for real-world usage by Fitya School.</p>
+    <p>The entire backend and web infrastructure is hosted on a high-performance <strong>DigitalOcean Virtual Private
+        Server (VPS)</strong>. The server was manually provisioned with an <strong>Ubuntu Linux</strong> operating
+      system, leveraging <strong>2 dedicated CPU cores and 2 GB of RAM</strong> to guarantee fluid performance even
+      during peak administrative hours (e.g., end-of-trimester grade processing).</p>
+    <p>The DevOps pipeline involved configuring Nginx as a reverse proxy, securing the application with SSL/TLS
+      encryption for safe data transmission, and fine-tuning database connections. The fully functional,
+      production-ready platform is currently live and globally accessible to the administration via the custom,
+      professionally branded domain name: <strong>ecolehub.app</strong>.</p>
+
+    <div class="gb">
+      <p><strong>Test Results:</strong> All PHPUnit feature test suites pass successfully. RBAC rules are enforced
+        consistently across all 80+ API endpoints. The payment allocation engine has been verified against all five
+        payment scenarios (full, partial, advance, overpayment, and multi-payment bill completion).</p>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 18 — CONCLUSION
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter VIII – Conclusion &amp; Future Work</span><span class="r">SchoolHub</span></div>
+
+    <h1 class="ch">VIII. Conclusion &amp; Future Work</h1>
+
+    <h2 class="sh">1. Project Summary</h2>
+    <p>This internship successfully delivered <strong>SchoolHub</strong> — a production-ready, full-stack school
+      management platform. The project covered the complete software development lifecycle: from requirements analysis
+      and UML-based design through to implementation, testing, and documentation.</p>
+
+    <p>All primary objectives were achieved:</p>
+    <ul>
+      <li> <strong>Laravel 12 REST API</strong> — 80+ endpoints, 48 DB migrations, 26 models, 7-role RBAC, comprehensive
+        documentation;</li>
+      <li> <strong>Vue.js 3 Web Dashboard</strong> — 25 views with TypeScript, PrimeVue components, real-time analytics,
+        and i18n;</li>
+      <li> <strong>Flutter Mobile App</strong> — Cross-platform (Android/iOS), 8 feature modules, tri-lingual with RTL
+        support;</li>
+      <li> <strong>Intelligent Schedule Generator</strong> — Constraint-satisfaction algorithm with hard rules and soft
+        scoring;</li>
+      <li> <strong>Complete Financial System</strong> — Contract management, automatic billing, allocation engine,
+        refund calculations;</li>
+      <li> <strong>Full UML Design</strong> — Use case, class, activity, and sequence diagrams for all major features.
+      </li>
+    </ul>
+
+    <h2 class="sh">2. Major Technical Challenges &amp; Difficulties Encountered</h2>
+    <p>Engineering a comprehensive ERP system from scratch inevitably presented several formidable technical hurdles.
+      Unquestionably, the most profound challenge encountered was the conceptualisation and implementation of the
+      <strong>Automated Schedule Generator Algorithm</strong>.</p>
+    <p>Timetabling is a mathematically complex constraint-satisfaction problem (NP-hard). Initially, finding a way to
+      programmatically assign hundreds of teaching sessions into limited time slots without creating a single teacher,
+      class, or room conflict seemed daunting. The algorithm required numerous architectural iterations. The
+      breakthrough was achieved by decoupling the logic into two distinct phases: a non-negotiable <em>Hard
+        Constraint</em> filter (instantly rejecting overlaps and availability breaches), followed by an intelligent
+      <em>Soft Scoring System</em> (which evaluates and ranks valid slots based on pedagogical preferences, such as
+      prioritizing mathematics in the morning).</p>
+    <p>Overcoming this algorithm was exceptionally rewarding; it successfully automated a painstaking logistical
+      nightmare that historically consumed weeks of the administration's time, reducing the task to a matter of seconds.
+    </p>
+
+    <h2 class="sh">3. Personal Growth &amp; Skills Acquired</h2>
+    <p>Beyond the raw code, this internship served as an invaluable catalyst for my personal and professional evolution
+      as a software engineer. Working directly with real-world stakeholders at Fitya School drastically improved my soft
+      skills—specifically my ability to actively listen to client grievances, translate non-technical requirements into
+      strict database architectures, and clearly communicate technical limitations when negotiating feature scope.</p>
+    <p>I cultivated a strong sense of autonomy, learning how to independently research, debug, and overcome
+      framework-specific roadblocks without external reliance. Technically, architecting a full-stack system entirely
+      from scratch solidified my engineering foundation:</p>
+    <div class="two">
+      <div>
+        <h3 class="ssh">Technical Skills</h3>
+        <ul>
+          <li>REST API design with Laravel 12</li>
+          <li>Relational database design (26 tables)</li>
+          <li>Vue.js 3 with TypeScript (strict mode)</li>
+          <li>Flutter cross-platform development</li>
+          <li>JWT/token authentication systems</li>
+          <li>Constraint-satisfaction algorithms</li>
+          <li>UML system modelling</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="ssh">Methodological Skills</h3>
+        <ul>
+          <li>Project management (WBS, Gantt, PMP)</li>
+          <li>Requirements analysis &amp; user stories</li>
+          <li>3-tier architectural design</li>
+          <li>RBAC security design</li>
+          <li>API documentation writing</li>
+          <li>PHPUnit testing strategies</li>
+          <li>Git version control &amp; workflow</li>
+        </ul>
+      </div>
+    </div>
+
+
+    <h2 class="sh">4. Future Perspectives &amp; Expansions</h2>
+    <p>While the deployed beta version of SchoolHub successfully satisfies all primary administrative and pedagogical
+      requirements, a software ecosystem of this nature is never truly finished. To further cement SchoolHub as an
+      elite, state-of-the-art educational platform, several high-impact features are projected for future iterations:
+    </p>
+    <ul>
+      <li><strong>Dedicated Supervisor Application:</strong> The development of a specialized, lightweight mobile
+        application strictly tailored for floor supervisors. This would allow them to manage hallway discipline,
+        instantly log behavioral incidents, and monitor student movements dynamically while patrolling the school
+        grounds.</li>
+      <li><strong>Live Push Notifications for Parents:</strong> Upgrading the Flutter application with Firebase Cloud
+        Messaging (FCM) to deliver instantaneous, real-time alerts to parents' smartphones the exact moment a teacher
+        marks a student absent, late, or logs a new exam grade.</li>
+      <li><strong>Live Parent-Teacher Communication Hub:</strong> Implementing a secure, moderated, in-app real-time
+        chat interface. This feature would dissolve the traditional communication barrier, allowing parents and teachers
+        to instantly discuss a child's academic trajectory without waiting for formal meetings.</li>
+      <li><strong>Live GPS School Bus Tracking:</strong> An ambitious IoT integration utilizing GPS modules on the
+        school's transport fleet. This feature would allow anxious parents to open the SchoolHub app and track the
+        precise, real-time geographical location of their child's school bus on an interactive map, ensuring absolute
+        peace of mind regarding student safety.</li>
+    </ul>
+
+
+    <h2 class="sh">5. Results vs. Initial Objectives</h2>
+    <p>The following table compares the original objectives defined during the requirements phase with the actual
+      delivered outcomes, providing a measurable assessment of project success.</p>
+
+    <table class="rt">
+      <thead>
+        <tr>
+          <th style="width:35%">Initial Objective</th>
+          <th style="width:10%">Status</th>
+          <th style="width:55%">Delivered Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Build a secure multi-role RESTful API</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>Laravel 12 API with 80+ endpoints, 7-role RBAC, Sanctum token auth, deployed on HTTPS VPS</td>
+        </tr>
+        <tr>
+          <td>Automate schedule generation</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>Constraint-satisfaction algorithm generates conflict-free timetables in &lt;2 seconds; replaced weeks of
+            manual work</td>
+        </tr>
+        <tr>
+          <td>Full student &amp; teacher lifecycle management</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>26 database models, complete CRUD, class-subject-teacher pivot, enrollment history tracking</td>
+        </tr>
+        <tr>
+          <td>Grading, report cards &amp; class rankings</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>Bulk grade entry, weighted averages, PDF-ready report cards, automatic class ranking engine</td>
+        </tr>
+        <tr>
+          <td>Localized financial management</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>Contract auto-billing, partial payments, advance allocations, refund computation — all Algerian-context
+            compliant</td>
+        </tr>
+        <tr>
+          <td>Cross-platform parent mobile application</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>Flutter app (Android &amp; iOS), 8 feature modules, tri-lingual (Arabic RTL, French, English)</td>
+        </tr>
+        <tr>
+          <td>Deploy to a live production environment</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>Running 24/7 on DigitalOcean VPS with Nginx, PHP-FPM, SSL/TLS; actively used by Fitya School daily</td>
+        </tr>
+        <tr>
+          <td>Deliver on schedule (Feb – Jul 2026)</td>
+          <td style="text-align:center;color:#16a34a;font-weight:700;">✔ Achieved</td>
+          <td>Zero deadline missed; Gantt chart adherence 100% — all sprints completed within predicted windows</td>
+        </tr>
+        <tr>
+          <td>Push notifications (FCM)</td>
+          <td style="text-align:center;color:#d97706;font-weight:700;">⟳ Planned</td>
+          <td>Deferred to Phase 2 post-launch; architecture already prepared for Firebase Cloud Messaging integration
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="ib" style="margin-top:24px;">
+      <p>SchoolHub demonstrates that a comprehensive, production-grade school management platform can be designed and
+        implemented by a single developer following rigorous software engineering practices. The project establishes a
+        solid foundation ready to be deployed in real educational institutions and extended with additional features
+        based on user feedback.</p>
+    </div>
+  </div>
+
+
+
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 19 — GENERAL CONCLUSION
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>General Conclusion</span><span class="r">SchoolHub &middot; 2025&ndash;2026</span></div>
+    <h1 class="ch">General Conclusion</h1>
+
+    <div class="cen" style="padding:10px 0 20px;">
+      <div class="orn">&#10022;</div>
+    </div>
+
+    <p>
+      This end-of-studies internship was, above all, a deeply formative human and technical experience. Carried out
+      over five months within <strong>Fitya School</strong> &mdash; a living, breathing educational institution with
+      real students, real teachers, and real administrative pressures &mdash; it challenged me to go far beyond writing
+      code. It demanded that I think as a systems architect, communicate as a project manager, and listen as a
+      product designer.
+    </p>
+
+    <p>
+      The <strong>SchoolHub</strong> platform that emerged from this internship is not a prototype or a proof of
+      concept. It is a production-grade, fully deployed digital ecosystem that is actively being used by Fitya
+      School's administration today. This tangible, real-world impact is the most rewarding outcome of the entire
+      project &mdash; the knowledge that the work I produced genuinely improves the daily lives of the school's
+      staff, teachers, and parents.
+    </p>
+
+    <p>
+      On a technical level, this project gave me the opportunity to master and integrate a wide spectrum of
+      modern software engineering disciplines in a single coherent system: RESTful API design with
+      <strong>Laravel 12</strong>, reactive frontend development with <strong>Vue.js 3 and TypeScript</strong>,
+      cross-platform mobile engineering with <strong>Flutter</strong>, rigorous relational database modeling
+      through the <strong>Merise methodology</strong>, and professional DevOps practices including server
+      provisioning, Nginx configuration, and SSL/TLS deployment on a <strong>DigitalOcean VPS</strong>.
+    </p>
+
+    <p>
+      Perhaps the most intellectually stimulating achievement was the design of the
+      <strong>constraint-satisfaction schedule generation algorithm</strong> &mdash; a problem that sits at the
+      intersection of combinatorics and practical pedagogy. Solving it required iterative thinking, creative
+      architectural decomposition, and a deep understanding of the school's operational constraints. The result
+      is an algorithm that reduced a task historically consuming weeks of manual labor to a matter of seconds.
+    </p>
+
+    <p>
+      Beyond the technical, this internship was a masterclass in <strong>professional autonomy</strong>. Operating
+      with direct access to the General Manager and all departmental heads of Fitya School, I navigated complex
+      stakeholder relationships, managed competing priorities, and delivered on commitments without ever missing
+      a single deadline. This level of trust and responsibility, extended to me as an intern, is something I carry
+      with immense pride.
+    </p>
+
+    <div class="gb" style="margin:22px 0;">
+      <p>
+        <strong>SchoolHub</strong> is already live, already making a difference, and already laying the groundwork
+        for a fully digital future at Fitya School. The road ahead &mdash; push notifications, a supervisor mobile
+        app, a live parent-teacher communication hub, and GPS bus tracking &mdash; is clearly charted. This
+        internship was not an end, but the beginning of something much larger.
+      </p>
+    </div>
+
+    <p>
+      I leave this internship as a more complete engineer: one who has proven the ability to independently
+      conceive, design, implement, test, deploy, and document a real-world multi-platform software system, end
+      to end, from a blank repository to a live production server.
+    </p>
+
+    <div style="text-align:center; margin-top:36px; padding-top:24px; border-top:1px solid #e5e7eb;">
+      <div style="font-family:'Merriweather',serif;font-size:13pt;font-weight:700;color:#1a3a6b;margin-bottom:6px;">
+        Mechta Abdelmoumen
+      </div>
+      <div style="font-size:9pt;color:#666;font-style:italic;">
+        Software Engineering Student &mdash; CESI &nbsp;|&nbsp; Intern Developer, Fitya School &nbsp;|&nbsp; June 2026
+      </div>
+      <div
+        style="width:80px;height:4px;background:linear-gradient(90deg,#1a3a6b,#2563a8,#f59e0b);border-radius:2px;margin:18px auto 0;">
+      </div>
+      <div class="orn" style="margin-top:12px;">&#10022;</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+     PAGE 19 — REFERENCES
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>References</span><span class="r">SchoolHub</span></div>
+    <h1 class="ch">References</h1>
+
+    <h2 class="sh">Official Documentation</h2>
+    <ul>
+      <li><strong>[1]</strong> Laravel Documentation (2025). <em>Laravel 12.x Framework Reference</em>.
+        https://laravel.com/docs/12.x</li>
+      <li><strong>[2]</strong> Vue.js Team (2024). <em>Vue.js 3 — The Progressive JavaScript Framework</em>.
+        https://vuejs.org/guide/</li>
+      <li><strong>[3]</strong> Flutter Team (2024). <em>Flutter SDK — Build apps for any screen</em>.
+        https://docs.flutter.dev/</li>
+      <li><strong>[4]</strong> PrimeVue Team (2024). <em>PrimeVue 4 — UI Component Library for Vue</em>.
+        https://primevue.org/</li>
+      <li><strong>[5]</strong> Laravel Sanctum (2024). <em>API Token Authentication</em>.
+        https://laravel.com/docs/sanctum</li>
+      <li><strong>[6]</strong> TypeScript Team (2024). <em>TypeScript 5.7 — JavaScript with syntax for types</em>.
+        https://www.typescriptlang.org/docs/</li>
+    </ul>
+
+    <h2 class="sh">Reference Books</h2>
+    <ul>
+      <li><strong>[7]</strong> Martin, R. C. (2017). <em>Clean Architecture: A Craftsman's Guide to Software Structure
+          and Design</em>. Prentice Hall.</li>
+      <li><strong>[8]</strong> Fowler, M. (2002). <em>Patterns of Enterprise Application Architecture</em>.
+        Addison-Wesley.</li>
+      <li><strong>[9]</strong> Gamma, E., Helm, R., Johnson, R., &amp; Vlissides, J. (1994). <em>Design Patterns:
+          Elements of Reusable Object-Oriented Software</em>. Addison-Wesley.</li>
+      <li><strong>[10]</strong> Silberschatz, A., Korth, H. F., &amp; Sudarshan, S. (2019). <em>Database System
+          Concepts</em> (7th ed.). McGraw-Hill.</li>
+      <li><strong>[11]</strong> Booch, G., Rumbaugh, J., &amp; Jacobson, I. (2005). <em>The Unified Modeling Language
+          User Guide</em> (2nd ed.). Addison-Wesley. [UML — Use Case, Class, Activity, Sequence Diagrams]</li>
+    </ul>
+
+    <h2 class="sh">Technical Articles &amp; Standards</h2>
+    <ul>
+      <li><strong>[12]</strong> Fielding, R. T. (2000). <em>Architectural Styles and the Design of Network-based
+          Software Architectures</em>. PhD Thesis, UC Irvine. [Defines REST architectural style]</li>
+      <li><strong>[13]</strong> OWASP Foundation (2023). <em>OWASP Top 10 — Most Critical Web Application Security
+          Risks</em>. https://owasp.org/www-project-top-ten/</li>
+      <li><strong>[14]</strong> PHP-FIG (2023). <em>PSR-12: Extended Coding Style Guide</em>.
+        https://www.php-fig.org/psr/psr-12/</li>
+    </ul>
+
+    <h2 class="sh">Tools Used</h2>
+    <ul>
+      <li><strong>[15]</strong> GanttPRO (2024). <em>Project Planning &amp; Gantt Chart Tool</em>. https://ganttpro.com/
+      </li>
+      <li><strong>[16]</strong> PHPUnit (2024). <em>The PHP Testing Framework</em>. https://phpunit.de/</li>
+      <li><strong>[17]</strong> Mermaid.js (2024). <em>Generation of diagrams from text — UML diagrams in Markdown</em>.
+        https://mermaid.js.org/</li>
+      <li><strong>[18]</strong> GitHub (2024). <em>SchoolHub Repository — MoumenMHT/SchoolManager</em>.
+        https://github.com/MoumenMHT/SchoolManager</li>
+    </ul>
+
+    <div style="margin-top:40px;padding-top:20px;border-top:2px solid #1a3a6b;text-align:center;">
+      <p style="font-size:10pt;color:#555;font-style:italic;">This report was produced as part of the final-year
+        internship at <strong>FITYA School of Information Technology</strong>.<br>Any reproduction for commercial
+        purposes is subject to prior written authorisation.</p>
+      <p style="font-size:9pt;color:#888;margin-top:10px;">SchoolHub v2.0.0 · July 2026 · Mechta Abdelmoumen ·
+        moumenabdou482@gmail.com</p>
+      <div
+        style="width:70px;height:4px;background:linear-gradient(90deg,#1a3a6b,#2563a8,#f59e0b);border-radius:2px;margin:14px auto 0;">
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Print Button -->
+  <button class="pbtn no-print" onclick="window.print()"> Print / Export PDF</button>
+
+  <!-- ════════════════════════════════════════════════════
+     APPENDICES
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Chapter IX – Appendices</span><span class="r">SchoolHub</span></div>
+
+    <h2 class="sh">Appendix A: Project Management Plan</h2>
+
+    <p>The project was structured into <strong>5 major phases</strong> following the WBS methodology. Each phase was
+      further decomposed into deliverable tasks, as illustrated in the diagram below.</p>
+
+    <div class="fig">
+      <img src="schoolHubWBS.png" alt="SchoolHub WBS Diagram" />
+      <div class="fig-cap"><strong>Figure 20:</strong> Work Breakdown Structure (WBS) — 5 phases: Planning &amp; Design,
+        Backend (Laravel), Frontend (Vue.js), Integration &amp; Testing, Finalization &amp; Documentation.</div>
+    </div>
+
+    <table class="rt" style="margin-top:12px;">
+      <thead>
+        <tr>
+          <th>Phase</th>
+          <th>Key Deliverables</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1 – Planning &amp; Design</strong></td>
+          <td>Requirements analysis, system architecture, DB design, UI mockups, WBS &amp; PMP</td>
+          <td>2 weeks</td>
+        </tr>
+        <tr>
+          <td><strong>2 – Backend (Laravel)</strong></td>
+          <td>Environment setup, Eloquent models, controllers, authentication, RBAC, unit tests</td>
+          <td>6 weeks</td>
+        </tr>
+        <tr>
+          <td><strong>3 – Frontend (Vue.js)</strong></td>
+          <td>Reusable components, CRUD views, API integration, responsive design, i18n</td>
+          <td>5 weeks</td>
+        </tr>
+        <tr>
+          <td><strong>4 – Integration &amp; Testing</strong></td>
+          <td>End-to-end tests, security audit, performance optimisation, test server deployment</td>
+          <td>2 weeks</td>
+        </tr>
+        <tr>
+          <td><strong>5 – Documentation &amp; Finalization</strong></td>
+          <td>User guides, technical docs, this end-of-studies report, demo preparation</td>
+          <td>1 week</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:12px;">The Gantt chart below shows the temporal planning of all tasks, managed with
+      <strong>GanttPRO</strong>:</p>
+
+    <div class="fig">
+      <img src="schoolhubGantt.png" alt="Gantt Chart" />
+      <div class="fig-cap"><strong>Figure 21:</strong> Gantt Chart (GanttPRO) — Full project timeline from February to
+        July 2026. Red bars indicate critical path tasks.</div>
+    </div>
+  </div>
+
+
+
+
+  <!-- ════════════════════════════════════════════════════
+     BACK COVER (4ÈME DE COUVERTURE)
+════════════════════════════════════════════════════ -->
+  <div class="page">
+    <div class="ph"><span>Back Cover</span><span class="r">SchoolHub</span></div>
+    <h1 class="ch" style="text-align: center; border: none; margin-bottom: 40px; font-size: 20pt;">Résumé / Abstract
+    </h1>
+
+    <h2 class="sh">Résumé (Français)</h2>
+    <p>Ce document présente le travail réalisé lors du projet de fin d'études au sein de l'établissement Fitya School.
+      Le projet a consisté en la conception et le développement de <strong>SchoolHub</strong>, un système complet de
+      gestion scolaire. Afin de pallier les inefficacités de l'administration sur papier, l'application offre une
+      solution centralisée pour l'administration, les enseignants et les parents. Le système s'appuie sur une
+      architecture moderne comprenant une API RESTful développée avec Laravel 12, un tableau de bord web en Vue.js 3 et
+      une application mobile multiplateforme en Flutter. SchoolHub intègre un algorithme intelligent de satisfaction de
+      contraintes pour la génération automatique des emplois du temps, ainsi que des modules avancés pour le suivi des
+      absences, la gestion des notes et la facturation. Ce travail aboutit à une numérisation réussie garantissant la
+      sécurité des données, un gain de temps opérationnel et une meilleure communication entre les acteurs.</p>
+    <p><strong>Mots-clés :</strong> Gestion Scolaire, ERP, Laravel, Vue.js, Flutter, Emploi du Temps Automatisé.</p>
+
+    <h2 class="sh" style="margin-top: 40px;">Abstract (English)</h2>
+    <p>This document presents the work carried out during the end-of-studies project at Fitya School. The project
+      involved the design and development of <strong>SchoolHub</strong>, a comprehensive school management ERP. To
+      address the inefficiencies of paper-based administration, the application provides a centralized solution for
+      administrators, teachers, and parents. The system is built upon a robust modern architecture comprising a RESTful
+      API developed with Laravel 12, a web administration dashboard using Vue.js 3, and a cross-platform mobile
+      application in Flutter. SchoolHub features an intelligent constraint-satisfaction algorithm for automatic schedule
+      generation, alongside advanced modules for attendance tracking, grading, and financial management. The outcome is
+      a successfully digitized workflow that ensures data security, operational efficiency, and dramatically enhanced
+      communication among all educational stakeholders.</p>
+    <p><strong>Keywords:</strong> School Management, ERP, Laravel, Vue.js, Flutter, Automated Scheduling.</p>
+  </div>
+
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.querySelectorAll('.mermaid svg').forEach(svg => {
+
+          // ── 1. Remove hard pixel dimensions so CSS width:100% takes over ──
+          svg.removeAttribute('width');
+          svg.removeAttribute('height');
+          svg.style.width = '100%';
+          svg.style.height = 'auto';
+
+          // ── 2. ER diagram: fix attribute row text ─────────────────────────
+          // Use setAttribute (beats SVG presentation attributes) AND setProperty
+          // (beats inline style). Belt-and-suspenders approach.
+          svg.querySelectorAll('g[id^="entity-"] text').forEach(el => {
+            const isHeader = el.classList.contains('entityLabel') ||
+              el.getAttribute('class')?.includes('entityLabel');
+            if (isHeader) {
+              // Entity name header: keep white
+              el.setAttribute('fill', '#ffffff');
+              el.style.setProperty('fill', '#ffffff', 'important');
+              el.style.setProperty('color', '#ffffff', 'important');
+              el.style.setProperty('font-weight', '800', 'important');
+            } else {
+              // Attribute name / type / key text: force dark
+              el.setAttribute('fill', '#1a1a2e');
+              el.style.setProperty('fill', '#1a1a2e', 'important');
+              el.style.setProperty('color', '#1a1a2e', 'important');
+              el.style.setProperty('font-weight', '700', 'important');
+            }
+          });
+
+          // ── 3. ER relationship label text (dark on white rect) ────────────
+          svg.querySelectorAll('g[id^="rel-"] text').forEach(el => {
+            el.setAttribute('fill', '#1a1a2e');
+            el.style.setProperty('fill', '#1a1a2e', 'important');
+            el.style.setProperty('font-weight', '700', 'important');
+          });
+
+        });
+      }, 1200);
+    });
+  </script>
+</body>
+
+</html>

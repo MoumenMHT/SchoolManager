@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SchoolHub - End-of-Studies Project Presentation for Fitya School by Moumen MHT">
+  <title>SchoolHub - Project Presentation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header Bar -->
+  <header>
+    <div class="logo-section">
+      <div class="logo-icon">S</div>
+      <div class="logo-text">School<span>Hub</span></div>
+    </div>
+    <div class="header-meta">End-of-Studies Project Presentation</div>
+    <div class="header-controls">
+      <!-- Autoplay controls -->
+      <div class="play-pause-container">
+        <span id="autoplay-indicator" class="autoplay-indicator"></span>
+        <button id="btn-play" class="icon-btn" title="Autoplay Slides">▶</button>
+      </div>
+      <!-- Theme Switcher -->
+      <button id="btn-theme" class="icon-btn" title="Toggle Light/Dark Theme">
+        <span id="theme-icon">☀️</span>
+      </button>
+      <!-- Fullscreen Toggle -->
+      <button id="btn-fullscreen" class="icon-btn" title="Toggle Fullscreen">⛶</button>
+    </div>
+  </header>
+
+  <!-- Slide Deck Wrapper -->
+  <main class="slides-wrapper">
+
+    <!-- SLIDE 1: Title / Cover -->
+    <section class="slide" id="slide-1">
+      <div class="title-slide-content">
+        <div class="title-slide-logo">S</div>
+        <h1 class="title-slide-title">SchoolHub</h1>
+        <p class="title-slide-subtitle">A Unified School Management Ecosystem for Private Institutions</p>
+        
+        <div style="margin-bottom: 30px;">
+          <span class="tag">Final Year Project Presentation</span>
+        </div>
+
+        <div class="title-slide-meta">
+          <div class="title-meta-item">
+            <span class="title-meta-label">Presenter</span>
+            <span class="title-meta-value">Moumen MHT</span>
+          </div>
+          <div class="title-meta-item">
+            <span class="title-meta-label">Host Enterprise</span>
+            <span class="title-meta-value">Fitya School (Algeria)</span>
+          </div>
+          <div class="title-meta-item">
+            <span class="title-meta-label">Academic Year</span>
+            <span class="title-meta-value">2025 – 2026</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: Context & Problem Statement -->
+    <section class="slide" id="slide-2">
+      <h2 class="slide-title">Context &amp; Problem Statement <span class="tag">The Challenge</span></h2>
+      <div class="grid-2">
+        <div class="column">
+          <p class="lead"><strong>Fitya School</strong> is a private educational institution (Primary &amp; Middle school) in Ben Telha, Baraki, renowned for its academic and moral discipline.</p>
+          <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 16px;">
+            Despite outstanding pedagogical results, administrative operations faced major inefficiencies due to the lack of central digital tracking. Daily processes relied almost entirely on analog, paper-based workflows.
+          </p>
+          <div class="card" style="border-left: 4px solid var(--color-secondary);">
+            <h3 style="color: var(--color-secondary);">Real-world Bottleneck</h3>
+            <p>Archaic management procedures led to operational friction, delayed report generation, and fragmented communication between parents and the school administration.</p>
+          </div>
+        </div>
+        
+        <div class="column">
+          <div class="grid-2" style="gap: 16px;">
+            <div class="comparison-box problem">
+              <h3>❌ Analog Process</h3>
+              <ul class="bullet-list" style="font-size: 0.85rem;">
+                <li>High risk of <strong>physical record damage</strong> or loss.</li>
+                <li>Tedious <strong>manual schedule</strong> grid planning.</li>
+                <li><strong>No live updates</strong> for parent-teacher tracking.</li>
+                <li>Fragmented, paper-based payment tracking.</li>
+              </ul>
+            </div>
+            <div class="comparison-box solution">
+              <h3>🚀 SchoolHub Solution</h3>
+              <ul class="bullet-list" style="font-size: 0.85rem;">
+                <li>Secure <strong>central cloud database</strong> backups.</li>
+                <li>Intelligent <strong>automatic timetable</strong> generator.</li>
+                <li><strong>Real-time portals</strong> for parents and teachers.</li>
+                <li>Integrated <strong>localized billing</strong> ledger contracts.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: The Solution & Objectives -->
+    <section class="slide" id="slide-3">
+      <h2 class="slide-title">System Vision &amp; Objectives <span class="tag">The Architecture</span></h2>
+      <p class="lead" style="margin-bottom: 24px;">SchoolHub is a comprehensive, production-ready ecosystem bridging administrative, pedagogical, and financial operations.</p>
+      
+      <div class="grid-3">
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 12px;">🖥️</div>
+          <h3>Laravel 12 Backend API</h3>
+          <p style="margin-bottom: 12px;">Acts as the centralized, secure business logic engine exposing RESTful JSON endpoints.</p>
+          <ul class="bullet-list" style="font-size: 0.85rem; padding-left: 0;">
+            <li>Sanctum Auth</li>
+            <li>MVC + Service Layers</li>
+            <li>Automated Observers</li>
+          </ul>
+        </div>
+        
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 12px;">🎨</div>
+          <h3>Vue 3 Web Dashboard</h3>
+          <p style="margin-bottom: 12px;">An administration console designed for directors, secretariat, accountants, and supervisors.</p>
+          <ul class="bullet-list" style="font-size: 0.85rem; padding-left: 0;">
+            <li>TypeScript + Vite</li>
+            <li>PrimeVue UI Component library</li>
+            <li>25 complete administrative views</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 12px;">📱</div>
+          <h3>Flutter Mobile App</h3>
+          <p style="margin-bottom: 12px;">Cross-platform mobile client tailored specifically for parent and teacher portals.</p>
+          <ul class="bullet-list" style="font-size: 0.85rem; padding-left: 0;">
+            <li>Clean architecture &amp; Dart</li>
+            <li>Provider state management</li>
+            <li>Real-time attendance &amp; grades</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: System Architecture -->
+    <section class="slide" id="slide-4">
+      <h2 class="slide-title">System Architecture (3-Tier Design) <span class="tag">Technical Stack</span></h2>
+      <div class="grid-2">
+        <div class="column">
+          <p class="lead">Designed with strict separation of layers to guarantee performance, scaling, and codebase testability.</p>
+          
+          <div class="tier-diagram">
+            <div class="tier-card active" data-tier="presentation">
+              <span class="tier-number">01</span>
+              <div class="tier-info">
+                <h4>Presentation Layer</h4>
+                <p>Vue 3 Dashboard &amp; Flutter Mobile Portal</p>
+              </div>
+            </div>
+            
+            <div class="tier-card" data-tier="business">
+              <span class="tier-number">02</span>
+              <div class="tier-info">
+                <h4>Business Logic Layer</h4>
+                <p>Laravel 12 Service-Driven REST API</p>
+              </div>
+            </div>
+
+            <div class="tier-card" data-tier="data">
+              <span class="tier-number">03</span>
+              <div class="tier-info">
+                <h4>Data Persistence Layer</h4>
+                <p>Relational SQL Database &amp; Eloquent ORM</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="tier-details-panel">
+            <!-- Presentation detail -->
+            <div class="tier-detail-group active" id="detail-tier-presentation">
+              <h3>Client UI &amp; UX Details</h3>
+              <p style="margin-bottom: 12px; font-size: 0.9rem; line-height: 1.6;">
+                The frontends operate strictly as single-page consumer applications. Communication with the backend is entirely asynchronous via token-authenticated API requests.
+              </p>
+              <ul class="bullet-list" style="font-size: 0.85rem;">
+                <li><strong>Web UI:</strong> PrimeVue templates, styled with Tailwind CSS, supporting complete localized grids (FR, EN, AR).</li>
+                <li><strong>Mobile:</strong> Reactive provider state management, offline JSON caching, and modular theme support.</li>
+              </ul>
+              <div class="tech-badge-container">
+                <span class="tech-badge">Vue.js 3</span>
+                <span class="tech-badge">TypeScript</span>
+                <span class="tech-badge">Vite</span>
+                <span class="tech-badge">Flutter</span>
+                <span class="tech-badge">Dart</span>
+                <span class="tech-badge">PrimeVue</span>
+              </div>
+            </div>
+
+            <!-- Business detail -->
+            <div class="tier-detail-group" id="detail-tier-business">
+              <h3>API Logic &amp; Security</h3>
+              <p style="margin-bottom: 12px; font-size: 0.9rem; line-height: 1.6;">
+                Built on top of Laravel 12, routing requests through specific controller actions that delegate complex computations to dedicated service classes, ensuring lightweight controllers.
+              </p>
+              <ul class="bullet-list" style="font-size: 0.85rem;">
+                <li><strong>Sanctum Auth:</strong> Key-scoped, secure authorization tokens.</li>
+                <li><strong>Role Middleware:</strong> RBAC route protection.</li>
+                <li><strong>Resource Mappers:</strong> Structured JSON serialization API output.</li>
+              </ul>
+              <div class="tech-badge-container">
+                <span class="tech-badge">Laravel 12</span>
+                <span class="tech-badge">PHP 8.3</span>
+                <span class="tech-badge">Sanctum</span>
+                <span class="tech-badge">MVC Pattern</span>
+                <span class="tech-badge">Rest API</span>
+              </div>
+            </div>
+
+            <!-- Data detail -->
+            <div class="tier-detail-group" id="detail-tier-data">
+              <h3>Database Modeling &amp; ORM</h3>
+              <p style="margin-bottom: 12px; font-size: 0.9rem; line-height: 1.6;">
+                The storage system represents school entities. Structured as third-normal form tables with primary key indexes and relational foreign constraint cascades.
+              </p>
+              <ul class="bullet-list" style="font-size: 0.85rem;">
+                <li><strong>Eloquent ORM:</strong> Relational graph mapping (HasMany, BelongsToMany).</li>
+                <li><strong>Migrations:</strong> 48 SQL migration files defining structured relationships.</li>
+                <li><strong>SQLite support:</strong> Light developer environment, migrating to MySQL/Postgres in production.</li>
+              </ul>
+              <div class="tech-badge-container">
+                <span class="tech-badge">MySQL</span>
+                <span class="tech-badge">PostgreSQL</span>
+                <span class="tech-badge">Eloquent</span>
+                <span class="tech-badge">Migrations</span>
+                <span class="tech-badge">Seeds</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: Database Schema & RBAC -->
+    <section class="slide" id="slide-5">
+      <h2 class="slide-title">Data Schema &amp; Role Access Control <span class="tag">MCD / RBAC</span></h2>
+      <div class="grid-2">
+        <div class="column scroll-y">
+          <h3 style="margin-bottom: 12px; font-size: 1.2rem;">7-Role Access Matrix</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+            A custom role-based access control middleware guards endpoints, mapping user roles to token expiration and access levels:
+          </p>
+          <table class="rbac-table">
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th>Token Expiry</th>
+                <th>Access Level</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="rbac-role">admin</td>
+                <td>8 Hours</td>
+                <td>Full system access</td>
+              </tr>
+              <tr>
+                <td class="rbac-role">director</td>
+                <td>7 Days</td>
+                <td>Global read-only + analytics</td>
+              </tr>
+              <tr>
+                <td class="rbac-role">supervisor</td>
+                <td>7 Days</td>
+                <td>Assigned level classes management</td>
+              </tr>
+              <tr>
+                <td class="rbac-role">teacher</td>
+                <td>7 Days</td>
+                <td>Assigned classes, grades, attendance</td>
+              </tr>
+              <tr>
+                <td class="rbac-role">parent</td>
+                <td>7 Days</td>
+                <td>Own children data visibility only</td>
+              </tr>
+              <tr>
+                <td class="rbac-role">secretariat</td>
+                <td>8 Hours</td>
+                <td>Core student &amp; teacher administrative inputs</td>
+              </tr>
+              <tr>
+                <td class="rbac-role">accountant</td>
+                <td>8 Hours</td>
+                <td>Financial contracts &amp; bill payments ledger</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="column">
+          <div class="img-container">
+            <img src="assets/mcd.png" alt="MCD Schema Diagram">
+          </div>
+          <div style="font-size: 0.75rem; text-align: center; color: var(--text-muted); margin-top: 6px;">
+            <strong>MCD Entity-Relationship Diagram:</strong> 26 models, 3-way pivot relationships.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: Feature Deep-Dive: Sibling Billing (Interactive) -->
+    <section class="slide" id="slide-6">
+      <h2 class="slide-title">Deep Dive: Localized Sibling Billing <span class="tag">Interactive Widget</span></h2>
+      <div class="grid-2">
+        <div class="column">
+          <h3>The Algerian Market Reality</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+            Standard SaaS models attach invoices to individual students. Algerian families expect:
+          </p>
+          <ul class="bullet-list" style="font-size: 0.85rem; margin-bottom: 16px;">
+            <li><strong>Single Parent Contract:</strong> One billing invoice covering all siblings.</li>
+            <li><strong>A-la-carte Fees:</strong> Sibling A can pay Tuition + Transport, Sibling B only Tuition.</li>
+            <li><strong>Sibling Discounts:</strong> Global percentage deductions on sibling counts.</li>
+            <li><strong>Automated Instalments:</strong> Spreading the annual sum over 10 monthly bills.</li>
+          </ul>
+          
+          <div class="card" style="margin-bottom: 0; padding: 14px; background: rgba(99,102,241,0.05); border-color: var(--color-primary);">
+            <h4 style="font-size: 0.95rem; color: var(--color-primary); margin-bottom: 4px;">Billing Logic (Backend Cascade)</h4>
+            <p style="font-size: 0.8rem;">
+              When a contract is stored, the backend computes the aggregate fee sums, subtracts the discount percentage, divides by contract months, and saves 10 monthly `Bill` entries.
+            </p>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="grid-2" style="gap: 16px;">
+            <!-- Widget inputs -->
+            <div class="billing-widget">
+              <div class="widget-title">Contract Setup</div>
+              
+              <div class="sibling-selector">
+                <div class="sibling-chip active" id="chip-sib1" data-sibling="sibling1">
+                  <div class="sibling-name">Anis</div>
+                  <div class="sibling-desc">Middle School</div>
+                </div>
+                <div class="sibling-chip" id="chip-sib2" data-sibling="sibling2">
+                  <div class="sibling-name">Lina</div>
+                  <div class="sibling-desc">Primary</div>
+                </div>
+              </div>
+
+              <div style="font-size: 0.8rem; font-weight: bold; color: var(--color-primary);">Active Sibling Fees:</div>
+              <div class="fee-options-container">
+                <div class="fee-btn active" style="pointer-events: none;">
+                  <span>Tuition</span>
+                  <span class="fee-price" id="tuition-price">22,000 DZD</span>
+                </div>
+                <button class="fee-btn" id="fee-canteen">
+                  <span>Canteen</span>
+                  <span class="fee-price">5,000 DZD</span>
+                </button>
+                <button class="fee-btn" id="fee-transport">
+                  <span>Transport</span>
+                  <span class="fee-price">7,000 DZD</span>
+                </button>
+              </div>
+
+              <div class="slider-container">
+                <div class="slider-label-row">
+                  <span>Sibling Discount:</span>
+                  <span id="discount-val-text" style="color: var(--color-primary);">10%</span>
+                </div>
+                <input type="range" min="0" max="30" value="10" step="5" class="slider-input" id="billing-discount-slider">
+              </div>
+
+              <div class="billing-totals">
+                <div class="total-group">
+                  <span class="total-label">Net Annual Sum</span>
+                  <span class="total-value" id="net-total-val">0 DZD</span>
+                </div>
+                <div class="total-group" style="text-align: right;">
+                  <span class="total-label">Original Sum</span>
+                  <span class="total-value old-price" id="grand-total-val">0 DZD</span>
+                  <span style="font-size: 0.75rem; color: var(--color-danger);" id="discount-amount-val">-0 DZD</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Widget outputs -->
+            <div class="billing-output-panel">
+              <div class="widget-title" style="margin-bottom: 12px;">
+                <span>Generated Invoices</span>
+                <span style="font-size: 0.8rem; color: var(--color-success);" id="monthly-bill-val">0 DZD/mo</span>
+              </div>
+              <div class="bills-scroll" id="bills-scroll">
+                <!-- Generated monthly bill list rows -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: Feature Deep-Dive: Schedule Generator (Interactive) -->
+    <section class="slide" id="slide-7">
+      <h2 class="slide-title">Deep Dive: Timetable Generator <span class="tag">Interactive Visualizer</span></h2>
+      <div class="grid-2">
+        <div class="column">
+          <h3>Constraint-Satisfaction Algorithm</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
+            Generating conflict-free school timetables manually is a logistical bottleneck. SchoolHub solves this in `ScheduleController::generateAll()` using priorities and constraint scoring:
+          </p>
+          
+          <div class="scheduler-visualizer">
+            <div class="scheduler-steps">
+              <div class="step-card active" data-step="0">
+                <div class="step-badge">1</div>
+                <div class="step-text">
+                  <h4>Priority Pre-sorting</h4>
+                  <p>Fetch demands. Place permanent/external teachers and high coefficient subjects first.</p>
+                </div>
+              </div>
+              
+              <div class="step-card" data-step="1">
+                <div class="step-badge">2</div>
+                <div class="step-text">
+                  <h4>Consecutive Block Allocation</h4>
+                  <p>Allocate multi-hour block demands (e.g. Sports: 2h consecutive slots).</p>
+                </div>
+              </div>
+
+              <div class="step-card" data-step="2">
+                <div class="step-badge">3</div>
+                <div class="step-text">
+                  <h4>Hard Constraints Validation</h4>
+                  <p>Fit standard sessions checking: teacher conflicts, classroom limits, and level limits.</p>
+                </div>
+              </div>
+
+              <div class="step-card" data-step="3">
+                <div class="step-badge">4</div>
+                <div class="step-text">
+                  <h4>Fallback Mode (Soft constraints)</h4>
+                  <p>If slot not found, relax soft rules (e.g., maximum daily hours per class/teacher).</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="scheduler-controls">
+              <button class="widget-btn secondary" id="scheduler-prev" disabled>← Back</button>
+              <button class="widget-btn" id="scheduler-next">Next Step →</button>
+              <span class="step-progress-text" id="step-progress-text">Step 1 of 5</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="scheduler-sandbox">
+            <div class="widget-title" style="margin-bottom: 12px;">Timetable Simulation (Class: 4 AM)</div>
+            
+            <div class="timetable-grid">
+              <!-- Grid header days -->
+              <div class="grid-cell time-col" style="border-bottom: 1px solid var(--border-color);">Hour</div>
+              <div class="grid-header">Mon</div>
+              <div class="grid-header">Tue</div>
+              <div class="grid-header">Wed</div>
+              <div class="grid-header">Thu</div>
+
+              <!-- Row 1 -->
+              <div class="grid-cell time-col">8:00 - 9:30</div>
+              <div class="grid-cell" id="cell-mon-1">-</div>
+              <div class="grid-cell" id="cell-tue-1">-</div>
+              <div class="grid-cell" id="cell-wed-1">-</div>
+              <div class="grid-cell" id="cell-thu-1">-</div>
+
+              <!-- Row 2 -->
+              <div class="grid-cell time-col">9:45 - 11:15</div>
+              <div class="grid-cell" id="cell-mon-2">-</div>
+              <div class="grid-cell" id="cell-tue-2">-</div>
+              <div class="grid-cell" id="cell-wed-2">-</div>
+              <div class="grid-cell" id="cell-thu-2">-</div>
+
+              <!-- Row 3 -->
+              <div class="grid-cell time-col">13:00 - 14:30</div>
+              <div class="grid-cell" id="cell-mon-3">-</div>
+              <div class="grid-cell" id="cell-tue-3">-</div>
+              <div class="grid-cell" id="cell-wed-3">-</div>
+              <div class="grid-cell" id="cell-thu-3">-</div>
+
+              <!-- Row 4 -->
+              <div class="grid-cell time-col">14:45 - 16:15</div>
+              <div class="grid-cell" id="cell-mon-4">-</div>
+              <div class="grid-cell" id="cell-tue-4">-</div>
+              <div class="grid-cell" id="cell-wed-4">-</div>
+              <div class="grid-cell" id="cell-thu-4">-</div>
+            </div>
+
+            <div style="font-size: 0.75rem; text-align: center; color: var(--text-muted); margin-top: 10px;">
+              Watch how cells populate as constraint phases are resolved.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: Feature Deep-Dive: Grading Report Cards (Interactive) -->
+    <section class="slide" id="slide-8">
+      <h2 class="slide-title">Deep Dive: Grading &amp; Report Cards <span class="tag">Interactive Calculator</span></h2>
+      <div class="grid-2">
+        <div class="column">
+          <h3>Trimester Average Generation</h3>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
+            Grades are never stored pre-calculated, preventing data syncing bugs. Normalization and average updates run on-demand in `GradingService`:
+          </p>
+          
+          <div class="results-formula" style="margin-bottom: 12px;">
+            <strong>Normalization formula:</strong><br>
+            <code>normalized_grade = (raw_grade / max_grade) * 20</code><br><br>
+            <strong>Subject average formula:</strong><br>
+            <code>subject_avg = (CC_norm*1 + Devoir_norm*1 + Composition_norm*2) / 4</code><br><br>
+            <strong>Overall average formula:</strong><br>
+            <code>overall_avg = Σ(subject_avg * coeff) / Σ(coeffs)</code>
+          </div>
+
+          <div class="card" style="margin-bottom: 0; padding: 14px; background: rgba(249, 115, 22, 0.05); border-color: var(--color-secondary);">
+            <h4 style="font-size: 0.95rem; color: var(--color-secondary); margin-bottom: 4px;">Smart Cache Invalidation</h4>
+            <p style="font-size: 0.8rem;">
+              Computed averages are stored in a database table cache. Observers monitor grade records and automatically invalidate cache rows when grades change.
+            </p>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="grid-2" style="gap: 16px;">
+            <!-- Input Form widget -->
+            <div class="grading-widget">
+              <div class="widget-title">Grade Inputs</div>
+              
+              <div class="coefficient-selector">
+                <div class="coef-chip active" data-subject="math">Math (coeff: 5)</div>
+                <div class="coef-chip" data-subject="arabic">Arabic (coeff: 4)</div>
+                <div class="coef-chip" data-subject="physics">Physics (coeff: 3)</div>
+              </div>
+
+              <!-- CC Grade -->
+              <div class="grade-row">
+                <label for="grade-cc-val">Continuous (CC)</label>
+                <div class="input-num-wrapper">
+                  <input type="number" id="grade-cc-val" class="input-num" min="0" max="20" step="0.5" value="15">
+                  <span class="max-label">/</span>
+                  <input type="number" id="grade-cc-max" class="input-num" min="10" max="100" value="20">
+                </div>
+                <span class="grade-normalised" id="cc-norm">15.00/20</span>
+              </div>
+
+              <!-- Devoir Grade -->
+              <div class="grade-row">
+                <label for="grade-dev-val">Written test (Devoir)</label>
+                <div class="input-num-wrapper">
+                  <input type="number" id="grade-dev-val" class="input-num" min="0" max="20" step="0.5" value="12">
+                  <span class="max-label">/</span>
+                  <input type="number" id="grade-dev-max" class="input-num" min="10" max="100" value="20">
+                </div>
+                <span class="grade-normalised" id="dev-norm">12.00/20</span>
+              </div>
+
+              <!-- Composition Grade -->
+              <div class="grade-row">
+                <label for="grade-comp-val">Trimester Exam (Comp)</label>
+                <div class="input-num-wrapper">
+                  <input type="number" id="grade-comp-val" class="input-num" min="0" max="20" step="0.5" value="14">
+                  <span class="max-label">/</span>
+                  <input type="number" id="grade-comp-max" class="input-num" min="10" max="100" value="20">
+                </div>
+                <span class="grade-normalised" id="comp-norm">14.00/20</span>
+              </div>
+            </div>
+
+            <!-- Grade Results Widget -->
+            <div class="grading-results">
+              <div class="widget-title">Report Card Summary</div>
+              
+              <div class="results-display">
+                <div class="result-card">
+                  <div class="result-card-label">Subject Average</div>
+                  <div class="result-card-value secondary" id="subject-avg-val">13.75 / 20</div>
+                </div>
+                <div class="result-card">
+                  <div class="result-card-label">Overall Average</div>
+                  <div class="result-card-value primary" id="overall-avg-val">14.25 / 20</div>
+                </div>
+              </div>
+
+              <div style="margin-top: 10px;">
+                <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 4px;">Dynamic Average scale:</div>
+                <div class="grade-bar-outer">
+                  <div class="grade-bar-inner" id="grade-bar-fill"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: Technical Implementation & QA -->
+    <section class="slide" id="slide-9">
+      <h2 class="slide-title">Implementation, QA &amp; Testing <span class="tag">Quality Assurance</span></h2>
+      <div class="grid-2">
+        <div class="column">
+          <p class="lead">System validation is key to ensure security, relational integrity, and correct business logic calculations.</p>
+          
+          <div class="card" style="border-left: 4px solid var(--color-success); margin-bottom: 12px;">
+            <h3>🛡️ Security &amp; Token Gates</h3>
+            <p>Protected endpoints utilize token checks. Route permission layers prevent invalid actor attempts (e.g. parents attempting to change student grades).</p>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--color-primary); margin-bottom: 12px;">
+            <h3>📊 Testing Coverage Metrics</h3>
+            <p>Tested logic via PHPUnit feature suites covering: authentication, RBAC visibility scopes, payment contract logic, and schedule generators.</p>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--color-secondary); margin-bottom: 0;">
+            <h3>🌐 Multi-language Support</h3>
+            <p>Vue.js and Flutter frontends include locale dictionaries, providing full English, French, and Arabic translation files.</p>
+          </div>
+        </div>
+
+        <div class="column scroll-y">
+          <h3 style="margin-bottom: 12px; font-size: 1.2rem;">Project Implementation Figures</h3>
+          <div class="grid-2" style="gap: 12px; margin-bottom: 16px;">
+            <div class="card" style="margin-bottom: 0; text-align: center; padding: 14px;">
+              <span style="font-size: 1.5rem; font-weight: 800; color: var(--color-primary);">80+</span>
+              <p style="font-size: 0.75rem; text-transform: uppercase;">API Endpoints</p>
+            </div>
+            <div class="card" style="margin-bottom: 0; text-align: center; padding: 14px;">
+              <span style="font-size: 1.5rem; font-weight: 800; color: var(--color-secondary);">48</span>
+              <p style="font-size: 0.75rem; text-transform: uppercase;">SQL Migrations</p>
+            </div>
+            <div class="card" style="margin-bottom: 0; text-align: center; padding: 14px;">
+              <span style="font-size: 1.5rem; font-weight: 800; color: var(--color-success);">25</span>
+              <p style="font-size: 0.75rem; text-transform: uppercase;">Web Views</p>
+            </div>
+            <div class="card" style="margin-bottom: 0; text-align: center; padding: 14px;">
+              <span style="font-size: 1.5rem; font-weight: 800; color: var(--color-primary);">100%</span>
+              <p style="font-size: 0.75rem; text-transform: uppercase;">PHPUnit Passing</p>
+            </div>
+          </div>
+          
+          <div class="img-container" style="height: 180px; position: relative;">
+            <img src="assets/gantt.png" alt="Project Gantt Chart" style="opacity: 0.5;">
+            <a href="gantt.html" class="widget-btn" style="position: absolute; text-decoration: none; padding: 10px 20px; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(99,102,241,0.5);">
+              📊 Open Interactive Gantt Chart
+            </a>
+          </div>
+          <div style="font-size: 0.7rem; text-align: center; color: var(--text-muted); margin-top: 4px;">
+            <strong>WBS Timeline:</strong> 154 tasks across 5 phases. Click above for interactive view.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: Conclusion & Perspectives -->
+    <section class="slide" id="slide-10">
+      <h2 class="slide-title">Conclusion &amp; Future Perspectives <span class="tag">Final Summary</span></h2>
+      <div class="grid-2">
+        <div class="column">
+          <h3>Technical Hurdles Overcome</h3>
+          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 12px;">
+            - Resolving constraint overlaps in automated scheduler logic.<br>
+            - Designing a high-performance relational mapping for localized, sibling-based bill payments.<br>
+            - Developing an optimized database caching strategy for on-demand GPA reports.
+          </p>
+
+          <div class="card" style="border-left: 4px solid var(--color-primary);">
+            <h3>💡 Personal Growth &amp; Skills</h3>
+            <p>Mastered robust API security design, state synchronization across desktop and mobile, and production deployment automation using VPS environments.</p>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="card" style="background: rgba(16, 185, 129, 0.05); border-color: var(--color-success); margin-bottom: 16px;">
+            <h3 style="color: var(--color-success);">🚀 Future Perspectives</h3>
+            <p style="font-size: 0.9rem; line-height: 1.5;">
+              - <strong>AI Engine integration:</strong> Automated pupil warning predictions for GPA drops.<br>
+              - <strong>Mobile Billing integrations:</strong> Direct Dahibya / CIB card gateways to pay contracts online.<br>
+              - <strong>Messaging Server integration:</strong> Direct WhatsApp/SMS reports for class schedules and attendance warnings.
+            </p>
+          </div>
+          
+          <div style="text-align: center; padding: 20px; border: 1px dashed var(--border-color); border-radius: 12px;">
+            <h4 style="font-size: 1.2rem; color: var(--color-secondary); margin-bottom: 4px;">Thank You!</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Questions &amp; Discussion</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer Navigation controls -->
+  <footer>
+    <div class="footer-nav">
+      <button id="btn-prev" class="nav-arrow" title="Previous Slide">←</button>
+      <button id="btn-next" class="nav-arrow" title="Next Slide">→</button>
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bar-bg">
+        <div id="progress-fill" class="progress-bar-fill"></div>
+      </div>
+      <span id="slide-num" class="slide-number">1 / 10</span>
+    </div>
+    
+    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">
+      Keyboard: <kbd>Space</kbd>, <kbd>→</kbd> Next | <kbd>←</kbd> Back
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+@startuml Schedule_Generation_Simple
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 13
+skinparam ArrowColor #374151
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityBorderColor #6B7280
+skinparam ActivityDiamondBackgroundColor #EFF6FF
+skinparam ActivityDiamondBorderColor #3B82F6
+
+title <b>Activity Diagram — Automatic Schedule Generation\n<i>ScheduleController::generateAll()</i>
+
+start
+
+:Fetch all **ClassSubjectTeacher** assignments\nfor the given academic year;
+
+:Build **assignmentDemands**\n(weekly sessions + coefficient per assignment);
+
+:Sort by priority:\n1. Permanent teachers first\n2. High coefficient subjects first;
+
+while (more assignments?) is (yes)
+
+  if (Subject is Sport\nAND requires 2h?) then (yes)
+    :Search for 2 consecutive free slots;
+    if (block found?) then (yes)
+      :Allocate both slots;
+    else (no)
+      :Mark as UNFILLED; <<#CD5C5C>>
+    endif
+
+  else (no)
+    while (sessions still needed?) is (yes)
+      :Find best slot\n(check hard constraints + score slots);
+      if (slot found?) then (no)
+        :Retry in fallback mode\n(relax soft constraints);
+      endif
+      if (slot found?) then (yes)
+        :Allocate slot;
+      else (no)
+        :Mark as UNFILLED; <<#CD5C5C>>
+        break
+      endif
+    endwhile
+  endif
+
+endwhile (done)
+
+:Save schedule to database\n(or return as preview);
+
+stop
+
+@enduml
