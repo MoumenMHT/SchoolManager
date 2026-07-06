@@ -752,9 +752,10 @@ const createUserAccount = async () => {
         <!-- CIN -->
         <div>
           <label for="cin" class="block font-semibold mb-2">{{ t('common.cin') }}</label>
-          <InputText
+          <InputNumber
             id="cin"
             v-model="parent.cin"
+            :useGrouping="false"
             :placeholder="t('parents.enter_cin')"
           />
         </div>
@@ -763,9 +764,10 @@ const createUserAccount = async () => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label for="phone" class="block font-semibold mb-2">{{ t('common.phone') }}</label>
-            <InputText
+            <InputNumber
               id="phone"
               v-model="parent.phone"
+              :useGrouping="false"
               :placeholder="t('parents.phone_placeholder')"
             />
           </div>

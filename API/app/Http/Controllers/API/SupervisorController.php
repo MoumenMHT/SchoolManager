@@ -47,7 +47,7 @@ class SupervisorController extends Controller
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|numeric',
             'hire_date' => 'nullable|date',
             'status' => 'in:active,inactive',
             'username' => 'required|string|unique:users,username',
@@ -139,7 +139,7 @@ class SupervisorController extends Controller
             $validator = Validator::make($request->all(), [
                 'first_name' => 'sometimes|string|max:255',
                 'last_name' => 'sometimes|string|max:255',
-                'phone' => 'nullable|string|max:20',
+                'phone' => 'nullable|numeric',
                 'hire_date' => 'nullable|date',
                 'status' => 'in:active,inactive',
                 'username' => 'sometimes|required|string|unique:users,username,' . $supervisor->user_id,

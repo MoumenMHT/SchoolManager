@@ -161,7 +161,7 @@ const loadTeachers = async () => {
         ? t.subjects.map((s: any) => s.name).join(', ')
         : '',
       classes_text: t.classes && Array.isArray(t.classes)
-        ? t.classes.map((c: any) => c.name).join(', ')
+        ? Array.from(new Set(t.classes.map((c: any) => c.name || c))).join(', ')
         : '',
     }));
   } catch (error: any) {
@@ -1137,9 +1137,10 @@ const removeAvailabilityRow = (index: number) => {
         <!-- CIN -->
         <div>
           <label for="cin" class="block font-semibold mb-2">{{ t('common.cin') }}</label>
-          <InputText
+          <InputNumber
             id="cin"
             v-model="teacher.cin"
+            :useGrouping="false"
             :placeholder="t('teachers.enter_cin')"
           />
         </div>

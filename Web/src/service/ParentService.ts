@@ -18,9 +18,9 @@ export interface Parent {
   user_id: number | null;
   first_name: string;
   last_name: string;
-  phone: string | null;
+  phone: number | null;
   email: string | null;
-  cin: string | null;
+  cin: number | null;
   profession: string | null;
   created_at: string;
   updated_at: string;
@@ -36,7 +36,7 @@ export interface Parent {
 export interface CreateParentDTO {
   first_name: string;
   last_name: string;
-  phone?: string;
+  phone?: number;
   email?: string;
   cin?: string;
   profession?: string;
@@ -45,7 +45,7 @@ export interface CreateParentDTO {
 export interface UpdateParentDTO {
   first_name?: string;
   last_name?: string;
-  phone?: string;
+  phone?: number;
   email?: string;
   cin?: string;
   profession?: string;

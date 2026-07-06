@@ -5,7 +5,7 @@ export interface SupervisorData {
   user_id: number;
   first_name: string;
   last_name: string;
-  phone: string | null;
+  phone: number | string | null;
   hire_date: string | null;
   status: 'active' | 'inactive';
   user?: any;

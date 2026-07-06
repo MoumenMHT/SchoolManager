@@ -17,6 +17,7 @@ declare module 'vue' {
     Chart: typeof import('primevue/chart')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
     Column: typeof import('primevue/column')['default']
+    ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     ContractPaymentWidget: typeof import('./src/components/dashboard/ContractPaymentWidget.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     DatePicker: typeof import('primevue/datepicker')['default']
@@ -72,6 +73,7 @@ declare module 'vue' {
     UpcomingDuesWidget: typeof import('./src/components/dashboard/UpcomingDuesWidget.vue')['default']
   }
   export interface ComponentCustomProperties {
+    KeyFilter: typeof import('primevue/keyfilter')['default']
     StyleClass: typeof import('primevue/styleclass')['default']
     Tooltip: typeof import('primevue/tooltip')['default']
   }

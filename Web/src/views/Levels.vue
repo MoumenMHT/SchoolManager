@@ -148,11 +148,11 @@ const openAssignSubjects = async (lvl: Level) => {
   try {
     const existing = await LevelService.getLevelSubjects(lvl.id!);
     // Setup mapping rows from existing DB data
+    // Note: the DB pivot column is `weekly_sessions_required`; the UI calls it `weekly_hours`
     mappingRows.value = existing.map((val: any) => ({
       subject_id: val.id || val.subject_id,
       coefficient: val.pivot ? val.pivot.coefficient : val.coefficient,
-      weekly_sessions_required: val.pivot?.weekly_sessions_required || val.weekly_sessions_required,
-      weekly_hours: val.pivot?.weekly_hours || val.weekly_hours,
+      weekly_hours: val.pivot?.weekly_sessions_required ?? val.weekly_sessions_required ?? 0,
       subject: val,
     }));
   } catch (error) {

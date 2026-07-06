@@ -7,7 +7,7 @@ export interface Teacher {
   user_id: number | null;
   first_name: string;
   last_name: string;
-  cin: string | null;
+  cin: number | null;
   birth_date: Date | string | null;
   created_at: string;
   hire_date: Date | string | null;
@@ -46,7 +46,7 @@ export interface TeacherAvailability {
 export interface CreateTeacherDTO {
   first_name: string;
   last_name: string;
-  cin?: string;
+  cin?: number;
   birth_date?: string;
   hire_date?: string;
   specialization?: string;
@@ -59,7 +59,7 @@ export interface CreateTeacherDTO {
 export interface UpdateTeacherDTO {
   first_name: string;
   last_name: string;
-  cin?: string;
+  cin?: number;
   birth_date?: string;
   hire_date?: string;
   specialization?: string;

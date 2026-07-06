@@ -100,27 +100,23 @@ const academicYears = computed(() => {
 // Load levels from API
 const apiLevels = ref<any[]>([]);
 
-// Group levels by cycle for the Select dropdown
+// Group levels by cycle for the Select dropdown — fully dynamic based on API data
 const groupedLevels = computed(() => {
-  const groups: { label: string, items: any[] }[] = [];
-  
-  const cycles = [
-    { key: 'primary', label: t('cycles.primary', 'Primary') },
-    { key: 'cem', label: t('cycles.cem', 'Middle School (CEM)') },
-    { key: 'lycee', label: t('cycles.lycee', 'High School (Lycée)') }
-  ];
-
-  cycles.forEach(cycle => {
-    const cycleLevels = apiLevels.value.filter(level => level.cycle === cycle.key);
-    if (cycleLevels.length > 0) {
-      groups.push({
-        label: cycle.label,
-        items: cycleLevels
-      });
+  // Extract unique cycle values in the order they first appear (API returns ordered by sort_order)
+  const seenCycles = new Set<string>();
+  const orderedCycles: string[] = [];
+  for (const level of apiLevels.value) {
+    if (level.cycle && !seenCycles.has(level.cycle)) {
+      seenCycles.add(level.cycle);
+      orderedCycles.push(level.cycle);
     }
-  });
+  }
 
-  return groups;
+  return orderedCycles.map(cycleKey => ({
+    // Try i18n key first, fall back to the raw cycle value stored in DB
+    label: t(`cycles.${cycleKey}`, cycleKey),
+    items: apiLevels.value.filter(level => level.cycle === cycleKey)
+  }));
 });
 
 // Load classes on mount

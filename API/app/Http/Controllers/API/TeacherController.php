@@ -59,7 +59,7 @@ class TeacherController extends Controller
             unset($teacher->user); // Remove the user relationship to avoid confusion
             $teacher->subjects = $teacher->teachableSubjects; // Add subjects to the teacher object
             unset($teacher->teachableSubjects); // Remove the original relationship name
-            $teacher->classes = $teacher->classes->pluck('name'); // Add classes to the teacher object
+            $teacher->setRelation('classes', $teacher->classes->unique('id')->values()); // Deduplicate classes
         });
         return response()->json([
             'success' => true,
@@ -85,7 +85,7 @@ class TeacherController extends Controller
             'last_name' => 'required|string|max:255',
             'birth_date' => 'required|date',
             'hire_date' => 'required|date',
-            'cin' => 'required|string|max:20',
+            'cin' => 'required|integer',
             'specialization' => 'required|string|max:255',
             'salary' => 'required|numeric|min:0',
             'contract_type' => 'sometimes|in:permanent,part_time',
@@ -170,6 +170,8 @@ class TeacherController extends Controller
         $teacher->loadCount('classes'); // Load count of related classes
         $teacher->load('classes'); // Load count of related students
         
+        $teacher->setRelation('classes', $teacher->classes->unique('id')->values()); // Deduplicate classes
+        
         return response()->json([
             'success' => true,
             'data' => $teacher
@@ -196,7 +198,7 @@ class TeacherController extends Controller
             'hire_date' => 'sometimes|required|date',
             'specialization' => 'sometimes|required|string|max:255',
             'salary' => 'sometimes|required|numeric|min:0',
-            'cin' => 'sometimes|required|string|max:20',
+            'cin' => 'sometimes|required|integer',
             'contract_type' => 'sometimes|in:permanent,part_time',
             'weekly_hours' => 'sometimes|integer|min:1|max:60',
             'availabilities' => 'sometimes|array',

@@ -351,7 +351,7 @@ onMounted(async () => {
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block font-semibold mb-2">{{ t('common.phone') }}</label>
-            <InputText v-model="form.phone" placeholder="+213 xxx xxx xxx" />
+            <InputText v-model="form.phone" placeholder="0xxx xxx xxx" v-keyfilter="/[0-9]/" />
           </div>
           <div>
             <label class="block font-semibold mb-2">{{ t('common.hire_date') }}</label>

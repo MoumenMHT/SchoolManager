@@ -47,8 +47,8 @@ class ParentController extends Controller
         $parentsToProcess->load('user:id,email,phone'); // Load email and phone fields from the related user
 
          $parentsToProcess->each(function ($parent) {
-            $parent->email = $parent->user ? $parent->user->email : null; // Add email attribute to parent
-            $parent->phone = $parent->user ? $parent->user->phone : null; // Add phone attribute to parent
+            $parent->email = $parent->user ? $parent->user->email : $parent->email; // Prefer user email, fallback to parent's own
+            $parent->phone = $parent->user ? $parent->user->phone : $parent->phone; // Prefer user phone, fallback to parent's own
             unset($parent->user); // Remove the user relationship to avoid confusion
         });
         return response()->json([
@@ -73,9 +73,9 @@ class ParentController extends Controller
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|integer',
             'email' => 'nullable|email|max:255',
-            'cin' => 'nullable|string|max:20',
+            'cin' => 'nullable|integer',
             'profession' => 'nullable|string|max:255',
         ]);
         
@@ -125,8 +125,8 @@ class ParentController extends Controller
         $parent = ParentModel::with(['students.class'])->find($id);
         $parent->load('user:id,email,phone'); // Load email and phone fields from the related user
 
-        $parent->email = $parent->user ? $parent->user->email : null; // Add email attribute to parent
-        $parent->phone = $parent->user ? $parent->user->phone : null; // Add phone attribute to parent
+        $parent->email = $parent->user ? $parent->user->email : $parent->email; // Prefer user email, fallback to parent's own
+        $parent->phone = $parent->user ? $parent->user->phone : $parent->phone; // Prefer user phone, fallback to parent's own
         unset($parent->user); // Remove the user relationship to avoid confusion
         
 
@@ -167,9 +167,9 @@ class ParentController extends Controller
         $validator = Validator::make($request->all(), [
             'first_name' => 'sometimes|required|string|max:255',
             'last_name' => 'sometimes|required|string|max:255',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|integer',
             'email' => 'nullable|email|max:255',
-            'cin' => 'nullable|string|max:20|unique:parents,cin,' . $parent->id,
+            'cin' => 'nullable|integer|unique:parents,cin,' . $parent->id,
             'profession' => 'nullable|string|max:255',
         ]);
 

@@ -18,7 +18,8 @@ class LevelController extends Controller
         $query = Level::query();
 
         $user = auth()->user();
-        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+        $isAdminOrSecretariat = $user && in_array($user->role, ['admin', 'secretariat']);
+        if (!$isAdminOrSecretariat && $user && method_exists($user, 'isDirector') && $user->isDirector()) {
             $directorCycle = $user->directorCycle();
             if ($directorCycle) {
                 $query->where('cycle', $directorCycle);
@@ -141,14 +142,16 @@ class LevelController extends Controller
             'subjects' => 'required|array',
             'subjects.*.subject_id' => 'required|exists:subjects,id',
             'subjects.*.coefficient' => 'required|integer|min:1',
+            // Accept both field names: frontend sends `weekly_hours`, DB column is `weekly_sessions_required`
+            'subjects.*.weekly_hours' => 'nullable|integer|min:1',
             'subjects.*.weekly_sessions_required' => 'nullable|integer|min:1',
         ]);
 
         $syncData = [];
         foreach ($validated['subjects'] as $subject) {
-            // Assign weekly_hours to weekly_sessions_required if the former is provided
-            $weeklySessions =  $subject['weekly_sessions_required'] ?? null;
-            
+            // Accept weekly_hours (frontend name) or weekly_sessions_required (DB column name)
+            $weeklySessions = $subject['weekly_hours'] ?? $subject['weekly_sessions_required'] ?? null;
+
             $syncData[$subject['subject_id']] = [
                 'coefficient' => $subject['coefficient'],
                 'weekly_sessions_required' => $weeklySessions,
