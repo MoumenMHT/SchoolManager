@@ -160,6 +160,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/analytics/subject-exercise-averages', [GradeController::class, 'getSubjectExerciseAverages']);
         Route::apiResource('grades', GradeController::class);
         Route::post('/attendances/bulk', [AttendanceController::class, 'bulkStore']);
+        Route::get('/attendances/overview', [AttendanceController::class, 'getOverviewByDate']);
         Route::apiResource('attendances', AttendanceController::class);
         
         // Grade specific endpoints

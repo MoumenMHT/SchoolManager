@@ -38,9 +38,17 @@ const attendanceLoading = ref(false);
 // Students in the selected class
 const classStudents = ref<any[]>([]);
 
-// Today's overview (shown when no class is selected)
-const todayRecords = ref<Array<{ classId: number; records: AttendanceRecord[] }>>([]);
-const todayLoading = ref(false);
+// Overview (shown when no class is selected) — reacts to date/viewMode filter
+// Stores pre-aggregated counts from the single /attendances/overview endpoint
+const overviewRecords = ref<Array<{
+  classId: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  marked: number;
+}>>([])
+const overviewLoading = ref(false);
 
 // Student attendance dialog
 const studentDialog = ref(false);
@@ -141,7 +149,7 @@ const attBySchedule = computed(() => {
 // Session summaries for day mode only
 const sessionSummaries = computed(() => {
   return filteredScheduleSlots.value.map((slot: any) => {
-    const records = attBySchedule.value[slot.id] ?? [];
+    const records = (attBySchedule.value[slot.id] ?? []).filter(r => r.date === selectedDateStr.value);
     const present = records.filter(r => r.status === 'present').length;
     const absent = records.filter(r => r.status === 'absent').length;
     const late = records.filter(r => r.status === 'late').length;
@@ -156,7 +164,7 @@ const sessionSummaries = computed(() => {
 const attendanceGrid = computed(() => {
   return classStudents.value.map((student: any) => {
     const sessions = filteredScheduleSlots.value.map((slot: any) => {
-      const records = attBySchedule.value[slot.id] ?? [];
+      const records = (attBySchedule.value[slot.id] ?? []).filter(r => r.date === selectedDateStr.value);
       const rec = records.find(r => r.student_id === student.id);
       return { slot, status: rec?.status ?? null };
     });
@@ -238,21 +246,30 @@ const weekAttendanceGrid = computed(() => {
 
 // ─── Today overview computeds ─────────────────────────────
 
-const todaySummaries = computed(() =>
+const overviewSummaries = computed(() =>
   classes.value
     .filter((cls: any) => (cls.students ?? []).length > 0)
     .map((cls: any) => {
-      const entry = todayRecords.value.find(r => r.classId === cls.id);
-      const records = entry?.records ?? [];
-      const present = records.filter(r => r.status === 'present').length;
-      const absent  = records.filter(r => r.status === 'absent').length;
-      const late    = records.filter(r => r.status === 'late').length;
-      const excused = records.filter(r => r.status === 'excused').length;
+      const entry = overviewRecords.value.find(r => r.classId === cls.id);
+      const present = entry?.present ?? 0;
+      const absent  = entry?.absent  ?? 0;
+      const late    = entry?.late    ?? 0;
+      const excused = entry?.excused ?? 0;
+      const marked  = entry?.marked  ?? 0;
       const total   = (cls.students ?? []).length;
-      const rate    = records.length > 0 ? Math.round((present / records.length) * 100) : null;
-      return { cls, present, absent, late, excused, total, marked: records.length, rate };
+      const rate    = marked > 0 ? Math.round((present / marked) * 100) : null;
+      return { cls, present, absent, late, excused, total, marked, rate };
     })
 );
+
+// Human-readable label for the overview header
+const overviewLabel = computed(() => {
+  if (viewMode.value === 'week') return `${weekStartStr.value} – ${weekEndStr.value}`;
+  return selectedDateStr.value;
+});
+
+// True when the endpoint returned at least one record for the selected date/period
+const overviewHasData = computed(() => overviewRecords.value.length > 0);
 
 // ─── Load ─────────────────────────────────────────────────
 async function loadClasses() {
@@ -268,21 +285,28 @@ async function loadClasses() {
   }
 }
 
-async function loadTodayOverview() {
+async function loadOverview() {
   if (classes.value.length === 0) return;
-  todayLoading.value = true;
+  overviewLoading.value = true;
   try {
-    const today = formatDateStr(new Date());
-    const results = await Promise.all(
-      classes.value.map(cls =>
-        AttendanceService.getClassAttendances(cls.id, { date: today })
-          .then(records => ({ classId: cls.id, records }))
-          .catch(() => ({ classId: cls.id, records: [] as AttendanceRecord[] }))
-      )
-    );
-    todayRecords.value = results;
+    const params = viewMode.value === 'week'
+      ? { start_date: weekStartStr.value, end_date: weekEndStr.value }
+      : { date: selectedDateStr.value };
+    // Single request — the backend aggregates counts for ALL classes in one SQL query
+    const response = await ApiService.get<any>('/attendances/overview', params);
+    const raw: any[] = (response as any)?.data ?? [];
+    overviewRecords.value = raw.map((s: any) => ({
+      classId: Number(s.class_id),
+      present: Number(s.present  ?? 0),
+      absent:  Number(s.absent   ?? 0),
+      late:    Number(s.late     ?? 0),
+      excused: Number(s.excused  ?? 0),
+      marked:  Number(s.marked   ?? 0),
+    }));
+  } catch {
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('attendance.load_attendance_error'), life: 3000 });
   } finally {
-    todayLoading.value = false;
+    overviewLoading.value = false;
   }
 }
 
@@ -420,18 +444,23 @@ function rateColor(rate: number | null) {
 watch(viewMode, () => {
   selectedPeriodIds.value = [];
   if (selectedClassId.value) loadClassData();
+  else loadOverview();
 });
 
 watch(selectedClassId, () => {
   selectedPeriodIds.value = [];
   if (selectedClassId.value) loadClassData();
+  else loadOverview();
 });
 
-watch(selectedDate, () => { if (selectedClassId.value) loadClassData(); });
+watch(selectedDate, () => {
+  if (selectedClassId.value) loadClassData();
+  else loadOverview();
+});
 
 onMounted(async () => {
   await loadClasses();
-  await loadTodayOverview();
+  await loadOverview();
 });
 </script>
 
@@ -526,27 +555,44 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- No class selected → Today's Attendance Overview -->
+    <!-- No class selected → Attendance Overview -->
     <div v-if="!selectedClassId">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-0">{{ t('attendance.todays_attendance') }}</h2>
-          <p class="text-sm text-surface-500 dark:text-surface-400">{{ formatDateStr(new Date()) }} {{ t('attendance.all_classes_subtitle') }}</p>
+          <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-0">
+            {{ viewMode === 'week' ? t('attendance.week_overview') : t('attendance.todays_attendance') }}
+          </h2>
+          <p class="text-sm text-surface-500 dark:text-surface-400">
+            <span class="inline-flex items-center gap-1.5">
+              <i class="pi pi-calendar text-xs"></i>
+              {{ overviewLabel }}
+            </span>
+            <span class="ml-2">{{ t('attendance.all_classes_subtitle') }}</span>
+          </p>
         </div>
-        <Button icon="pi pi-refresh" text rounded :loading="todayLoading" @click="loadTodayOverview" />
+        <Button icon="pi pi-refresh" text rounded :loading="overviewLoading" @click="loadOverview" />
       </div>
 
-      <div v-if="todayLoading && todaySummaries.length === 0" class="flex justify-center py-16">
+      <div v-if="overviewLoading && overviewSummaries.length === 0" class="flex justify-center py-16">
         <ProgressSpinner style="width: 40px; height: 40px" />
       </div>
 
-      <div v-else-if="todaySummaries.length === 0" class="flex flex-col items-center py-20 text-surface-400">
+      <div v-else-if="overviewSummaries.length === 0" class="flex flex-col items-center py-20 text-surface-400">
         <i class="pi pi-building text-5xl mb-3"></i>
         <p class="text-lg">{{ t('attendance.no_classes') }}</p>
       </div>
 
       <div v-else class="overflow-x-auto rounded-xl border border-surface-200 dark:border-surface-700">
-        <table class="w-full text-sm">
+        <!-- No records for selected date/period -->
+        <div
+          v-if="!overviewHasData"
+          class="flex flex-col items-center py-10 text-surface-400 dark:text-surface-500"
+        >
+          <i class="pi pi-calendar-times text-4xl mb-3"></i>
+          <p class="font-medium">{{ t('attendance.no_records_date') }}</p>
+          <p class="text-sm mt-1">{{ overviewLabel }}</p>
+        </div>
+        <table v-else class="w-full text-sm">
           <thead>
             <tr class="bg-surface-50 dark:bg-surface-800/80">
               <th class="text-left p-3 font-semibold text-surface-500 dark:text-surface-400">{{ t('attendance.class') }}</th>
@@ -566,7 +612,7 @@ onMounted(async () => {
           </thead>
           <tbody>
             <tr
-              v-for="row in todaySummaries"
+              v-for="row in overviewSummaries"
               :key="row.cls.id"
               class="border-t border-surface-100 dark:border-surface-700 hover:bg-surface-50/50 dark:hover:bg-surface-800/40 transition-colors"
             >
@@ -574,11 +620,20 @@ onMounted(async () => {
                 <div class="font-medium text-surface-900 dark:text-surface-100">{{ row.cls.name }}</div>
                 <div v-if="row.cls.level" class="text-xs text-surface-400 dark:text-surface-500">{{ row.cls.level }}</div>
               </td>
-              <td class="p-3 text-center font-semibold text-green-700 dark:text-green-300">{{ row.present }}</td>
-              <td class="p-3 text-center font-semibold text-red-700 dark:text-red-300">{{ row.absent }}</td>
-              <td class="p-3 text-center font-semibold text-amber-700 dark:text-amber-300 hidden sm:table-cell">{{ row.late }}</td>
+              <td class="p-3 text-center font-semibold text-green-700 dark:text-green-300">
+                <span v-if="overviewRecords.find(r => r.classId === row.cls.id)">{{ row.present }}</span>
+                <span v-else class="text-surface-300 dark:text-surface-600">–</span>
+              </td>
+              <td class="p-3 text-center font-semibold text-red-700 dark:text-red-300">
+                <span v-if="overviewRecords.find(r => r.classId === row.cls.id)">{{ row.absent }}</span>
+                <span v-else class="text-surface-300 dark:text-surface-600">–</span>
+              </td>
+              <td class="p-3 text-center font-semibold text-amber-700 dark:text-amber-300 hidden sm:table-cell">
+                <span v-if="overviewRecords.find(r => r.classId === row.cls.id)">{{ row.late }}</span>
+                <span v-else class="text-surface-300 dark:text-surface-600">–</span>
+              </td>
               <td class="p-3 text-center text-surface-500 dark:text-surface-400 hidden md:table-cell">
-                <span class="text-xs">{{ row.marked }} / {{ row.total }}</span>
+                <span class="text-xs font-medium">{{ row.total }}</span>
               </td>
               <td class="p-3 text-center">
                 <span v-if="row.rate !== null" class="font-semibold text-sm" :class="rateColor(row.rate)">{{ row.rate }}%</span>

@@ -202,7 +202,7 @@ class AttendanceController extends Controller
                 }
             }
 
-            $query = Attendance::with(['subject', 'teacher', 'schedule.assignment.teacher'])
+            $query = Attendance::with(['subject', 'teacher', 'schedule.assignment.teacher', 'student.class'])
                 ->where('student_id', $studentId);
 
             // DB-level filters
@@ -279,37 +279,48 @@ class AttendanceController extends Controller
         }
 
         try {
-            $saved = \Illuminate\Support\Facades\DB::transaction(function () use ($records) {
-                $results = [];
-                foreach ($records as $record) {
-                    if (!empty($record['id'])) {
-                        // Update existing
-                        $attendance = Attendance::find($record['id']);
+            \Illuminate\Support\Facades\DB::transaction(function () use ($records) {
+                $toUpdate = collect($records)->filter(fn($r) => !empty($r['id']));
+                $toCreate = collect($records)->filter(fn($r) => empty($r['id']));
+
+                // Pre-load all records to update in ONE query instead of N find() calls
+                if ($toUpdate->isNotEmpty()) {
+                    $existingMap = Attendance::whereIn('id', $toUpdate->pluck('id'))
+                        ->get()
+                        ->keyBy('id');
+
+                    foreach ($toUpdate as $record) {
+                        $attendance = $existingMap->get($record['id']);
                         if ($attendance) {
                             $attendance->update([
                                 'status' => $record['status'],
                                 'reason' => $record['reason'] ?? null,
                             ]);
-                            $results[] = $attendance;
                         }
-                    } else {
-                        // Create new
-                        $results[] = Attendance::create([
+                    }
+                }
+
+                // Bulk insert new records in ONE query instead of N create() calls
+                if ($toCreate->isNotEmpty()) {
+                    $now = now();
+                    \Illuminate\Support\Facades\DB::table('attendances')->insert(
+                        $toCreate->map(fn($record) => [
                             'student_id'  => $record['student_id'],
                             'subject_id'  => $record['subject_id'] ?? null,
                             'teacher_id'  => $record['teacher_id'] ?? null,
                             'schedule_id' => $record['schedule_id'] ?? null,
-                            'date'        => $record['date'] ?? now()->format('Y-m-d'),
-                            'time'        => now()->format('H:i:s'),
+                            'date'        => $record['date'] ?? $now->format('Y-m-d'),
+                            'time'        => $now->format('H:i:s'),
                             'status'      => $record['status'],
                             'reason'      => $record['reason'] ?? null,
-                        ]);
-                    }
+                            'created_at'  => $now,
+                            'updated_at'  => $now,
+                        ])->values()->all()
+                    );
                 }
-                return $results;
             });
 
-            return response()->json(['success' => true, 'data' => $saved]);
+            return response()->json(['success' => true]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -319,33 +330,76 @@ class AttendanceController extends Controller
         }
     }
 
+    /**
+     * Return per-class attendance summary counts for all classes in a single query.
+     * Accepts: date (single day) OR start_date + end_date (range).
+     * Used by the admin overview table to avoid N parallel HTTP requests.
+     */
+    public function getOverviewByDate(Request $request)
+    {
+        try {
+            $query = \Illuminate\Support\Facades\DB::table('attendances')
+                ->join('students', 'students.id', '=', 'attendances.student_id')
+                ->select(
+                    'students.class_id',
+                    \Illuminate\Support\Facades\DB::raw('SUM(CASE WHEN attendances.status = \'present\' THEN 1 ELSE 0 END) as present'),
+                    \Illuminate\Support\Facades\DB::raw('SUM(CASE WHEN attendances.status = \'absent\'  THEN 1 ELSE 0 END) as absent'),
+                    \Illuminate\Support\Facades\DB::raw('SUM(CASE WHEN attendances.status = \'late\'    THEN 1 ELSE 0 END) as late'),
+                    \Illuminate\Support\Facades\DB::raw('SUM(CASE WHEN attendances.status = \'excused\' THEN 1 ELSE 0 END) as excused'),
+                    \Illuminate\Support\Facades\DB::raw('COUNT(*) as marked')
+                )
+                ->groupBy('students.class_id');
+
+            if ($request->has('start_date') && $request->has('end_date')) {
+                $query->whereDate('attendances.date', '>=', $request->start_date)
+                      ->whereDate('attendances.date', '<=', $request->end_date);
+            } elseif ($request->has('date')) {
+                $query->whereDate('attendances.date', $request->date);
+            } else {
+                $query->whereDate('attendances.date', now()->toDateString());
+            }
+
+            return response()->json([
+                'success' => true,
+                'data'    => $query->get(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.failed_retrieve_attendance'),
+                'error'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
     public function getAttendanceByClass($classId, Request $request)
     {
         try {
-            $query = Attendance::with(['student.class', 'subject', 'teacher'])
-                ->whereHas('student', function ($q) use ($classId) {
-                    $q->where('class_id', $classId);
-                });
+            // Use a JOIN instead of a correlated whereHas subquery for the class filter
+            $query = Attendance::with(['student', 'subject', 'teacher'])
+                ->join('students', 'students.id', '=', 'attendances.student_id')
+                ->where('students.class_id', $classId)
+                ->select('attendances.*');
 
             if ($request->has('start_date') && $request->has('end_date')) {
-                $query->whereDate('date', '>=', $request->start_date)
-                      ->whereDate('date', '<=', $request->end_date);
+                $query->whereDate('attendances.date', '>=', $request->start_date)
+                      ->whereDate('attendances.date', '<=', $request->end_date);
             }
 
             if ($request->has('subject_id')) {
-                $query->where('subject_id', $request->subject_id);
+                $query->where('attendances.subject_id', $request->subject_id);
             }
 
             if ($request->has('schedule_id')) {
-                $query->where('schedule_id', $request->schedule_id);
+                $query->where('attendances.schedule_id', $request->schedule_id);
             }
 
             if ($request->has('status')) {
-                $query->where('status', $request->status);
+                $query->where('attendances.status', $request->status);
             }
 
             if ($request->has('teacher_id')) {
-                $query->where('teacher_id', $request->teacher_id);
+                $query->where('attendances.teacher_id', $request->teacher_id);
             }
 
             if ($request->has('academic_year')) {
@@ -355,17 +409,17 @@ class AttendanceController extends Controller
             }
 
             if ($request->has('month')) {
-                $query->whereMonth('date', $request->month);
+                $query->whereMonth('attendances.date', $request->month);
             }
 
             if ($request->has('semester')) {
                 $semester = $request->semester;
                 if ($semester == 1) {
-                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [9, 10, 11, 12]);
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(attendances.date)'), [9, 10, 11, 12]);
                 } elseif ($semester == 2) {
-                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [1, 2, 3]);
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(attendances.date)'), [1, 2, 3]);
                 } elseif ($semester == 3) {
-                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [4, 5, 6]);
+                    $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(attendances.date)'), [4, 5, 6]);
                 }
                 $query->whereHas('student.class', function($q) {
                     $q->where('academic_year', 'like', now()->year . '-%')
