@@ -51,7 +51,7 @@ class SettingsScreen extends StatelessWidget {
             onTap: () async {
               await auth.logout();
               if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
+                Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
               }
             },
           ),

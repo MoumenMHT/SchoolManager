@@ -55,7 +55,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
 
     if (success && mounted) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      if (auth.user?.role == 'teacher') {
+        Navigator.of(context).pushReplacementNamed('/teacher');
+      } else {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
     }
   }
 

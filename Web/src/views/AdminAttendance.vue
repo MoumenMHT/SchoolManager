@@ -92,10 +92,46 @@ const weekLabel = computed(() => `${weekStartStr.value} – ${weekEndStr.value}`
 
 // ─── Schedule slots computeds ─────────────────────────────
 
+// Real schedule slots plus virtual ones based on attendance data (for subject-only attendance)
+const combinedClassSlots = computed(() => {
+  const slots = [...allClassSlots.value];
+  const virtualMap = new Map();
+  for (const r of attendanceRecords.value) {
+    if (!r.schedule_id && r.subject_id) {
+      const d = new Date(r.date);
+      const dayName = DAY_NAMES[d.getDay()]?.toLowerCase() || '';
+
+      // Check if there is an existing schedule slot for this subject on this day
+      const existingSlot = slots.find(s => 
+        (s.day ?? s.assignment?.day ?? '').toLowerCase() === dayName && 
+        (s.subject_id === r.subject_id || s.assignment?.subject_id === r.subject_id)
+      );
+
+      if (!existingSlot) {
+        const key = `virtual_${r.date}_${r.subject_id}`;
+        if (!virtualMap.has(key)) {
+          virtualMap.set(key, {
+            id: key,
+            isVirtual: true,
+            subject: r.subject,
+            subject_id: r.subject_id,
+            day: dayName,
+            start_time: '--:--',
+            end_time: '--:--',
+            date: r.date
+          });
+        }
+      }
+    }
+  }
+  slots.push(...Array.from(virtualMap.values()));
+  return slots;
+});
+
 // Slots visible for the current view (all days in week mode, current day in day mode)
 const scheduleSlots = computed(() => {
   if (viewMode.value === 'week') {
-    return [...allClassSlots.value].sort((a: any, b: any) => {
+    return [...combinedClassSlots.value].sort((a: any, b: any) => {
       const da = DAY_ORDER.indexOf((a.day ?? a.assignment?.day ?? '').toLowerCase());
       const db = DAY_ORDER.indexOf((b.day ?? b.assignment?.day ?? '').toLowerCase());
       if (da !== db) return da - db;
@@ -103,14 +139,14 @@ const scheduleSlots = computed(() => {
     });
   }
   const day = selectedDayName.value.toLowerCase();
-  return allClassSlots.value
+  return combinedClassSlots.value
     .filter((s: any) => (s.day ?? s.assignment?.day ?? '').toLowerCase() === day)
     .sort((a: any, b: any) => (a.start_time ?? '').localeCompare(b.start_time ?? ''));
 });
 
 // Options for the period MultiSelect – always drawn from all class slots
 const periodOptions = computed(() => {
-  return [...allClassSlots.value].sort((a: any, b: any) => {
+  return [...combinedClassSlots.value].sort((a: any, b: any) => {
     const da = DAY_ORDER.indexOf((a.day ?? a.assignment?.day ?? '').toLowerCase());
     const db = DAY_ORDER.indexOf((b.day ?? b.assignment?.day ?? '').toLowerCase());
     if (da !== db) return da - db;
@@ -133,11 +169,29 @@ const filteredScheduleSlots = computed(() => {
 
 // ─── Attendance computeds ─────────────────────────────────
 
-// Group all records by schedule_id
+// Group all records by schedule_id (or virtual id)
 const attBySchedule = computed(() => {
-  const map: Record<number, AttendanceRecord[]> = {};
+  const map: Record<string, AttendanceRecord[]> = {};
   for (const rec of attendanceRecords.value) {
-    const key = rec.schedule_id ?? -1;
+    let key = '-1';
+    if (rec.schedule_id) {
+      key = String(rec.schedule_id);
+    } else if (rec.subject_id) {
+      const d = new Date(rec.date);
+      const dayName = DAY_NAMES[d.getDay()]?.toLowerCase() || '';
+      
+      const existingSlot = allClassSlots.value.find(s => 
+        (s.day ?? s.assignment?.day ?? '').toLowerCase() === dayName && 
+        (s.subject_id === rec.subject_id || s.assignment?.subject_id === rec.subject_id)
+      );
+
+      if (existingSlot) {
+        key = String(existingSlot.id);
+      } else {
+        key = `virtual_${rec.date}_${rec.subject_id}`;
+      }
+    }
+    
     if (!map[key]) map[key] = [];
     map[key].push(rec);
   }
@@ -393,9 +447,9 @@ const studentDialogHeader = computed(() => {
     : `${name} – ${selectedDateStr.value}`;
 });
 
-function getScheduleSlot(scheduleId: number | null): any | null {
+function getScheduleSlot(scheduleId: number | string | null): any | null {
   if (!scheduleId) return null;
-  return allClassSlots.value.find((s: any) => s.id === scheduleId) ?? null;
+  return combinedClassSlots.value.find((s: any) => String(s.id) === String(scheduleId)) ?? null;
 }
 
 function formatTime(t: string) {
@@ -991,7 +1045,7 @@ onMounted(async () => {
                           :key="slot.id"
                           class="text-center p-2 font-semibold text-surface-500 dark:text-surface-400 border-b border-surface-200 dark:border-surface-700 min-w-24"
                         >
-                          <div class="text-xs font-semibold">{{ slot.assignment?.subject?.name ?? 'Session' }}</div>
+                          <div class="text-xs font-semibold">{{ slot.assignment?.subject?.name ?? slot.subject?.name ?? 'Session' }}</div>
                           <div class="text-[10px] text-surface-400 font-normal mt-0.5">
                             {{ formatTime(slot.start_time) }}–{{ formatTime(slot.end_time) }}
                           </div>
@@ -1043,7 +1097,7 @@ onMounted(async () => {
                         >
                           <div class="text-xs font-semibold text-surface-700 dark:text-surface-200">{{ col.dayLabel }}</div>
                           <div class="text-[10px] text-surface-500 dark:text-surface-400 font-normal mt-0.5">
-                            {{ col.slot.assignment?.subject?.name ?? 'Session' }}
+                            {{ col.slot.assignment?.subject?.name ?? col.slot.subject?.name ?? 'Session' }}
                           </div>
                           <div class="text-[10px] text-surface-400 font-normal">
                             {{ formatTime(col.slot.start_time) }}
