@@ -107,17 +107,10 @@ class SubjectService {
     }
 
     /**
-     * Unassign a subject from a teacher for a specific class and academic year
+     * Remove a class-subject-teacher assignment by its record ID
      */
-    async unassignSubjectFromTeacher(subjectId: number, teacherId: number, classId: number, academicYear: string): Promise<void> { 
-        await ApiService.delete('/class-subject-teacher', {
-            data: {
-                subject_id: subjectId,
-                teacher_id: teacherId,
-                class_id: classId,
-                academic_year: academicYear
-            }
-        });
+    async unassignSubjectFromTeacher(assignmentId: number): Promise<void> {
+        await ApiService.delete(`/class-assignments/${assignmentId}`);
     }
 
     /**

@@ -50,7 +50,7 @@ const studentAssignmentLoading = ref(false);
 
 // Confirmation dialog states
 const removeTeacherConfirmDialog = ref(false);
-const teacherToRemove = ref<{ teacherId: number; subjectId: number } | null>(null);
+const teacherToRemove = ref<number | null>(null);
 const removeStudentConfirmDialog = ref(false);
 const studentToRemove = ref<number | null>(null);
 
@@ -524,8 +524,8 @@ const assignTeacherToClass = async () => {
 };
 
 // Confirm remove teacher from class
-const confirmRemoveTeacher = (teacherId: number, subjectId: number) => {
-  teacherToRemove.value = { teacherId, subjectId };
+const confirmRemoveTeacher = (assignmentId: number) => {
+  teacherToRemove.value = assignmentId;
   removeTeacherConfirmDialog.value = true;
 };
 
@@ -533,17 +533,8 @@ const confirmRemoveTeacher = (teacherId: number, subjectId: number) => {
 const removeTeacherFromClass = async () => {
   if (!selectedClassDetails.value || !teacherToRemove.value) return;
 
-  const { teacherId, subjectId } = teacherToRemove.value;
-
   try {
-    const academicYear = selectedClassDetails.value.academic_year || `${currentYear.value}-${currentYear.value + 1}`;
-
-    await SubjectService.unassignSubjectFromTeacher(
-      subjectId,
-      teacherId,
-      selectedClassDetails.value.id,
-      academicYear
-    );
+    await SubjectService.unassignSubjectFromTeacher(teacherToRemove.value);
 
     toast.add({
       severity: 'success',
@@ -1319,7 +1310,7 @@ const hideScheduleEditDialog = () => {
                   severity="danger"
                   text
                   rounded
-                  @click="confirmRemoveTeacher(data.teacher_id, data.subject_id)"
+                  @click="confirmRemoveTeacher(data.id)"
                   v-tooltip.top="t('classes.remove')"
                 />
               </template>
