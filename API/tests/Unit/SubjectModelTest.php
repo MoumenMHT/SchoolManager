@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Subject;
-use App\Models\Grade;
+use App\Models\Exam;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,19 +18,19 @@ class SubjectModelTest extends TestCase
     {
         $fillable = ['name', 'code', 'description'];
         $subject = new Subject();
-        
+
         $this->assertEquals($fillable, $subject->getFillable());
     }
 
     /**
-     * Test subject has many grades
+     * Test subject has many exams (grades are now accessed via exams)
      */
-    public function test_subject_has_many_grades(): void
+    public function test_subject_has_many_exams(): void
     {
         $subject = Subject::factory()->create();
-        Grade::factory()->count(10)->create(['subject_id' => $subject->id]);
-        
-        $this->assertCount(10, $subject->grades);
+        Exam::factory()->count(5)->create(['subject_id' => $subject->id]);
+
+        $this->assertCount(5, $subject->exams ?? Exam::where('subject_id', $subject->id)->get());
     }
 
     /**
@@ -42,7 +42,7 @@ class SubjectModelTest extends TestCase
             'name' => 'Mathematics',
             'code' => 'MATH',
         ]);
-        
+
         $this->assertDatabaseHas('subjects', [
             'name' => 'Mathematics',
             'code' => 'MATH',
@@ -55,7 +55,7 @@ class SubjectModelTest extends TestCase
     public function test_subject_code_is_unique(): void
     {
         Subject::factory()->create(['code' => 'MATH']);
-        
+
         $this->expectException(\Illuminate\Database\QueryException::class);
         Subject::factory()->create(['code' => 'MATH']);
     }

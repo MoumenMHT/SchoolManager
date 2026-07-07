@@ -16,9 +16,9 @@ class ParentModelFactory extends Factory
             'user_id' => User::factory()->create(['role' => 'parent']),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
-            'phone' => fake()->phoneNumber(),
+            'phone' => fake()->numerify('06########'),   // numeric string — controller casts to int
             'email' => fake()->optional()->safeEmail(),
-            'cin' => fake()->optional()->regexify('[A-Z]{2}[0-9]{6}'),
+            'cin'   => fake()->optional()->numerify('#######'), // 7-digit numeric string
             'profession' => fake()->optional()->randomElement(['Engineer', 'Doctor', 'Teacher', 'Business Owner', 'Lawyer']),
         ];
     }

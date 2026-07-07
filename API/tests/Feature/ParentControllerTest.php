@@ -47,9 +47,9 @@ class ParentControllerTest extends TestCase
                 'user_id' => $user->id,
                 'first_name' => 'John',
                 'last_name' => 'Doe',
-                'phone' => '0612345678',
+                'phone' => 612345678,
                 'email' => 'parent@example.com',
-                'cin' => 'AB123456',
+                'cin' => 123456,
                 'profession' => 'Engineer',
             ]);
 
@@ -93,7 +93,7 @@ class ParentControllerTest extends TestCase
                 'user_id' => $parent->user_id,
                 'first_name' => $parent->first_name,
                 'last_name' => $parent->last_name,
-                'phone' => $parent->phone,
+                'phone' => 612345678,
                 'profession' => 'Engineer',
             ]);
 

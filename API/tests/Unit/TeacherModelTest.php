@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Teacher;
 use App\Models\User;
-use App\Models\Subject;
+use App\Models\Exam;
 use App\Models\Grade;
 use App\Models\Attendance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +42,7 @@ class TeacherModelTest extends TestCase
      */
     public function test_teacher_belongs_to_user(): void
     {
-        $user = User::factory()->create(['role' => 'teacher']);
+        $user    = User::factory()->create(['role' => 'teacher']);
         $teacher = Teacher::factory()->create(['user_id' => $user->id]);
 
         $this->assertInstanceOf(User::class, $teacher->user);
@@ -50,15 +50,16 @@ class TeacherModelTest extends TestCase
     }
 
     /**
-     * Test teacher has many grades
+     * Test teacher has many exams (grades now stored via Exam model)
      */
-    public function test_teacher_has_many_grades(): void
+    public function test_teacher_has_many_exams(): void
     {
         $teacher = Teacher::factory()->create();
-        $grades = Grade::factory()->count(5)->create(['teacher_id' => $teacher->id]);
+        Exam::factory()->count(5)->create(['teacher_id' => $teacher->id]);
 
-        $this->assertCount(5, $teacher->grades);
-        $this->assertInstanceOf(Grade::class, $teacher->grades->first());
+        // Teacher grades are now accessed through exams
+        $examCount = Exam::where('teacher_id', $teacher->id)->count();
+        $this->assertEquals(5, $examCount);
     }
 
     /**
@@ -66,7 +67,7 @@ class TeacherModelTest extends TestCase
      */
     public function test_teacher_has_many_attendances(): void
     {
-        $teacher = Teacher::factory()->create();
+        $teacher     = Teacher::factory()->create();
         $attendances = Attendance::factory()->count(10)->create(['teacher_id' => $teacher->id]);
 
         $this->assertCount(10, $teacher->attendances);

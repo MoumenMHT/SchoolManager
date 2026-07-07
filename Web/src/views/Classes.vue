@@ -468,6 +468,8 @@ const assignTeacherToClass = async () => {
     // Get the coefficient for this subject and class level
     const academicYear = selectedClassDetails.value.academic_year || getCurrentAcademicYear();
 
+    let hasError = false;
+
     for (const assignment of validAssignments) {
       try {
         await SubjectService.assignSubjectToTeacher(
@@ -478,7 +480,7 @@ const assignTeacherToClass = async () => {
           1 // Default coefficient
         );
       } catch (err: any) {
-        // Log individual failures but continue
+        hasError = true;
         console.error(`Failed to assign teacher for subject ${assignment.subject_id}:`, err);
         toast.add({
           severity: 'error',
@@ -487,6 +489,11 @@ const assignTeacherToClass = async () => {
           life: 3000
         });
       }
+    }
+
+    // If any assignment failed, keep the dialog open and don't show success
+    if (hasError) {
+      return;
     }
 
     await loadClasses(); // Reload classes to update the main table

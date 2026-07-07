@@ -9,6 +9,17 @@ return new class extends Migration
 {
     private function hasIndex(string $tableName, string $indexName): bool
     {
+        // SQLite does not support information_schema — use pragma instead
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $indexes = DB::select("PRAGMA index_list(`{$tableName}`)");
+            foreach ($indexes as $index) {
+                if ($index->name === $indexName) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         return DB::table('information_schema.statistics')
             ->where('table_schema', DB::getDatabaseName())
             ->where('table_name', $tableName)

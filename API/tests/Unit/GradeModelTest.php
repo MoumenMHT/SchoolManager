@@ -4,8 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Grade;
 use App\Models\Student;
-use App\Models\Subject;
-use App\Models\Teacher;
+use App\Models\Exam;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,13 +13,13 @@ class GradeModelTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Test grade has correct fillable fields
+     * Test grade has correct fillable fields (new exam-based architecture)
      */
     public function test_grade_has_correct_fillable_fields(): void
     {
-        $fillable = ['student_id', 'subject_id', 'teacher_id', 'exam_type', 'grade', 'max_grade', 'semester', 'academic_year', 'comment'];
+        $fillable = ['student_id', 'exam_id', 'grade', 'comment'];
         $grade = new Grade();
-        
+
         $this->assertEquals($fillable, $grade->getFillable());
     }
 
@@ -31,46 +30,42 @@ class GradeModelTest extends TestCase
     {
         $student = Student::factory()->create();
         $grade = Grade::factory()->create(['student_id' => $student->id]);
-        
+
         $this->assertInstanceOf(Student::class, $grade->student);
         $this->assertEquals($student->id, $grade->student->id);
     }
 
     /**
-     * Test grade belongs to subject
+     * Test grade belongs to exam (new architecture)
      */
-    public function test_grade_belongs_to_subject(): void
+    public function test_grade_belongs_to_exam(): void
     {
-        $subject = Subject::factory()->create();
-        $grade = Grade::factory()->create(['subject_id' => $subject->id]);
-        
-        $this->assertInstanceOf(Subject::class, $grade->subject);
-        $this->assertEquals($subject->id, $grade->subject->id);
+        $exam = Exam::factory()->create();
+        $grade = Grade::factory()->create(['exam_id' => $exam->id]);
+
+        $this->assertInstanceOf(Exam::class, $grade->exam);
+        $this->assertEquals($exam->id, $grade->exam->id);
     }
 
     /**
-     * Test grade belongs to teacher
-     */
-    public function test_grade_belongs_to_teacher(): void
-    {
-        $teacher = Teacher::factory()->create();
-        $grade = Grade::factory()->create(['teacher_id' => $teacher->id]);
-        
-        $this->assertInstanceOf(Teacher::class, $grade->teacher);
-        $this->assertEquals($teacher->id, $grade->teacher->id);
-    }
-
-    /**
-     * Test grade casts numeric fields
+     * Test grade casts numeric field
      */
     public function test_grade_casts_numeric_fields(): void
     {
-        $grade = Grade::factory()->create([
-            'grade' => 15.5,
-            'max_grade' => 20,
-        ]);
-        
-        $this->assertEquals(15.5, (float)$grade->grade);
-        $this->assertEquals(20, (float)$grade->max_grade);
+        $grade = Grade::factory()->create(['grade' => 15.5]);
+
+        $this->assertEquals(15.5, (float) $grade->grade);
+    }
+
+    /**
+     * Test grade can access subject through exam relationship
+     */
+    public function test_grade_can_access_subject_via_exam(): void
+    {
+        $grade = Grade::factory()->create();
+        $grade->load('exam.subject');
+
+        $this->assertNotNull($grade->exam);
+        $this->assertNotNull($grade->exam->subject);
     }
 }

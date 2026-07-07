@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Teacher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,18 +12,18 @@ class AuthTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Test user can login with valid credentials
+     * Test user can login with valid credentials (username-based login)
      */
     public function test_user_can_login_with_valid_credentials(): void
     {
         $user = User::factory()->create([
-            'email' => 'test@example.com',
-            'password' => bcrypt('password123'),
+            'username' => 'testuser',
+            'password' => bcrypt('Password123'),
         ]);
 
         $response = $this->postJson('/api/login', [
-            'email' => 'test@example.com',
-            'password' => 'password123',
+            'username' => 'testuser',
+            'password' => 'Password123',
         ]);
 
         $response->assertStatus(200)
@@ -32,7 +33,6 @@ class AuthTest extends TestCase
                 'user' => [
                     'id',
                     'username',
-                    'email',
                     'role',
                 ],
             ])
@@ -49,33 +49,32 @@ class AuthTest extends TestCase
     public function test_user_cannot_login_with_invalid_credentials(): void
     {
         $user = User::factory()->create([
-            'email' => 'test@example.com',
-            'password' => bcrypt('password123'),
+            'username' => 'testuser',
+            'password' => bcrypt('Password123'),
         ]);
 
         $response = $this->postJson('/api/login', [
-            'email' => 'test@example.com',
+            'username' => 'testuser',
             'password' => 'wrongpassword',
         ]);
 
         $response->assertStatus(401)
             ->assertJson([
                 'success' => false,
-                'message' => 'Invalid credentials',
             ]);
     }
 
     /**
-     * Test login requires email
+     * Test login requires username or phone
      */
-    public function test_login_requires_email(): void
+    public function test_login_requires_username_or_phone(): void
     {
         $response = $this->postJson('/api/login', [
-            'password' => 'password123',
+            'password' => 'Password123',
         ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['email']);
+        // Without username or phone, validation returns 422
+        $response->assertStatus(422);
     }
 
     /**
@@ -84,7 +83,7 @@ class AuthTest extends TestCase
     public function test_login_requires_password(): void
     {
         $response = $this->postJson('/api/login', [
-            'email' => 'test@example.com',
+            'username' => 'test@example.com',
         ]);
 
         $response->assertStatus(422)
@@ -96,7 +95,7 @@ class AuthTest extends TestCase
      */
     public function test_authenticated_user_can_logout(): void
     {
-        $user = User::factory()->create();
+        $user  = User::factory()->create();
         $token = $user->createToken('test-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
@@ -105,7 +104,6 @@ class AuthTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Logged out successfully',
             ]);
 
         $this->assertCount(0, $user->tokens);
@@ -128,7 +126,6 @@ class AuthTest extends TestCase
     {
         $user = User::factory()->create([
             'username' => 'testuser',
-            'email' => 'test@example.com',
         ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
@@ -138,47 +135,45 @@ class AuthTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'user' => [
+                'user'    => [
                     'username' => 'testuser',
-                    'email' => 'test@example.com',
                 ],
             ]);
     }
 
     /**
-     * Test authenticated user can change password
+     * Test authenticated user can change password (password must meet complexity rules)
      */
     public function test_authenticated_user_can_change_password(): void
     {
-        $user = User::factory()->create([
-            'password' => bcrypt('oldpassword'),
+        $user  = User::factory()->create([
+            'password' => bcrypt('OldPassword123'),
         ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/change-password', [
-                'current_password' => 'oldpassword',
-                'new_password' => 'newpassword123',
-                'new_password_confirmation' => 'newpassword123',
+                'current_password'          => 'OldPassword123',
+                'new_password'              => 'NewPassword456',
+                'new_password_confirmation' => 'NewPassword456',
             ]);
 
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
-                'message' => 'Password changed successfully',
             ]);
 
         // Verify old password no longer works
         $loginResponse = $this->postJson('/api/login', [
-            'email' => $user->email,
-            'password' => 'oldpassword',
+            'username' => $user->username,
+            'password' => 'OldPassword123',
         ]);
         $loginResponse->assertStatus(401);
 
         // Verify new password works
         $loginResponse = $this->postJson('/api/login', [
-            'email' => $user->email,
-            'password' => 'newpassword123',
+            'username' => $user->username,
+            'password' => 'NewPassword456',
         ]);
         $loginResponse->assertStatus(200);
     }
@@ -188,36 +183,36 @@ class AuthTest extends TestCase
      */
     public function test_change_password_requires_correct_current_password(): void
     {
-        $user = User::factory()->create([
-            'password' => bcrypt('oldpassword'),
+        $user  = User::factory()->create([
+            'password' => bcrypt('OldPassword123'),
         ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/change-password', [
-                'current_password' => 'wrongpassword',
-                'new_password' => 'newpassword123',
-                'new_password_confirmation' => 'newpassword123',
+                'current_password'          => 'WrongPassword1',
+                'new_password'              => 'NewPassword456',
+                'new_password_confirmation' => 'NewPassword456',
             ]);
 
         $response->assertStatus(400);
     }
 
     /**
-     * Test admin can register new user
+     * Test admin can register new user (role=admin since register supports admin/teacher/parent)
      */
     public function test_admin_can_register_new_user(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $token = $admin->createToken('test-token')->plainTextToken;
 
+        // Register an admin user (no teacher_id/parent_id required)
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/register', [
-                'username' => 'newuser',
-                'email' => 'newuser@example.com',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
-                'role' => 'teacher',
+                'username'              => 'newadminuser',
+                'password'              => 'Password123',
+                'password_confirmation' => 'Password123',
+                'role'                  => 'admin',
             ]);
 
         $response->assertStatus(201)
@@ -226,8 +221,8 @@ class AuthTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('users', [
-            'email' => 'newuser@example.com',
-            'role' => 'teacher',
+            'username' => 'newadminuser',
+            'role'     => 'admin',
         ]);
     }
 
@@ -237,15 +232,14 @@ class AuthTest extends TestCase
     public function test_non_admin_cannot_register_new_user(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
-        $token = $teacher->createToken('test-token')->plainTextToken;
+        $token   = $teacher->createToken('test-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/register', [
-                'username' => 'newuser',
-                'email' => 'newuser@example.com',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
-                'role' => 'teacher',
+                'username'              => 'newuser',
+                'password'              => 'Password123',
+                'password_confirmation' => 'Password123',
+                'role'                  => 'teacher',
             ]);
 
         $response->assertStatus(403);

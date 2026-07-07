@@ -46,7 +46,7 @@ class TeacherControllerTest extends TestCase
                 'user_id' => $user->id,
                 'first_name' => 'Jane',
                 'last_name' => 'Smith',
-                'cin' => 'AB123456',
+                'cin' => 123456,
                 'birth_date' => '1990-05-15',
                 'specialization' => 'Mathematics',
                 'hire_date' => '2020-09-01',

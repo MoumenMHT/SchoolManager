@@ -7,7 +7,6 @@ use App\Models\SchoolClass;
 use App\Models\ParentModel;
 use App\Models\Grade;
 use App\Models\Attendance;
-use App\Models\Payment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,7 +42,7 @@ class StudentModelTest extends TestCase
      */
     public function test_student_belongs_to_class(): void
     {
-        $class = SchoolClass::factory()->create();
+        $class   = SchoolClass::factory()->create();
         $student = Student::factory()->create(['class_id' => $class->id]);
 
         $this->assertInstanceOf(SchoolClass::class, $student->class);
@@ -55,7 +54,7 @@ class StudentModelTest extends TestCase
      */
     public function test_student_belongs_to_parent(): void
     {
-        $parent = ParentModel::factory()->create();
+        $parent  = ParentModel::factory()->create();
         $student = Student::factory()->create(['parent_id' => $parent->id]);
 
         $this->assertInstanceOf(ParentModel::class, $student->parent);
@@ -68,7 +67,7 @@ class StudentModelTest extends TestCase
     public function test_student_has_many_grades(): void
     {
         $student = Student::factory()->create();
-        $grades = Grade::factory()->count(3)->create(['student_id' => $student->id]);
+        Grade::factory()->count(3)->create(['student_id' => $student->id]);
 
         $this->assertCount(3, $student->grades);
         $this->assertInstanceOf(Grade::class, $student->grades->first());
@@ -79,23 +78,11 @@ class StudentModelTest extends TestCase
      */
     public function test_student_has_many_attendances(): void
     {
-        $student = Student::factory()->create();
+        $student     = Student::factory()->create();
         $attendances = Attendance::factory()->count(5)->create(['student_id' => $student->id]);
 
         $this->assertCount(5, $student->attendances);
         $this->assertInstanceOf(Attendance::class, $student->attendances->first());
-    }
-
-    /**
-     * Test student has many payments
-     */
-    public function test_student_has_many_payments(): void
-    {
-        $student = Student::factory()->create();
-        $payments = Payment::factory()->count(2)->create(['student_id' => $student->id]);
-
-        $this->assertCount(2, $student->payments);
-        $this->assertInstanceOf(Payment::class, $student->payments->first());
     }
 
     /**
@@ -105,7 +92,7 @@ class StudentModelTest extends TestCase
     {
         $student = Student::factory()->create([
             'first_name' => 'John',
-            'last_name' => 'Doe',
+            'last_name'  => 'Doe',
         ]);
 
         $this->assertEquals('John Doe', $student->full_name);
@@ -117,7 +104,7 @@ class StudentModelTest extends TestCase
     public function test_student_date_casting(): void
     {
         $student = Student::factory()->create([
-            'birth_date' => '2010-01-15',
+            'birth_date'      => '2010-01-15',
             'enrollment_date' => '2024-09-01',
         ]);
 

@@ -16,7 +16,7 @@ class SchoolClassModelTest extends TestCase
      */
     public function test_class_has_correct_fillable_fields(): void
     {
-        $fillable = ['name', 'level', 'level_id', 'academic_year', 'capacity', 'main_teacher_id', 'is_active'];
+        $fillable = ['name', 'level', 'level_id', 'academic_year', 'capacity', 'main_teacher_id', 'supervisor_id', 'is_active'];
         $class = new SchoolClass();
         
         $this->assertEquals($fillable, $class->getFillable());

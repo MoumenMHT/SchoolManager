@@ -21,7 +21,6 @@ use App\Http\Controllers\API\FeeController;
 use App\Http\Controllers\API\ContractController;
 use App\Http\Controllers\API\BillController;
 use App\Http\Controllers\API\SupervisorController;
-
 use App\Http\Controllers\API\LevelController;
 
 // Public routes

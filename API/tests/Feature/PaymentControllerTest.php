@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\Payment;
+use App\Models\Contract;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -13,76 +14,73 @@ class PaymentControllerTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Test admin can create payment
+     * Test admin can create payment (new contract-based architecture)
      */
     public function test_admin_can_create_payment(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $token = $admin->createToken('test-token')->plainTextToken;
-
-        $student = Student::factory()->create();
+        $admin    = User::factory()->create(['role' => 'admin']);
+        $token    = $admin->createToken('test-token')->plainTextToken;
+        $contract = Contract::factory()->create();
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/payments', [
-                'student_id' => $student->id,
-                'amount' => 500.00,
-                'due_date' => now()->addMonth()->format('Y-m-d'),
-                'status' => 'pending',
-                'payment_type' => 'monthly',
-                'academic_year' => '2025-2026',
-                'month' => 'January',
+                'contract_id'  => $contract->id,
+                'amount'       => 500.00,
+                'payment_type' => 'cash',
+                'paid_date'    => now()->format('Y-m-d H:i:s'),
+                'note'         => 'Test payment',
             ]);
 
         $response->assertStatus(201);
-        
+
         $this->assertDatabaseHas('payments', [
-            'student_id' => $student->id,
-            'amount' => 500.00,
+            'contract_id' => $contract->id,
         ]);
     }
 
     /**
-     * Test can get student payments
+     * Test admin can list payments
      */
-    public function test_can_get_student_payments(): void
+    public function test_admin_can_list_payments(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $token = $admin->createToken('test-token')->plainTextToken;
 
-        $student = Student::factory()->create();
-        Payment::factory()->count(5)->create(['student_id' => $student->id]);
+        Payment::factory()->count(3)->create();
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson('/api/parent/students/' . $student->id . '/payments');
+            ->getJson('/api/payments');
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data',
+            ]);
     }
 
     /**
-     * Test can update payment
+     * Test admin can update a payment
      */
     public function test_can_update_payment(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $token = $admin->createToken('test-token')->plainTextToken;
-
+        $admin   = User::factory()->create(['role' => 'admin']);
+        $token   = $admin->createToken('test-token')->plainTextToken;
         $payment = Payment::factory()->create(['status' => 'pending']);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson('/api/payments/' . $payment->id, [
-                'student_id' => $payment->student_id,
-                'amount' => $payment->amount,
-                'due_date' => $payment->due_date->format('Y-m-d'),
-                'paid_date' => now()->format('Y-m-d'),
-                'status' => 'paid',
+                'contract_id'  => $payment->contract_id,
+                'amount'       => $payment->amount,
                 'payment_type' => $payment->payment_type,
+                'paid_date'    => now()->format('Y-m-d H:i:s'),
+                'status'       => 'completed',
             ]);
 
         $response->assertStatus(200);
-        
+
         $this->assertDatabaseHas('payments', [
-            'id' => $payment->id,
-            'status' => 'paid',
+            'id'     => $payment->id,
+            'status' => 'completed',
         ]);
     }
 
@@ -92,12 +90,12 @@ class PaymentControllerTest extends TestCase
     public function test_teacher_cannot_create_payments(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
-        $token = $teacher->createToken('test-token')->plainTextToken;
+        $token   = $teacher->createToken('test-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/payments', [
-                'student_id' => 1,
-                'amount' => 500,
+                'contract_id' => 1,
+                'amount'      => 500,
             ]);
 
         $response->assertStatus(403);

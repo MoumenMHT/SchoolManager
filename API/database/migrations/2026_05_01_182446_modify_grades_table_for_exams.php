@@ -14,9 +14,34 @@ return new class extends Migration
      * 3. Bulk-populates class_exam pivot from the student→class relation.
      * 4. Bulk-updates grades.exam_id using a JOIN.
      * 5. Drops the redundant columns from grades.
+     *
+     * Note: MySQL-specific steps 2-5 are skipped on SQLite (test environment).
+     * For SQLite + RefreshDatabase there is no existing data to migrate.
+     * Because SQLite cannot drop FK-referenced columns, we recreate the table.
      */
     public function up(): void
     {
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+
+        if ($isSqlite) {
+            // SQLite path: recreate grades table with the final schema.
+            // With RefreshDatabase there is no data, so we just recreate.
+            DB::statement('PRAGMA foreign_keys = OFF');
+            Schema::drop('grades');
+            Schema::create('grades', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('student_id')->constrained()->onDelete('cascade');
+                $table->foreignId('exam_id')->constrained()->onDelete('cascade');
+                $table->decimal('grade', 5, 2);
+                $table->text('comment')->nullable();
+                $table->timestamps();
+            });
+            DB::statement('PRAGMA foreign_keys = ON');
+            return;
+        }
+
+        // ── MySQL path ────────────────────────────────────────────────────────
+
         // Step 1: Add nullable exam_id FK (guard in case a previous partial run already added it)
         if (!Schema::hasColumn('grades', 'exam_id')) {
             Schema::table('grades', function (Blueprint $table) {
@@ -105,6 +130,29 @@ return new class extends Migration
 
     public function down(): void
     {
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+
+        if ($isSqlite) {
+            // Recreate the old grades table schema for SQLite
+            DB::statement('PRAGMA foreign_keys = OFF');
+            Schema::drop('grades');
+            Schema::create('grades', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('student_id')->constrained()->onDelete('cascade');
+                $table->foreignId('subject_id')->constrained()->onDelete('cascade');
+                $table->foreignId('teacher_id')->constrained()->onDelete('cascade');
+                $table->string('exam_type');
+                $table->decimal('grade', 5, 2);
+                $table->decimal('max_grade', 5, 2)->default(20);
+                $table->string('semester');
+                $table->string('academic_year');
+                $table->text('comment')->nullable();
+                $table->timestamps();
+            });
+            DB::statement('PRAGMA foreign_keys = ON');
+            return;
+        }
+
         Schema::table('grades', function (Blueprint $table) {
             $table->foreignId('subject_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('teacher_id')->nullable()->constrained()->onDelete('cascade');

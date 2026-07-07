@@ -87,9 +87,13 @@ onMounted(async () => {
 });
 
 watch(selectedParent, async (newVal) => {
-  if (newVal && !editingContractId.value) {
+  // Guard: AutoComplete may temporarily set v-model to the typed string.
+  // Only proceed when newVal is a real Parent object (has an id).
+  if (newVal && typeof newVal !== 'object') return;
+
+  if (newVal && (newVal as Parent).id && !editingContractId.value) {
     try {
-      parentStudents.value = await ContractService.getParentStudentsWithFees(newVal.id);
+      parentStudents.value = await ContractService.getParentStudentsWithFees((newVal as Parent).id);
       const newStudentFees: Record<number, number[]> = {};
       parentStudents.value.forEach(student => {
         const preassignedFees = (student.fees || []).map((f: any) => f.id);

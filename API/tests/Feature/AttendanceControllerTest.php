@@ -19,9 +19,9 @@ class AttendanceControllerTest extends TestCase
      */
     public function test_teacher_can_mark_attendance(): void
     {
-        $user = User::factory()->create(['role' => 'teacher']);
+        $user    = User::factory()->create(['role' => 'teacher']);
         $teacher = Teacher::factory()->create(['user_id' => $user->id]);
-        $token = $user->createToken('test-token')->plainTextToken;
+        $token   = $user->createToken('test-token')->plainTextToken;
 
         $student = Student::factory()->create();
         $subject = Subject::factory()->create();
@@ -31,16 +31,16 @@ class AttendanceControllerTest extends TestCase
                 'student_id' => $student->id,
                 'subject_id' => $subject->id,
                 'teacher_id' => $teacher->id,
-                'date' => now()->format('Y-m-d'),
-                'status' => 'present',
-                'time' => '08:00',
+                'date'       => now()->format('Y-m-d'),
+                'status'     => 'present',
+                // 'time' is set automatically by the controller; do not send it
             ]);
 
         $response->assertStatus(201);
-        
+
         $this->assertDatabaseHas('attendances', [
             'student_id' => $student->id,
-            'status' => 'present',
+            'status'     => 'present',
         ]);
     }
 
@@ -49,11 +49,11 @@ class AttendanceControllerTest extends TestCase
      */
     public function test_can_get_student_attendance(): void
     {
-        $user = User::factory()->create(['role' => 'teacher']);
+        $user  = User::factory()->create(['role' => 'teacher']);
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $student = Student::factory()->create();
-        Attendance::factory()->count(10)->create(['student_id' => $student->id]);
+        $student     = Student::factory()->create();
+        $attendances = Attendance::factory()->count(10)->create(['student_id' => $student->id]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->getJson('/api/students/' . $student->id . '/attendances');
@@ -66,11 +66,11 @@ class AttendanceControllerTest extends TestCase
      */
     public function test_can_get_class_attendance(): void
     {
-        $user = User::factory()->create(['role' => 'teacher']);
+        $user  = User::factory()->create(['role' => 'teacher']);
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $student = Student::factory()->create();
-        Attendance::factory()->count(10)->create(['student_id' => $student->id]);
+        $student     = Student::factory()->create();
+        $attendances = Attendance::factory()->count(10)->create(['student_id' => $student->id]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->getJson('/api/classes/' . $student->class_id . '/attendances');
@@ -79,29 +79,25 @@ class AttendanceControllerTest extends TestCase
     }
 
     /**
-     * Test can update attendance
+     * Test can update attendance — controller only accepts status and reason
      */
     public function test_can_update_attendance(): void
     {
-        $user = User::factory()->create(['role' => 'teacher']);
+        $user  = User::factory()->create(['role' => 'teacher']);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $attendance = Attendance::factory()->create(['status' => 'present']);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson('/api/attendances/' . $attendance->id, [
-                'student_id' => $attendance->student_id,
-                'subject_id' => $attendance->subject_id,
-                'teacher_id' => $attendance->teacher_id,
-                'date' => $attendance->date->format('Y-m-d'),
                 'status' => 'absent',
-                'time' => $attendance->time,
+                'reason' => 'Sick leave',
             ]);
 
         $response->assertStatus(200);
-        
+
         $this->assertDatabaseHas('attendances', [
-            'id' => $attendance->id,
+            'id'     => $attendance->id,
             'status' => 'absent',
         ]);
     }
@@ -111,13 +107,13 @@ class AttendanceControllerTest extends TestCase
      */
     public function test_attendance_status_validation(): void
     {
-        $user = User::factory()->create(['role' => 'teacher']);
+        $user  = User::factory()->create(['role' => 'teacher']);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/attendances', [
                 'student_id' => 1,
-                'status' => 'invalid_status',
+                'status'     => 'invalid_status',
             ]);
 
         $response->assertStatus(422);
