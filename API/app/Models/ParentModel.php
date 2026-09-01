@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Contract;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class ParentModel extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
     protected $table = 'parents';
 
     protected $fillable = [
@@ -21,6 +22,7 @@ class ParentModel extends Model
         'email',
         'cin',
         'profession',
+        'tenant_id',
     ];
 
     // Relationships

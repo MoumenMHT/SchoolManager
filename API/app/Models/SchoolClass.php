@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class SchoolClass extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
     protected $table = 'classes';
 
     protected $fillable = [
@@ -22,6 +23,7 @@ class SchoolClass extends Model
         'main_teacher_id',
         'supervisor_id',
         'is_active',
+        'tenant_id',
     ];
 
     protected $casts = [

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Fee extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $fillable = [
         'name',
@@ -16,6 +17,7 @@ class Fee extends Model
         'base_amount',
         'academic_year',
         'is_active',
+        'tenant_id',
     ];
 
     protected $casts = [

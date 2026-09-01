@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Contract extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $fillable = [
         'parent_id',
@@ -27,6 +28,7 @@ class Contract extends Model
         'notes',
         'status',
         'is_active',
+        'tenant_id',
     ];
 
     protected $casts = [
@@ -62,7 +64,12 @@ class Contract extends Model
 
         static::creating(function ($contract) {
             if (empty($contract->contract_number)) {
-                $contract->contract_number = 'CNT-' . date('Y') . '-' . str_pad(static::max('id') + 1, 6, '0', STR_PAD_LEFT);
+                // Scope the sequential number to the current tenant to avoid cross-tenant numbering gaps
+                $tenantId = $contract->tenant_id ?? tenancy()->tenant?->getTenantKey();
+                $lastId = static::withoutGlobalScopes()
+                    ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
+                    ->max('id') ?? 0;
+                $contract->contract_number = 'CNT-' . date('Y') . '-' . str_pad($lastId + 1, 6, '0', STR_PAD_LEFT);
             }
         });
     }

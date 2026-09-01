@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Bill extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $fillable = [
         'contract_id',
@@ -18,6 +19,7 @@ class Bill extends Model
         'status',
         'due_date',
         'note',
+        'tenant_id',
     ];
 
     protected $casts = [

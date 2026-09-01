@@ -303,8 +303,9 @@ class AttendanceController extends Controller
                 // Bulk insert new records in ONE query instead of N create() calls
                 if ($toCreate->isNotEmpty()) {
                     $now = now();
-                    \Illuminate\Support\Facades\DB::table('attendances')->insert(
+                    \App\Models\Attendance::query()->insert(
                         $toCreate->map(fn($record) => [
+                            'tenant_id'   => tenant('id'),
                             'student_id'  => $record['student_id'],
                             'subject_id'  => $record['subject_id'] ?? null,
                             'teacher_id'  => $record['teacher_id'] ?? null,
@@ -338,7 +339,7 @@ class AttendanceController extends Controller
     public function getOverviewByDate(Request $request)
     {
         try {
-            $query = \Illuminate\Support\Facades\DB::table('attendances')
+            $query = \App\Models\Attendance::query()
                 ->join('students', 'students.id', '=', 'attendances.student_id')
                 ->select(
                     'students.class_id',

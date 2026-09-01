@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class LevelSubject extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $fillable = [
         'level_id',
@@ -16,6 +17,7 @@ class LevelSubject extends Model
         'coefficient',
         'weekly_sessions_required',
         'weekly_hours', // Personalized weekly hours
+        'tenant_id',
     ];
 
     protected $casts = [

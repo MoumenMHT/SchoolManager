@@ -106,7 +106,9 @@ class UserController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('users')->ignore($user->id),
+                Rule::unique('users')->where(function ($query) {
+                    return $query->where('tenant_id', tenant('id'));
+                })->ignore($user->id),
             ],
             'password' => 'nullable|string|min:8',
         ]);
@@ -126,7 +128,14 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:users',
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('users')->where(function ($query) {
+                    return $query->where('tenant_id', tenant('id'));
+                })
+            ],
             'password' => 'required|string|min:8',
             'role' => 'required|string|in:admin,teacher,parent,supervisor,secretariat,accountant,primary_director,cem_director,lycee_director',
             'is_active' => 'boolean',
@@ -163,7 +172,9 @@ class UserController extends Controller
                 'sometimes',
                 'string',
                 'max:255',
-                Rule::unique('users')->ignore($user->id),
+                Rule::unique('users')->where(function ($query) {
+                    return $query->where('tenant_id', tenant('id'));
+                })->ignore($user->id),
             ],
             'password' => 'nullable|string|min:8',
             'role' => 'sometimes|string|in:admin,teacher,parent,supervisor,secretariat,accountant,primary_director,cem_director,lycee_director',

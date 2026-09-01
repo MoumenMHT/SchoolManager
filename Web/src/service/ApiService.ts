@@ -25,6 +25,23 @@ class ApiService {
         }
         const locale = localStorage.getItem('locale') || 'en';
         config.headers['Accept-Language'] = locale;
+
+        // Add tenant path prefix if applicable
+        const tenantId = this.getTenantId();
+        const isCentralRoute = config.url?.startsWith('/central') || config.url?.startsWith('central');
+        
+        // Failsafe for users who have old sessions without a tenant_id
+        if (!tenantId && !isCentralRoute && token && config.url !== '/central/login') {
+            this.removeToken();
+            window.location.href = '/auth/login';
+            return Promise.reject(new Error('Missing tenant ID. Please log in again.'));
+        }
+
+        if (tenantId && !isCentralRoute && config.url && !config.url.startsWith(`/t/`)) {
+            const normalizedUrl = config.url.startsWith('/') ? config.url : `/${config.url}`;
+            config.url = `/t/${tenantId}${normalizedUrl}`;
+        }
+
         return config;
       },
       (error) => {
@@ -54,34 +71,51 @@ class ApiService {
     );
   }
 
+  // Tenant management
+  public getTenantId(): string | null {
+    return localStorage.getItem('current_tenant_id');
+  }
+
+  public setTenantId(tenantId: string): void {
+    localStorage.setItem('current_tenant_id', tenantId);
+  }
+
+  private getNamespacedKey(key: string): string {
+    const tenantId = this.getTenantId();
+    return tenantId ? `${tenantId}_${key}` : key;
+  }
+
   // Token management
   private getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return localStorage.getItem(this.getNamespacedKey('auth_token'));
   }
 
   public setToken(token: string): void {
-    localStorage.setItem('auth_token', token);
+    localStorage.setItem(this.getNamespacedKey('auth_token'), token);
   }
 
   public removeToken(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    localStorage.removeItem(this.getNamespacedKey('auth_token'));
+    localStorage.removeItem(this.getNamespacedKey('user'));
   }
 
   // User management
   public setUser(user: any): void {
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem(this.getNamespacedKey('user'), JSON.stringify(user));
   }
 
   public getUser(): any | null {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem(this.getNamespacedKey('user'));
     return user ? JSON.parse(user) : null;
   }
 
   // Authentication methods
   async login(username: string, password: string): Promise<AuthResponse> {
-    const response = await this.api.post<AuthResponse>('/login', { username, password });
+    const response = await this.api.post<AuthResponse>('/central/login', { username, password });
     if (response.data.success && response.data.token) {
+      if ((response.data as any).tenant_id) {
+        this.setTenantId((response.data as any).tenant_id);
+      }
       this.setToken(response.data.token);
       this.setUser(response.data.user);
     }

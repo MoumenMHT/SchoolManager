@@ -20,8 +20,6 @@ use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use \Illuminate\Database\Console\Seeds\WithoutModelEvents;
-
     // ──────────────────────────────────────────────
     //  Static name pools (Arabic-Algerian style)
     // ──────────────────────────────────────────────
@@ -58,6 +56,13 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('🌱 Starting comprehensive database seeding...');
+
+        // Ensure a default tenant exists and initialize it
+        $tenant = \App\Models\Tenant::firstOrCreate(
+            ['id' => 'school1'],
+            ['data' => ['name' => 'Default School']]
+        );
+        tenancy()->initialize($tenant);
 
         if (User::where('username', 'admin')->exists()) {
             $this->command->warn('⚠ Seed already exists – dropping all data and re-seeding.');

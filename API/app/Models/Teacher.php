@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Teacher extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
     protected $fillable = [
         'user_id',
         'first_name',
@@ -22,6 +23,7 @@ class Teacher extends Model
         'salary',
         'contract_type',
         'weekly_hours',
+        'tenant_id',
     ];
 
     protected $hidden = [

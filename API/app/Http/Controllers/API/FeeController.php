@@ -175,7 +175,7 @@ class FeeController extends Controller
             // Get usage statistics
             $usageStats = [
                 'total_parents_using' => $fee->parentFees()->distinct('parent_id')->count(),
-                'total_contracts_using' => DB::table('parents_fees')
+                'total_contracts_using' => \App\Models\ParentFee::query()
                     ->join('contracts', 'parents_fees.parent_id', '=', 'contracts.parent_id')
                     ->where('parents_fees.fee_id', $id)
                     ->where('contracts.status', 'active')
@@ -222,7 +222,7 @@ class FeeController extends Controller
             }
 
             // Check if fee is being used in active contracts
-            $activeUsage = DB::table('parents_fees')
+            $activeUsage = \App\Models\ParentFee::query()
                 ->join('contracts', 'parents_fees.parent_id', '=', 'contracts.parent_id')
                 ->where('parents_fees.fee_id', $id)
                 ->where('contracts.status', 'active')
@@ -263,7 +263,7 @@ class FeeController extends Controller
             $fee = Fee::findOrFail($id);
 
             // Check if fee is being used
-            $isUsed = DB::table('parents_fees')
+            $isUsed = \App\Models\ParentFee::query()
                 ->where('fee_id', $id)
                 ->exists();
 
@@ -492,7 +492,7 @@ class FeeController extends Controller
                         'active' => $yearFees->where('is_active', true)->count(),
                     ];
                 }),
-                'usage_statistics' => DB::table('parents_fees')
+                'usage_statistics' => \App\Models\ParentFee::query()
                     ->select('fee_id', DB::raw('count(distinct parent_id) as parent_count'))
                     ->groupBy('fee_id')
                     ->get()

@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Payment extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $fillable = [
         'contract_id',
@@ -18,6 +19,7 @@ class Payment extends Model
         'status',
         'paid_date',
         'note',
+        'tenant_id',
     ];
 
     protected $casts = [

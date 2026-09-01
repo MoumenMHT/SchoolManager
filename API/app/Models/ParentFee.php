@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class ParentFee extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $table = 'parents_fees';
 
@@ -15,6 +16,7 @@ class ParentFee extends Model
         'parent_id',
         'student_id',
         'fee_id',
+        'tenant_id',
     ];
 
     public function parent()

@@ -15,6 +15,81 @@ use Illuminate\Validation\Rules\Password;
 class AuthController extends Controller
 {
     /**
+     * Central Login for frontend. Finds the user ignoring tenant scope,
+     * logs them in, and returns the tenant_id so frontend can proceed.
+     */
+    public function centralLogin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required_without:phone|string|nullable',
+            'phone' => 'required_without:username|string|nullable',
+            'password' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Find user across ALL tenants
+        $users = User::withoutGlobalScope(\Stancl\Tenancy\Database\Models\BelongsToTenant::class)
+            ->with(['teacher', 'parent', 'parent.students', 'supervisor'])
+            ->where(function($query) use ($request) {
+                if ($request->username) {
+                    $query->where('username', $request->username);
+                }
+                if ($request->phone) {
+                    $query->orWhere('phone', $request->phone);
+                }
+            })->get();
+
+        $matchedUser = null;
+        foreach ($users as $user) {
+            if (Hash::check($request->password, $user->password)) {
+                $matchedUser = $user;
+                break;
+            }
+        }
+
+        if (!$matchedUser) {
+            return response()->json([
+                'success' => false, 
+                'message' => __('messages.invalid_credentials')
+            ], 401);
+        }
+
+        if (!$matchedUser->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.account_inactive')
+            ], 403);
+        }
+
+        $expiresAt = match($matchedUser->role) {
+            'parent' => now()->addDays(30),
+            'teacher' => now()->addDays(7),
+            default => now()->addHours(24),
+        };
+
+        $token = $matchedUser->createToken('auth_token', ['*'], $expiresAt)->plainTextToken;
+
+        $userData = $matchedUser->toArray();
+        if ($matchedUser->role === 'parent' && $matchedUser->parent) {
+            $userData['students'] = $matchedUser->parent->students;
+        }
+
+        return response()->json([
+            'success' => true,
+            'token' => $token,
+            'tenant_id' => $matchedUser->tenant_id,
+            'token_type' => 'Bearer',
+            'user' => $userData
+        ]);
+    }
+
+    /**
      * Login user and create token
      */
     public function login(Request $request)
@@ -91,7 +166,14 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255|unique:users',
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('users')->where(function ($query) {
+                    return $query->where('tenant_id', tenant('id'));
+                })
+            ],
             'password' => ['required', Password::min(8)],
             'role' => 'required|in:admin,teacher,parent',
             'phone' => 'nullable|string',

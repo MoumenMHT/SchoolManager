@@ -249,6 +249,11 @@ const router = createRouter({
                     path: '/start/documentation',
                     name: 'documentation',
                     component: () => import('@/views/pages/Documentation.vue')
+                },
+                {
+                    path: '/platform/schools',
+                    name: 'platform-schools',
+                    component: () => import('@/views/platform/Schools.vue')
                 }
             ]
         },
@@ -293,6 +298,7 @@ router.beforeEach((to, from, next) => {
     else if (userRole === 'accountant') roleHome = '/payments';
     else if (userRole === 'supervisor') roleHome = '/supervisor/panel';
     else if (userRole === 'parent') roleHome = '/parent/dashboard';
+    else if (userRole === 'superadmin') roleHome = '/platform/schools';
 
     // If trying to access auth page while logged in, redirect to role home
     if (isAuthRoute && isAuthenticated) {
@@ -345,6 +351,12 @@ router.beforeEach((to, from, next) => {
         } else if (userRole === 'parent') {
             // Parent can access their portal
             if (!to.path.startsWith('/parent/') && !to.path.startsWith('/uikit') && !to.path.startsWith('/pages/')) {
+                next(roleHome);
+                return;
+            }
+        } else if (userRole === 'superadmin') {
+            // Superadmin accesses platform routes
+            if (!to.path.startsWith('/platform/')) {
                 next(roleHome);
                 return;
             }

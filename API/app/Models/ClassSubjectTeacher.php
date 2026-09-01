@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class ClassSubjectTeacher extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
     
     protected $table = 'class_subject_teacher';
 
@@ -19,6 +20,7 @@ class ClassSubjectTeacher extends Model
         'teacher_id',
         'academic_year',
         'coefficient',
+        'tenant_id',
     ];
 
     protected $casts = [

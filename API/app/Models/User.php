@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, BelongsToTenant;
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +27,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'is_active',
+        'tenant_id',
     ];
 
     /**
@@ -69,6 +71,11 @@ class User extends Authenticatable
     }
 
     // Helper methods
+    public function isSuperAdmin()
+    {
+        return $this->role === 'superadmin';
+    }
+
     public function isAdmin()
     {
         return $this->role === 'admin';

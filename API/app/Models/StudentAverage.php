@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class StudentAverage extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $table = 'student_averages';
 
@@ -19,6 +20,7 @@ class StudentAverage extends Model
         'trimester',
         'academic_year',
         'average',
+        'tenant_id',
     ];
 
     /**

@@ -4,14 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class TeacherSubject extends Model
 {
+    use BelongsToTenant;
+
     protected $table = 'teacher_subjects';
 
     protected $fillable = [
         'teacher_id',
         'subject_id',
+        'tenant_id',
     ];
 
     // Relationships

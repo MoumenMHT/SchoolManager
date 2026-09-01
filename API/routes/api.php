@@ -23,6 +23,13 @@ use App\Http\Controllers\API\BillController;
 use App\Http\Controllers\API\SupervisorController;
 use App\Http\Controllers\API\LevelController;
 
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
+
+Route::group([
+    'prefix' => 't/{tenant}',
+    'middleware' => [InitializeTenancyByPath::class],
+], function () {
+
 // Public routes
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
@@ -220,3 +227,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // Schedule viewing (accessible by teachers, students, parents, admin)
     Route::get('/my-schedule', [ScheduleController::class, 'index']);
 });
+
+}); // End of tenant group

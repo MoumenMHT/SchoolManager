@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Attendance extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
     protected $fillable = [
         'student_id',
         'subject_id',
@@ -18,6 +19,7 @@ class Attendance extends Model
         'status',
         'time',
         'reason',
+        'tenant_id',
     ];
 
     protected $casts = [

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class StudentHistory extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
 
     protected $table = 'student_history';
 
@@ -18,6 +19,7 @@ class StudentHistory extends Model
         'academic_year',
         'enrolled_at',
         'left_at',
+        'tenant_id',
     ];
 
     protected $casts = [

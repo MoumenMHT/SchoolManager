@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Schedule extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToTenant;
     
     protected $fillable = [
         'class_subject_teacher_id',
@@ -16,6 +17,7 @@ class Schedule extends Model
         'start_time',
         'end_time',
         'room',
+        'tenant_id',
     ];
 
     protected $casts = [
