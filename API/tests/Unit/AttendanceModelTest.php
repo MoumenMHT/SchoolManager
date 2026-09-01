@@ -18,7 +18,7 @@ class AttendanceModelTest extends TestCase
      */
     public function test_attendance_has_correct_fillable_fields(): void
     {
-        $fillable = ['student_id', 'subject_id', 'teacher_id', 'schedule_id', 'date', 'status', 'time', 'reason'];
+        $fillable = ['student_id', 'subject_id', 'teacher_id', 'schedule_id', 'date', 'status', 'time', 'reason', 'tenant_id'];
         $attendance = new Attendance();
         
         $this->assertEquals($fillable, $attendance->getFillable());

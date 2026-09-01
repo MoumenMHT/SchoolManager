@@ -16,7 +16,7 @@ class PaymentModelTest extends TestCase
      */
     public function test_payment_has_correct_fillable_fields(): void
     {
-        $fillable = ['contract_id', 'amount', 'payment_type', 'status', 'paid_date', 'note'];
+        $fillable = ['contract_id', 'amount', 'payment_type', 'status', 'paid_date', 'note', 'tenant_id'];
         $payment = new Payment();
 
         $this->assertEquals($fillable, $payment->getFillable());

@@ -16,7 +16,7 @@ class ScheduleModelTest extends TestCase
      */
     public function test_schedule_has_correct_fillable_fields(): void
     {
-        $fillable = ['class_subject_teacher_id', 'day', 'start_time', 'end_time', 'room'];
+        $fillable = ['class_subject_teacher_id', 'day', 'start_time', 'end_time', 'room', 'tenant_id'];
         $schedule = new Schedule();
         
         $this->assertEquals($fillable, $schedule->getFillable());

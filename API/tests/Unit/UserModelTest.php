@@ -25,6 +25,7 @@ class UserModelTest extends TestCase
             'phone',
             'address',
             'is_active',
+            'tenant_id',
         ];
 
         $user = new User();
