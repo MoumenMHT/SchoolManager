@@ -18,10 +18,9 @@ class Exam extends Model
         'teacher_id',
         'exam_type',
         'semester',
-        'academic_year',
+        'academic_year_id',
         'max_grade',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'max_grade' => 'decimal:2',
@@ -55,5 +54,10 @@ class Exam extends Model
     public function grades(): HasMany
     {
         return $this->hasMany(Grade::class);
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

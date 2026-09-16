@@ -29,7 +29,6 @@ class AuthTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'token',
                 'user' => [
                     'id',
                     'username',
@@ -39,8 +38,6 @@ class AuthTest extends TestCase
             ->assertJson([
                 'success' => true,
             ]);
-
-        $this->assertNotEmpty($response->json('token'));
     }
 
     /**
@@ -96,17 +93,14 @@ class AuthTest extends TestCase
     public function test_authenticated_user_can_logout(): void
     {
         $user  = User::factory()->create();
-        $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->actingAs($user, 'web')
             ->postJson('/api/logout');
 
         $response->assertStatus(200)
             ->assertJson([
                 'success' => true,
             ]);
-
-        $this->assertCount(0, $user->tokens);
     }
 
     /**
@@ -127,9 +121,8 @@ class AuthTest extends TestCase
         $user = User::factory()->create([
             'username' => 'testuser',
         ]);
-        $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->actingAs($user, 'web')
             ->getJson('/api/me');
 
         $response->assertStatus(200)
@@ -149,9 +142,8 @@ class AuthTest extends TestCase
         $user  = User::factory()->create([
             'password' => bcrypt('OldPassword123'),
         ]);
-        $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->actingAs($user, 'web')
             ->postJson('/api/change-password', [
                 'current_password'          => 'OldPassword123',
                 'new_password'              => 'NewPassword456',
@@ -186,9 +178,8 @@ class AuthTest extends TestCase
         $user  = User::factory()->create([
             'password' => bcrypt('OldPassword123'),
         ]);
-        $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->actingAs($user, 'web')
             ->postJson('/api/change-password', [
                 'current_password'          => 'WrongPassword1',
                 'new_password'              => 'NewPassword456',
@@ -204,10 +195,9 @@ class AuthTest extends TestCase
     public function test_admin_can_register_new_user(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
-        $token = $admin->createToken('test-token')->plainTextToken;
 
         // Register an admin user (no teacher_id/parent_id required)
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->actingAs($admin, 'web')
             ->postJson('/api/register', [
                 'username'              => 'newadminuser',
                 'password'              => 'Password123',
@@ -232,9 +222,8 @@ class AuthTest extends TestCase
     public function test_non_admin_cannot_register_new_user(): void
     {
         $teacher = User::factory()->create(['role' => 'teacher']);
-        $token   = $teacher->createToken('test-token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->actingAs($teacher, 'web')
             ->postJson('/api/register', [
                 'username'              => 'newuser',
                 'password'              => 'Password123',

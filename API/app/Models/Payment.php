@@ -19,8 +19,7 @@ class Payment extends Model
         'status',
         'paid_date',
         'note',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'amount' => 'decimal:2',

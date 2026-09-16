@@ -14,7 +14,7 @@ class Contract extends Model
         'parent_id',
         'old_contract_id',
         'contract_number',
-        'academic_year',
+        'academic_year_id',
         'total_fees',
         'discount_type',
         'discount_value',
@@ -28,8 +28,7 @@ class Contract extends Model
         'notes',
         'status',
         'is_active',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'total_fees' => 'decimal:2',
@@ -64,13 +63,14 @@ class Contract extends Model
 
         static::creating(function ($contract) {
             if (empty($contract->contract_number)) {
-                // Scope the sequential number to the current tenant to avoid cross-tenant numbering gaps
-                $tenantId = $contract->tenant_id ?? tenancy()->tenant?->getTenantKey();
-                $lastId = static::withoutGlobalScopes()
-                    ->when($tenantId, fn ($q) => $q->where('tenant_id', $tenantId))
-                    ->max('id') ?? 0;
-                $contract->contract_number = 'CNT-' . date('Y') . '-' . str_pad($lastId + 1, 6, '0', STR_PAD_LEFT);
+                $maxId = Contract::withoutGlobalScopes()->max('id') ?? 0;
+                $contract->contract_number = 'CNT-' . date('Y') . '-' . str_pad($maxId + 1, 6, '0', STR_PAD_LEFT);
             }
         });
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

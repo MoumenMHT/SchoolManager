@@ -18,13 +18,12 @@ class SchoolClass extends Model
         'name',
         'level',
         'level_id',
-        'academic_year',
+        'academic_year_id',
         'capacity',
         'main_teacher_id',
         'supervisor_id',
         'is_active',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -55,14 +54,14 @@ class SchoolClass extends Model
     public function teachers(): BelongsToMany
     {
         return $this->belongsToMany(Teacher::class, 'class_subject_teacher', 'class_id', 'teacher_id')
-            ->withPivot('subject_id', 'academic_year')
+            ->withPivot('subject_id', 'academic_year_id')
             ->withTimestamps();
     }
 
     public function subjects(): BelongsToMany
     {
         return $this->belongsToMany(Subject::class, 'class_subject_teacher', 'class_id', 'subject_id')
-            ->withPivot('teacher_id', 'academic_year')
+            ->withPivot('teacher_id', 'academic_year_id')
             ->withTimestamps();
     }
 
@@ -80,5 +79,10 @@ class SchoolClass extends Model
     public function hasAvailableSeats()
     {
         return $this->getCurrentStudentCount() < $this->capacity;
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

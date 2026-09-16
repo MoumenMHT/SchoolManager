@@ -14,7 +14,7 @@ class SchoolClassFactory extends Factory
         return [
             'name' => fake()->randomElement(['6ème A', '6ème B', '5ème A', '4ème A', '3ème A']),
             'level' => fake()->randomElement(['6ème', '5ème', '4ème', '3ème']),
-            'academic_year' => '2025-2026',
+            'academic_year_id' => \App\Models\AcademicYear::factory(),
             'capacity' => fake()->numberBetween(25, 35),
             'is_active' => true,
         ];

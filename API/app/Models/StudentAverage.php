@@ -18,10 +18,9 @@ class StudentAverage extends Model
         'subject_id',
         'record_type',
         'trimester',
-        'academic_year',
+        'academic_year_id',
         'average',
-        'tenant_id',
-    ];
+        ];
 
     /**
      * Ensure we can upsert quickly without worrying about casts changing precision logic.
@@ -43,5 +42,10 @@ class StudentAverage extends Model
     public function schoolClass()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

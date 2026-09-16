@@ -16,10 +16,10 @@ class ClassController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $query = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects', 'levelProfile']);
+            $query = SchoolClass::with(['mainTeacher', 'students', 'teachers', 'subjects', 'levelProfile', 'academicYear']);
             
             $user = auth()->user();
             if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
@@ -27,6 +27,22 @@ class ClassController extends Controller
                 $query->whereHas('levelProfile', function($q) use ($directorCycle) {
                     $q->where('cycle', $directorCycle);
                 });
+            }
+
+            if ($request->filled('academic_year_id')) {
+                $query->where('academic_year_id', $request->input('academic_year_id'));
+            } elseif ($request->filled('academic_year')) {
+                $val = $request->input('academic_year');
+                if (is_numeric($val)) {
+                    $query->where('academic_year_id', (int) $val);
+                } else {
+                    $ayId = \App\Models\AcademicYear::where('name', $val)->value('id');
+                    if ($ayId) {
+                        $query->where('academic_year_id', $ayId);
+                    } else {
+                        $query->whereHas('academicYear', fn($q) => $q->where('name', $val));
+                    }
+                }
             }
 
             $classes = $query->get()
@@ -69,7 +85,8 @@ class ClassController extends Controller
                         'name' => $class->name,
                         'level' => $class->levelProfile->name ?? $class->level,
                         'level_id' => $class->level_id,
-                        'academic_year' => $class->academic_year,
+                        'academic_year' => $class->academicYear->name ?? null,
+                        'academic_year_id' => $class->academic_year_id,
                         'capacity' => $class->capacity,
                         'main_teacher_id' => $class->main_teacher_id,
                         'is_active' => $class->is_active,
@@ -114,7 +131,7 @@ class ClassController extends Controller
                 'name' => 'required|string|max:255|unique:classes,name',
                 'level' => 'nullable|string|max:255',
                 'level_id' => 'nullable|exists:levels,id',
-                'academic_year' => 'nullable|string|max:255',
+                'academic_year_id' => 'nullable|exists:academic_years,id',
                 'capacity' => 'nullable|integer|min:1',
                 'main_teacher_id' => 'nullable|exists:teachers,id',
             ]);
@@ -143,7 +160,7 @@ class ClassController extends Controller
                 'name' => $request->name,
                 'level' => $request->level,
                 'level_id' => $resolvedLevelId,
-                'academic_year' => $request->academic_year,
+                'academic_year_id' => $request->academic_year_id,
                 'capacity' => $request->capacity,
                 'is_active' => true,
                 'main_teacher_id' => $request->main_teacher_id,
@@ -178,6 +195,14 @@ class ClassController extends Controller
                     'success' => false,
                     'message' => __('messages.class_not_found')
                 ], 404);
+            }
+            
+            $user = auth()->user();
+            if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+                $directorCycle = $user->directorCycle();
+                if ($class->levelProfile && $class->levelProfile->cycle !== $directorCycle) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
             }
             
             $studentsData = [];
@@ -218,7 +243,7 @@ class ClassController extends Controller
                 'name' => $class->name,
                 'level' => $class->levelProfile->name ?? $class->level,
                 'level_id' => $class->level_id,
-                'academic_year' => $class->academic_year,
+                'academic_year_id' => $class->academic_year_id,
                 'capacity' => $class->capacity,
                 'main_teacher_id' => $class->main_teacher_id,
                 'is_active' => $class->is_active,
@@ -267,11 +292,19 @@ class ClassController extends Controller
                 ], 404);
             }
 
+            $user = auth()->user();
+            if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+                $directorCycle = $user->directorCycle();
+                if ($class->levelProfile && $class->levelProfile->cycle !== $directorCycle) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            }
+
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255|unique:classes,name,' . $id,
                 'level' => 'sometimes|nullable|string|max:255',
                 'level_id' => 'sometimes|nullable|exists:levels,id',
-                'academic_year' => 'sometimes|nullable|string|max:255',
+                'academic_year_id' => 'sometimes|nullable|exists:academic_years,id',
                 'capacity' => 'sometimes|nullable|integer|min:1',
                 'main_teacher_id' => 'nullable|exists:teachers,id',
             ]);
@@ -292,15 +325,15 @@ class ClassController extends Controller
             $class->update($request->only([
                 'name',
                 'level',
-                'academic_year',
+                'academic_year_id',
                 'capacity',
                 'main_teacher_id'
             ]));
 
             // Update assignments academic year if updated
-            if ($request->has('academic_year')) {
+            if ($request->has('academic_year_id')) {
                 \App\Models\ClassSubjectTeacher::where('class_id', $class->id)->update([
-                    'academic_year' => $request->academic_year
+                    'academic_year_id' => $request->academic_year_id
                 ]);
             }
 
@@ -336,6 +369,14 @@ class ClassController extends Controller
                     'success' => false,
                     'message' => __('messages.class_not_found')
                 ], 404);
+            }
+
+            $user = auth()->user();
+            if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+                $directorCycle = $user->directorCycle();
+                if ($class->levelProfile && $class->levelProfile->cycle !== $directorCycle) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
             }
 
             // Check if class has students
@@ -414,12 +455,12 @@ class ClassController extends Controller
                 ]);
             }
 
-            $academicYear = $request->get('academic_year', $student->class->academic_year ?? (date('Y') . '-' . (date('Y') + 1)));
+            $academicYearId = $request->get('academic_year_id', $student->class->academic_year_id ?? (date('Y') . '-' . (date('Y') + 1)));
 
             $schedules = Schedule::with(['assignment.subject', 'assignment.teacher'])
-                ->whereHas('assignment', function ($q) use ($student, $academicYear) {
+                ->whereHas('assignment', function ($q) use ($student, $academicYearId) {
                     $q->where('class_id', $student->class_id)
-                      ->where('academic_year', $academicYear);
+                      ->where('academic_year_id', $academicYearId);
                 })
                 ->orderByRaw("FIELD(day, 'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')")
                 ->orderBy('start_time')

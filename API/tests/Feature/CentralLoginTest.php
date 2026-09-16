@@ -26,7 +26,6 @@ class CentralLoginTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'token',
                 'user',
                 'tenant_id'
             ])

@@ -119,6 +119,7 @@ const model = computed(() => {
             const adminItems = [];
             
             if (isAdmin.value) {
+                adminItems.push({ label: t('nav.academic_years', 'Academic Years'), icon: 'pi pi-fw pi-calendar', to: '/academic-years' });
                 adminItems.push({ label: t('nav.directors', 'Directors'), icon: 'pi pi-fw pi-star', to: '/directors' });
                 adminItems.push({ label: t('nav.secretaries', 'Secretariats'), icon: 'pi pi-fw pi-desktop', to: '/secretariats' });
                 adminItems.push({ label: t('nav.accountants', 'Accountants'), icon: 'pi pi-fw pi-wallet', to: '/accountants' });

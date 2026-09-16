@@ -24,8 +24,8 @@ class FeeController extends Controller
             }
 
             // Filter by academic year
-            if ($request->has('academic_year')) {
-                $query->where('academic_year', $request->academic_year);
+            if ($request->has('academic_year_id')) {
+                $query->where('academic_year_id', $request->academic_year_id);
             }
 
             // Filter by fee type/category if needed
@@ -69,7 +69,7 @@ class FeeController extends Controller
                 'name' => 'required|string|max:100',
                 'description' => 'nullable|string|max:600',
                 'base_amount' => 'required|numeric|min:0',
-                'academic_year' => 'required|string|max:60',
+                'academic_year_id' => 'required|exists:academic_years,id',
                 'is_active' => 'boolean'
             ]);
 
@@ -85,7 +85,7 @@ class FeeController extends Controller
                 'name' => $request->name,
                 'description' => $request->description,
                 'base_amount' => $request->base_amount,
-                'academic_year' => $request->academic_year,
+                'academic_year_id' => $request->academic_year_id,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -209,7 +209,7 @@ class FeeController extends Controller
                 'name' => 'sometimes|string|max:100',
                 'description' => 'nullable|string|max:600',
                 'base_amount' => 'sometimes|numeric|min:0',
-                'academic_year' => 'sometimes|string|max:60',
+                'academic_year_id' => 'sometimes|exists:academic_years,id',
                 'is_active' => 'boolean'
             ]);
 
@@ -237,7 +237,7 @@ class FeeController extends Controller
                 ], 422);
             }
 
-            $fee->update($request->all());
+            $fee->update($validator->validated());
 
             return response()->json([
                 'success' => true,
@@ -357,7 +357,7 @@ class FeeController extends Controller
                 'fees.*.name' => 'required|string|max:100',
                 'fees.*.description' => 'nullable|string|max:600',
                 'fees.*.base_amount' => 'required|numeric|min:0',
-                'academic_year' => 'required|string|max:60',
+                'academic_year_id' => 'required|exists:academic_years,id',
             ]);
 
             if ($validator->fails()) {
@@ -376,7 +376,7 @@ class FeeController extends Controller
                     'name' => $feeData['name'],
                     'description' => $feeData['description'] ?? null,
                     'base_amount' => $feeData['base_amount'],
-                    'academic_year' => $request->academic_year,
+                    'academic_year_id' => $request->academic_year_id,
                     'is_active' => true,
                 ]);
                 $createdFees[] = $fee;
@@ -423,13 +423,13 @@ class FeeController extends Controller
             DB::beginTransaction();
 
             $copiedFees = [];
-            $feesToCopy = Fee::where('academic_year', $request->from_academic_year)
+            $feesToCopy = Fee::where('academic_year_id', $request->from_academic_year)
                 ->where('is_active', true)
                 ->get();
 
             foreach ($feesToCopy as $fee) {
                 $newFeeData = $fee->toArray();
-                $newFeeData['academic_year'] = $request->to_academic_year;
+                $newFeeData['academic_year_id'] = $request->to_academic_year;
                 $newFeeData['base_amount'] = $request->has('increase_percentage')
                     ? $newFeeData['base_amount'] * (1 + $request->increase_percentage / 100)
                     : $newFeeData['base_amount'];
@@ -471,8 +471,8 @@ class FeeController extends Controller
         try {
             $query = Fee::query();
 
-            if ($request->has('academic_year')) {
-                $query->where('academic_year', $request->academic_year);
+            if ($request->has('academic_year_id')) {
+                $query->where('academic_year_id', $request->academic_year_id);
             }
 
             $fees = $query->get();
@@ -485,7 +485,7 @@ class FeeController extends Controller
                 'average_fee_amount' => $fees->where('is_active', true)->avg('base_amount'),
                 'highest_fee' => $fees->where('is_active', true)->max('base_amount'),
                 'lowest_fee' => $fees->where('is_active', true)->min('base_amount'),
-                'by_academic_year' => $fees->groupBy('academic_year')->map(function ($yearFees) {
+                'by_academic_year' => $fees->groupBy('academic_year_id')->map(function ($yearFees) {
                     return [
                         'count' => $yearFees->count(),
                         'total_amount' => $yearFees->sum('base_amount'),

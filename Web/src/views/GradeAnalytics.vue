@@ -10,6 +10,7 @@ import TeacherService, { type Teacher } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
 import ClassesService, { type SchoolClass } from '@/service/ClassesService';
 import StudentService, { type Student as StudentRecord } from '@/service/StudentService';
+import AcademicYearService from '@/service/AcademicYearService';
 
 interface AggregatedRow {
   id: string;
@@ -77,7 +78,7 @@ const bulletinTypeColumns = computed(() => {
 });
 
 const studentAverage = computed(() => {
-  if (studentReportCardData.value?.data?.overall_average !== undefined) {
+  if (studentReportCardData.value?.data?.overall_average != null) {
     return round2(Number(studentReportCardData.value.data.overall_average));
   }
   if (studentGrades.value.length === 0) return 0;
@@ -630,7 +631,29 @@ const loadSubjectExerciseAverages = async () => {
   }
 };
 
-const selectedAcademicYear = ref<string>('');
+const dbAcademicYears = ref<string[]>([]);
+const getCurrentAcademicYear = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  return now.getMonth() >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+};
+
+const selectedAcademicYear = ref<string>(getCurrentAcademicYear());
+
+const loadAcademicYears = async () => {
+  try {
+    const names = await AcademicYearService.getAcademicYearNames();
+    if (names && names.length > 0) {
+      dbAcademicYears.value = names;
+      if (!names.includes(selectedAcademicYear.value)) {
+        const curr = getCurrentAcademicYear();
+        selectedAcademicYear.value = names.includes(curr) ? curr : names[0];
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load academic years from backend', e);
+  }
+};
 const selectedSemester = ref<string>('all');
 const selectedExamType = ref<string>('all');
 const selectedClassId = ref<number | null>(null);
@@ -720,29 +743,30 @@ const formatExamTypeHeader = (type: string): string => {
   return formatExamType(type);
 };
 
-const getCurrentAcademicYear = (): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  return now.getMonth() >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-};
-
 const academicYearOptions = computed(() => {
-  const years = new Set<string>();
-  // academic_year is now on exam relation
+  const years = new Set<string>(dbAcademicYears.value);
   allGrades.value.forEach((grade) => {
     const yr = academicYr(grade);
     if (yr) years.add(yr);
   });
-  // Always include current year even if no grades loaded yet
   if (selectedAcademicYear.value) years.add(selectedAcademicYear.value);
   const sorted = Array.from(years).sort().reverse();
   return sorted.map((year) => ({ label: year, value: year }));
 });
 
+const yearClasses = computed(() => {
+  if (!selectedAcademicYear.value) return allClasses.value;
+  return allClasses.value.filter(
+    (c) => !c.academic_year || c.academic_year === selectedAcademicYear.value
+  );
+});
+
+const yearClassIds = computed(() => new Set(yearClasses.value.map((c) => c.id)));
+
 const classOptions = computed(() => {
   return [
     { label: t('grade_analytics.all_classes'), value: null as number | null },
-    ...allClasses.value.map((classItem) => ({
+    ...yearClasses.value.map((classItem) => ({
       label: classItem.name,
       value: classItem.id
     }))
@@ -750,9 +774,38 @@ const classOptions = computed(() => {
 });
 
 const teacherOptions = computed(() => {
+  if (!selectedAcademicYear.value || yearClasses.value.length === 0) {
+    return [
+      { label: t('grade_analytics.all_teachers'), value: null as number | null },
+      ...allTeachers.value.map((teacher) => ({
+        label: `${teacher.first_name} ${teacher.last_name}`,
+        value: teacher.id
+      }))
+    ];
+  }
+
+  const teacherIdsInYear = new Set<number>();
+  yearClasses.value.forEach((cls) => {
+    if (cls.main_teacher_id) teacherIdsInYear.add(Number(cls.main_teacher_id));
+    if (cls.teachers && Array.isArray(cls.teachers)) {
+      cls.teachers.forEach((tItem: any) => {
+        if (tItem.id) teacherIdsInYear.add(Number(tItem.id));
+      });
+    }
+  });
+
+  allGrades.value.forEach((g) => {
+    const tid = teacherId(g);
+    if (tid) teacherIdsInYear.add(tid);
+  });
+
+  const filteredTeachers = teacherIdsInYear.size > 0
+    ? allTeachers.value.filter((teacher) => teacher.id && teacherIdsInYear.has(teacher.id))
+    : allTeachers.value;
+
   return [
     { label: t('grade_analytics.all_teachers'), value: null as number | null },
-    ...allTeachers.value.map((teacher) => ({
+    ...filteredTeachers.map((teacher) => ({
       label: `${teacher.first_name} ${teacher.last_name}`,
       value: teacher.id
     }))
@@ -760,9 +813,37 @@ const teacherOptions = computed(() => {
 });
 
 const subjectOptions = computed(() => {
+  if (!selectedAcademicYear.value || yearClasses.value.length === 0) {
+    return [
+      { label: t('grade_analytics.all_subjects'), value: null as number | null },
+      ...allSubjects.value.map((subject) => ({
+        label: subject.name,
+        value: subject.id
+      }))
+    ];
+  }
+
+  const subjectIdsInYear = new Set<number>();
+  yearClasses.value.forEach((cls) => {
+    if (cls.subjects && Array.isArray(cls.subjects)) {
+      cls.subjects.forEach((sItem: any) => {
+        if (sItem.id) subjectIdsInYear.add(Number(sItem.id));
+      });
+    }
+  });
+
+  allGrades.value.forEach((g) => {
+    const sid = subjectId(g);
+    if (sid) subjectIdsInYear.add(sid);
+  });
+
+  const filteredSubjects = subjectIdsInYear.size > 0
+    ? allSubjects.value.filter((subject) => subject.id && subjectIdsInYear.has(subject.id))
+    : allSubjects.value;
+
   return [
     { label: t('grade_analytics.all_subjects'), value: null as number | null },
-    ...allSubjects.value.map((subject) => ({
+    ...filteredSubjects.map((subject) => ({
       label: subject.name,
       value: subject.id
     }))
@@ -772,7 +853,9 @@ const subjectOptions = computed(() => {
 const studentOptions = computed(() => {
   const filtered = selectedClassId.value
     ? allStudents.value.filter((student) => student.class_id === selectedClassId.value)
-    : allStudents.value;
+    : (selectedAcademicYear.value && yearClassIds.value.size > 0
+        ? allStudents.value.filter((student) => student.class_id && yearClassIds.value.has(student.class_id))
+        : allStudents.value);
 
   return [
     { label: t('grade_analytics.all_students'), value: null as number | null },
@@ -1057,7 +1140,17 @@ const baseChartOptions = {
 };
 
 const subjectDistributionChartOptions = computed(() => {
-  return baseChartOptions;
+  return {
+    ...baseChartOptions,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0
+        }
+      }
+    }
+  };
 });
 
 const stats = computed(() => {
@@ -1070,10 +1163,11 @@ const toughestClasses = computed(() => [...classAggregates.value].sort((a, b) =>
 const highVarianceSubjects = computed(() => [...subjectAggregates.value].sort((a, b) => b.stdDev - a.stdDev).slice(0, 5));
 
 const loadMetadata = async () => {
+  const params = selectedAcademicYear.value ? { academic_year: selectedAcademicYear.value } : undefined;
   const [teachers, subjects, classes, students] = await Promise.all([
     TeacherService.getTeachers({ paginate: 'false' }),
     SubjectService.getSubjects(),
-    ClassesService.getClasses(),
+    ClassesService.getClasses(params),
     StudentService.getStudents({ paginate: 'false' })
   ]);
 
@@ -1319,23 +1413,42 @@ const loadSubjectGrades = async () => {
   }
 };
 
+let analyticsReqId = 0;
+let isUpdatingFilters = false;
+
 const loadAnalytics = async () => {
+  const reqId = ++analyticsReqId;
   loading.value = true;
   error.value = null;
 
   try {
     const overview = await GradeService.getAnalyticsOverview(buildAnalyticsParams());
+    if (reqId !== analyticsReqId) return;
+
     applyOverviewData(overview);
     await loadChartDrilldowns();
+    if (reqId !== analyticsReqId) return;
+
     await loadStudentGrades();
+    if (reqId !== analyticsReqId) return;
+
     await loadClassGrades();
+    if (reqId !== analyticsReqId) return;
+
     await loadSubjectGrades();
+    if (reqId !== analyticsReqId) return;
+
     await loadSubjectExerciseAverages();
+    if (reqId !== analyticsReqId) return;
+
     await loadStudentReportCard();
   } catch (err: any) {
+    if (reqId !== analyticsReqId) return;
     error.value = err.response?.data?.message || t('grade_analytics.failed_load_analytics');
   } finally {
-    loading.value = false;
+    if (reqId === analyticsReqId) {
+      loading.value = false;
+    }
   }
 };
 
@@ -1344,46 +1457,86 @@ const reload = async () => {
 };
 
 const resetFilters = async () => {
-  selectedSemester.value = 'all';
-  selectedExamType.value = 'all';
-  selectedClassId.value = null;
-  selectedSubjectId.value = null;
-  selectedTeacherId.value = null;
-  selectedStudentId.value = null;
-  selectedTeacherForChart.value = null;
-  selectedSubjectForChart.value = null;
+  isUpdatingFilters = true;
+  try {
+    selectedSemester.value = 'all';
+    selectedExamType.value = 'all';
+    selectedClassId.value = null;
+    selectedSubjectId.value = null;
+    selectedTeacherId.value = null;
+    selectedStudentId.value = null;
+    selectedTeacherForChart.value = null;
+    selectedSubjectForChart.value = null;
+  } finally {
+    isUpdatingFilters = false;
+  }
   await loadAnalytics();
 };
 
 watch(selectedAcademicYear, async () => {
+  loading.value = true;
+  isUpdatingFilters = true;
+  try {
+    await loadMetadata();
+    if (selectedClassId.value && !yearClassIds.value.has(selectedClassId.value)) {
+      selectedClassId.value = null;
+    }
+    if (selectedStudentId.value) {
+      const st = allStudents.value.find((s) => s.id === selectedStudentId.value);
+      if (st && st.class_id && !yearClassIds.value.has(st.class_id)) {
+        selectedStudentId.value = null;
+      }
+    }
+    if (selectedTeacherId.value) {
+      const validTids = new Set(teacherOptions.value.map((o) => o.value).filter((v): v is number => v !== null));
+      if (!validTids.has(selectedTeacherId.value)) {
+        selectedTeacherId.value = null;
+      }
+    }
+    if (selectedSubjectId.value) {
+      const validSids = new Set(subjectOptions.value.map((o) => o.value).filter((v): v is number => v !== null));
+      if (!validSids.has(selectedSubjectId.value)) {
+        selectedSubjectId.value = null;
+      }
+    }
+
+    await loadExamTypes();
+  } finally {
+    isUpdatingFilters = false;
+  }
+
   await loadAnalytics();
 });
 
 watch(selectedSemester, async () => {
+  if (isUpdatingFilters) return;
   selectedDonutExerciseId.value = null; // reset exercise filter on trimester change
   await loadAnalytics();
 });
 
 watch([selectedExamType, selectedClassId, selectedSubjectId, selectedTeacherId, selectedStudentId], async () => {
+  if (isUpdatingFilters) return;
   selectedDonutExerciseId.value = null; // reset exercise filter on main filter change
   await loadAnalytics();
 });
 
 watch([selectedTeacherForChart, selectedSubjectForChart], async () => {
+  if (isUpdatingFilters) return;
   await loadChartDrilldowns();
 });
 
 watch(
-  [selectedSemester, selectedAcademicYear, selectedClassId, selectedStudentId],
+  [selectedSemester, selectedClassId, selectedStudentId],
   () => {
+    if (isUpdatingFilters) return;
     loadExamTypes();
   }
 );
 
 onMounted(async () => {
   loading.value = true;
-  selectedAcademicYear.value = getCurrentAcademicYear();
   await Promise.all([
+    loadAcademicYears(),
     loadMetadata(),
     loadExamTypes()
   ]);
@@ -1522,7 +1675,7 @@ onMounted(async () => {
         <div class="card chart-card">
           <h5 class="mb-3">{{ $t('grade_analytics.subject_performance_radar') }}</h5>
           <div class="chart-wrap flex justify-center items-center">
-            <Chart v-if="studentRadarChartData.labels.length > 0" type="radar" :data="studentRadarChartData" :options="radarChartOptions" class="w-full h-full" />
+            <Chart v-if="studentRadarChartData.labels.length > 0" :key="'student-radar-' + selectedStudentId + '-' + selectedAcademicYear + '-' + selectedSemester" type="radar" :data="studentRadarChartData" :options="radarChartOptions" class="w-full h-full" />
             <div v-else class="text-muted-color text-center py-6">{{ $t('grade_analytics.no_subject_data') }}</div>
           </div>
         </div>
@@ -1609,7 +1762,7 @@ onMounted(async () => {
           <template v-else-if="exerciseAverages.length">
             <!-- Mini bar chart of exercise averages -->
             <div class="chart-wrap mb-4" style="height:180px">
-              <Chart type="bar" :data="{
+              <Chart :key="'student-ex-bar-' + selectedExamIdForExercises" type="bar" :data="{
                 labels: exerciseAverages.map((e: any) => e.level_name),
                 datasets: [
                   {
@@ -1864,7 +2017,7 @@ onMounted(async () => {
              <h5 class="m-0">{{ $t('grade_analytics.subject_averages') }}</h5>
           </div>
           <div class="chart-wrap">
-            <Chart type="bar" :data="subjectAverageChartData" :options="baseChartOptions" />
+            <Chart :key="'class-subj-bar-' + selectedClassId + '-' + selectedAcademicYear" type="bar" :data="subjectAverageChartData" :options="baseChartOptions" />
           </div>
         </div>
       </div>
@@ -1907,10 +2060,10 @@ onMounted(async () => {
           <template v-else-if="subjectExerciseAverages.length">
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
               <div class="chart-wrap" style="height:250px">
-                <Chart type="radar" :data="subjectExerciseRadarData" :options="{ responsive: true, maintainAspectRatio: false, scales: { r: { min: 0 } } }" />
+                <Chart :key="'class-ex-radar-' + selectedClassId + '-' + selectedSubjectId" type="radar" :data="subjectExerciseRadarData" :options="{ responsive: true, maintainAspectRatio: false, scales: { r: { min: 0 } } }" />
               </div>
               <div class="chart-wrap" style="height:250px">
-                <Chart type="bar" :data="subjectExerciseBarData" :options="{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }" />
+                <Chart :key="'class-ex-bar-' + selectedClassId + '-' + selectedSubjectId" type="bar" :data="subjectExerciseBarData" :options="{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }" />
               </div>
             </div>
 
@@ -2018,6 +2171,7 @@ onMounted(async () => {
             <!-- Donut chart -->
             <div class="xl:col-span-2 flex justify-center" style="height:260px">
               <Chart
+                :key="'class-donut-' + selectedClassId + '-' + selectedDonutExerciseId + '-' + selectedAcademicYear"
                 type="doughnut"
                 :data="classGradeDistributionData"
                 :options="classGradeDistributionOptions"
@@ -2212,7 +2366,7 @@ onMounted(async () => {
 
           <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-center">
             <div class="xl:col-span-2 flex justify-center" style="height:260px">
-              <Chart type="doughnut" :data="classGradeDistributionData" :options="classGradeDistributionOptions" class="w-full h-full" />
+              <Chart :key="'teacher-donut-' + selectedTeacherId + '-' + selectedAcademicYear" type="doughnut" :data="classGradeDistributionData" :options="classGradeDistributionOptions" class="w-full h-full" />
             </div>
             <div class="flex flex-col gap-2">
               <div
@@ -2268,10 +2422,10 @@ onMounted(async () => {
           <template v-else-if="subjectExerciseAverages.length">
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
               <div class="chart-wrap" style="height:250px">
-                <Chart type="radar" :data="subjectExerciseRadarData" :options="{ responsive: true, maintainAspectRatio: false, scales: { r: { min: 0 } } }" />
+                <Chart :key="'teacher-ex-radar-' + selectedTeacherId" type="radar" :data="subjectExerciseRadarData" :options="{ responsive: true, maintainAspectRatio: false, scales: { r: { min: 0 } } }" />
               </div>
               <div class="chart-wrap" style="height:250px">
-                <Chart type="bar" :data="subjectExerciseBarData" :options="{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }" />
+                <Chart :key="'teacher-ex-bar-' + selectedTeacherId" type="bar" :data="subjectExerciseBarData" :options="{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0 } } }" />
               </div>
             </div>
             <DataTable :value="subjectExerciseAverages" size="small" stripedRows>
@@ -2438,7 +2592,7 @@ onMounted(async () => {
              <h5 class="m-0">{{ $t('grade_analytics.chart_avg_by_class') }}</h5>
           </div>
           <div class="chart-wrap">
-            <Chart type="bar" :data="classAverageChartData" :options="baseChartOptions" />
+            <Chart :key="'subj-class-bar-' + selectedSubjectId + '-' + selectedAcademicYear" type="bar" :data="classAverageChartData" :options="baseChartOptions" />
           </div>
         </div>
       </div>
@@ -2477,14 +2631,14 @@ onMounted(async () => {
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
               <!-- Radar Chart -->
               <div class="chart-wrap" style="height:250px">
-                <Chart type="radar" :data="subjectExerciseRadarData" :options="{
+                <Chart :key="'subj-ex-radar-' + selectedSubjectId" type="radar" :data="subjectExerciseRadarData" :options="{
                   responsive: true, maintainAspectRatio: false,
                   scales: { r: { min: 0 } }
                 }" />
               </div>
               <!-- Bar Chart -->
               <div class="chart-wrap" style="height:250px">
-                <Chart type="bar" :data="subjectExerciseBarData" :options="{
+                <Chart :key="'subj-ex-bar-' + selectedSubjectId" type="bar" :data="subjectExerciseBarData" :options="{
                   responsive: true, maintainAspectRatio: false,
                   plugins: { legend: { display: false } },
                   scales: { y: { min: 0 } }
@@ -2632,7 +2786,7 @@ onMounted(async () => {
             </div>
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-center">
               <div class="xl:col-span-2 flex justify-center" style="height:260px">
-                <Chart type="doughnut" :data="classGradeDistributionData" :options="classGradeDistributionOptions" class="w-full h-full" />
+                <Chart :key="'spec-donut-' + selectedAcademicYear + '-' + selectedSemester" type="doughnut" :data="classGradeDistributionData" :options="classGradeDistributionOptions" class="w-full h-full" />
               </div>
               <div class="flex flex-col gap-2">
                 <div
@@ -2783,7 +2937,7 @@ onMounted(async () => {
             <Tag :value="`${subjectAggregates.length} ${$t('grade_analytics.subjects_count')}`" severity="info" />
           </div>
           <div class="chart-wrap">
-            <Chart type="bar" :data="subjectAverageChartData" :options="baseChartOptions" />
+            <Chart :key="'all-subj-bar-' + selectedAcademicYear + '-' + selectedSemester" type="bar" :data="subjectAverageChartData" :options="baseChartOptions" />
           </div>
         </div>
       </div>
@@ -2795,7 +2949,7 @@ onMounted(async () => {
             <Tag :value="`${classAggregates.length} ${$t('grade_analytics.classes_count')}`" severity="success" />
           </div>
           <div class="chart-wrap">
-            <Chart type="bar" :data="classAverageChartData" :options="baseChartOptions" />
+            <Chart :key="'all-class-bar-' + selectedAcademicYear + '-' + selectedSemester" type="bar" :data="classAverageChartData" :options="baseChartOptions" />
           </div>
         </div>
       </div>
@@ -2815,7 +2969,7 @@ onMounted(async () => {
             />
           </div>
           <div class="chart-wrap">
-            <Chart type="bar" :data="teacherChartData" :options="baseChartOptions" />
+            <Chart :key="'all-teacher-bar-' + selectedTeacherForChart + '-' + selectedAcademicYear" type="bar" :data="teacherChartData" :options="baseChartOptions" />
           </div>
         </div>
       </div>
@@ -2835,7 +2989,7 @@ onMounted(async () => {
             />
           </div>
           <div class="chart-wrap">
-            <Chart type="bar" :data="subjectDrilldownChartData" :options="subjectDistributionChartOptions" />
+            <Chart :key="'all-drilldown-bar-' + selectedSubjectForChart + '-' + selectedAcademicYear" type="bar" :data="subjectDrilldownChartData" :options="subjectDistributionChartOptions" />
           </div>
         </div>
       </div>

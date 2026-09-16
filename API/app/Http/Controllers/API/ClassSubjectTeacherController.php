@@ -22,8 +22,8 @@ class ClassSubjectTeacherController extends Controller
         $query = ClassSubjectTeacher::with(['class', 'subject', 'teacher']);
 
         // Filter by academic year if provided
-        if ($request->has('academic_year')) {
-            $query->forAcademicYear($request->academic_year);
+        if ($request->has('academic_year_id')) {
+            $query->forAcademicYear($request->academic_year_id);
         }
 
         // Filter by class if provided
@@ -76,7 +76,7 @@ class ClassSubjectTeacherController extends Controller
         $validator = Validator::make($request->all(), [
             'subject_id' => 'required|exists:subjects,id',
             'class_id' => 'required|exists:classes,id',
-            'academic_year' => 'required|string',
+            'academic_year_id' => 'required|exists:academic_years,id',
         ]);
 
         if ($validator->fails()) {
@@ -97,7 +97,7 @@ class ClassSubjectTeacherController extends Controller
         // Check which ones are already assigned to this class for this subject
         $assignedTeacherIds = ClassSubjectTeacher::where('class_id', $validated['class_id'])
             ->where('subject_id', $validated['subject_id'])
-            ->where('academic_year', $validated['academic_year'])
+            ->where('academic_year_id', $validated['academic_year_id'])
             ->pluck('teacher_id')
             ->toArray();
 
@@ -127,7 +127,7 @@ class ClassSubjectTeacherController extends Controller
             'class_id' => 'required|exists:classes,id',
             'subject_id' => 'required|exists:subjects,id',
             'teacher_id' => 'required|exists:teachers,id',
-            'academic_year' => 'required|string',
+            'academic_year_id' => 'required|exists:academic_years,id',
         ]);
 
         if ($validator->fails()) {
@@ -161,7 +161,7 @@ class ClassSubjectTeacherController extends Controller
         //check if the class already has a teacher assigned for this subject and academic year
         $existingAssignment = ClassSubjectTeacher::where('class_id', $validated['class_id'])
             ->where('subject_id', $validated['subject_id'])
-            ->where('academic_year', $validated['academic_year'])
+            ->where('academic_year_id', $validated['academic_year_id'])
             ->first();
         if ($existingAssignment) {
             return response()->json([
@@ -174,7 +174,7 @@ class ClassSubjectTeacherController extends Controller
         $exists = ClassSubjectTeacher::where('class_id', $validated['class_id'])
             ->where('subject_id', $validated['subject_id'])
             ->where('teacher_id', $validated['teacher_id'])
-            ->where('academic_year', $validated['academic_year'])
+            ->where('academic_year_id', $validated['academic_year_id'])
             ->exists();
 
         if ($exists) {
@@ -200,7 +200,7 @@ class ClassSubjectTeacherController extends Controller
             'class_id' => $validated['class_id'],
             'subject_id' => $validated['subject_id'],
             'teacher_id' => $validated['teacher_id'],
-            'academic_year' => $validated['academic_year'],
+            'academic_year_id' => $validated['academic_year_id'],
             'coefficient' => $coefficient,
         ]);
 
@@ -219,7 +219,7 @@ class ClassSubjectTeacherController extends Controller
         $assignment = ClassSubjectTeacher::findOrFail($id);
 
         $validated = $request->validate([
-            'academic_year' => 'required|string',
+            'academic_year_id' => 'required|exists:academic_years,id',
         ]);
 
         $assignment->update($validated);

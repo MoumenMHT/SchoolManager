@@ -19,7 +19,7 @@ class ClassSubjectTeacherModelTest extends TestCase
      */
     public function test_assignment_has_correct_fillable_fields(): void
     {
-        $fillable = ['class_id', 'subject_id', 'teacher_id', 'academic_year', 'coefficient', 'tenant_id'];
+        $fillable = ['class_id', 'subject_id', 'teacher_id', 'academic_year_id', 'coefficient'];
         $assignment = new ClassSubjectTeacher();
         
         $this->assertEquals($fillable, $assignment->getFillable());

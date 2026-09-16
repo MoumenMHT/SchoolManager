@@ -89,9 +89,9 @@ class ScheduleController extends Controller
             }
 
             // Filter by academic year
-            if ($request->has('academic_year')) {
+            if ($request->has('academic_year_id')) {
                 $query->whereHas('assignment', function ($q) use ($request) {
-                    $q->where('academic_year', $request->academic_year);
+                    $q->where('academic_year_id', $request->academic_year_id);
                 });
             }
 
@@ -277,7 +277,7 @@ class ScheduleController extends Controller
                 ], 409);
             }
 
-            $schedule = Schedule::create($request->all());
+            $schedule = Schedule::create($validator->validated());
             $schedule->load(['assignment.class', 'assignment.subject', 'assignment.teacher']);
 
             return response()->json([
@@ -412,7 +412,7 @@ class ScheduleController extends Controller
                 ], 409);
             }
 
-            $schedule->update($request->all());
+            $schedule->update($validator->validated());
             $schedule->load(['assignment.class', 'assignment.subject', 'assignment.teacher']);
 
             return response()->json([
@@ -461,19 +461,19 @@ class ScheduleController extends Controller
     {
         
         try {
-            $academicYear = $request->get('academic_year', date('Y') . '-' . (date('Y') + 1));
+            $academicYearId = $request->get('academic_year_id', date('Y') . '-' . (date('Y') + 1));
             
             \Log::info('getClassSchedule called', [
                 'class_id' => $classId,
-                'academic_year_param' => $request->get('academic_year'),
-                'academic_year_used' => $academicYear,
+                'academic_year_id_param' => $request->get('academic_year_id'),
+                'academic_year_id_used' => $academicYearId,
                 'all_params' => $request->all()
             ]);
 
             $query = Schedule::with(['assignment.subject', 'assignment.teacher'])
-                ->whereHas('assignment', function ($q) use ($classId, $academicYear) {
+                ->whereHas('assignment', function ($q) use ($classId, $academicYearId) {
                     $q->where('class_id', $classId)
-                      ->where('academic_year', $academicYear);
+                      ->where('academic_year_id', $academicYearId);
                 });
             
             $this->orderByDayOfWeek($query);
@@ -511,12 +511,12 @@ class ScheduleController extends Controller
     public function getTeacherSchedule(Request $request, $teacherId)
     {
         try {
-            $academicYear = $request->get('academic_year', date('Y') . '-' . (date('Y') + 1));
+            $academicYearId = $request->get('academic_year_id', date('Y') . '-' . (date('Y') + 1));
 
             $query = Schedule::with(['assignment.class', 'assignment.subject'])
-                ->whereHas('assignment', function ($q) use ($teacherId, $academicYear) {
+                ->whereHas('assignment', function ($q) use ($teacherId, $academicYearId) {
                     $q->where('teacher_id', $teacherId)
-                      ->where('academic_year', $academicYear);
+                      ->where('academic_year_id', $academicYearId);
                 });
             
             $this->orderByDayOfWeek($query);
@@ -808,7 +808,7 @@ class ScheduleController extends Controller
             // Check teacher conflict
             if ($this->checkTeacherConflict(
                 $assignment->teacher_id,
-                $request->day,
+                $day,
                 $request->start_time,
                 $request->end_time,
                 $request->exclude_schedule_id
@@ -954,9 +954,9 @@ class ScheduleController extends Controller
                 });
             }
 
-            if ($request->has('academic_year')) {
+            if ($request->has('academic_year_id')) {
                 $query->whereHas('assignment', function ($q) use ($request) {
-                    $q->where('academic_year', $request->academic_year);
+                    $q->where('academic_year_id', $request->academic_year_id);
                 });
             }
 
@@ -996,7 +996,7 @@ class ScheduleController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'academic_year' => 'required|string',
+                'academic_year_id' => 'required|exists:academic_years,id',
                 'clear_existing' => 'nullable|boolean',
                 'save' => 'nullable|boolean',
             ]);
@@ -1009,7 +1009,7 @@ class ScheduleController extends Controller
                 ], 422);
             }
 
-            $academicYear = $request->academic_year;
+            $academicYearId = $request->academic_year_id;
             $clearExisting = $request->get('clear_existing', true);
             $shouldSave = $request->get('save', true);
 
@@ -1017,7 +1017,7 @@ class ScheduleController extends Controller
                 'class.levelProfile',
                 'subject',
                 'teacher.availabilities'
-            ])->where('academic_year', $academicYear)->get();
+            ])->where('academic_year_id', $academicYearId)->get();
 
             if ($assignments->isEmpty()) {
                 return response()->json([
@@ -1238,10 +1238,10 @@ class ScheduleController extends Controller
 
             $savedCount = 0;
             if ($shouldSave) {
-                DB::transaction(function () use ($academicYear, $clearExisting, $generatedRows, &$savedCount) {
+                DB::transaction(function () use ($academicYearId, $clearExisting, $generatedRows, &$savedCount) {
                     if ($clearExisting) {
-                        Schedule::whereHas('assignment', function ($q) use ($academicYear) {
-                            $q->where('academic_year', $academicYear);
+                        Schedule::whereHas('assignment', function ($q) use ($academicYearId) {
+                            $q->where('academic_year_id', $academicYearId);
                         })->delete();
                     }
 
@@ -1273,7 +1273,7 @@ class ScheduleController extends Controller
                 'success' => true,
                 'message' => $shouldSave ? __('messages.schedules_generated_successfully') : __('messages.schedule_preview_generated'),
                 'summary' => [
-                    'academic_year' => $academicYear,
+                    'academic_year_id' => $academicYearId,
                     'generated_sessions' => count($generatedRows),
                     'saved_sessions' => $savedCount,
                     'unfilled_items' => count($unfilled),
@@ -1300,13 +1300,32 @@ class ScheduleController extends Controller
     public function exportExcel(Request $request)
     {
         try {
-            $academicYear = $request->get('academic_year');
+            $rawYear = $request->get('academic_year') ?: $request->get('academic_year_id');
+            $academicYearId = $request->get('academic_year_id');
 
             $query = Schedule::with(['assignment.class', 'assignment.subject', 'assignment.teacher']);
-            if ($academicYear) {
-                $query->whereHas('assignment', function ($q) use ($academicYear) {
-                    $q->where('academic_year', $academicYear);
+            if ($academicYearId) {
+                $query->whereHas('assignment', function ($q) use ($academicYearId) {
+                    $q->where('academic_year_id', $academicYearId);
                 });
+            } elseif ($request->filled('academic_year')) {
+                $ayVal = $request->get('academic_year');
+                if (is_numeric($ayVal)) {
+                    $query->whereHas('assignment', function ($q) use ($ayVal) {
+                        $q->where('academic_year_id', (int)$ayVal);
+                    });
+                } else {
+                    $ayId = \App\Models\AcademicYear::where('name', $ayVal)->value('id');
+                    if ($ayId) {
+                        $query->whereHas('assignment', function ($q) use ($ayId) {
+                            $q->where('academic_year_id', $ayId);
+                        });
+                    } else {
+                        $query->whereHas('assignment.academicYear', function ($q) use ($ayVal) {
+                            $q->where('name', $ayVal);
+                        });
+                    }
+                }
             }
 
             $schedules = $query->get();
@@ -1365,11 +1384,13 @@ class ScheduleController extends Controller
 
             $html .= '</body></html>';
 
-            $fileName = 'schedules_' . ($academicYear ?: 'all') . '.xls';
+            $safeAcademicYear = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $rawYear ?: 'all');
+            $fileName = 'schedules_' . $safeAcademicYear . '.xls';
 
             return response($html, 200, [
                 'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
                 'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+                'X-Content-Type-Options' => 'nosniff',
             ]);
         } catch (\Exception $e) {
             return response()->json([

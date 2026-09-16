@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
             $table->foreignId('class_id')->nullable()->constrained('classes')->onDelete('set null');
-            $table->string('academic_year');
+            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
             $table->date('enrolled_at');
             $table->date('left_at')->nullable();
             $table->timestamps();

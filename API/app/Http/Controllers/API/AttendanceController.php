@@ -16,10 +16,33 @@ class AttendanceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $attendances = Attendance::with(['student', 'subject'])->get();
+            $query = Attendance::with(['student', 'subject']);
+
+            if ($request->filled('student_id')) {
+                $query->where('student_id', $request->integer('student_id'));
+            }
+            if ($request->filled('subject_id')) {
+                $query->where('subject_id', $request->integer('subject_id'));
+            }
+            if ($request->filled('start_date')) {
+                $query->whereDate('date', '>=', $request->input('start_date'));
+            }
+            if ($request->filled('end_date')) {
+                $query->whereDate('date', '<=', $request->input('end_date'));
+            }
+            if ($request->filled('status')) {
+                $query->where('status', $request->input('status'));
+            }
+
+            if ($request->input('paginate') === 'false') {
+                $attendances = $query->orderBy('date', 'desc')->get();
+            } else {
+                $perPage = max(1, min(200, $request->integer('per_page', 50)));
+                $attendances = $query->orderBy('date', 'desc')->paginate($perPage);
+            }
 
             return response()->json([
                 'success' => true,
@@ -64,6 +87,29 @@ class AttendanceController extends Controller
                     'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
+            }
+
+            $student = Student::find($request->student_id);
+            if (!$student || !$student->class_id) {
+                return response()->json(['success' => false, 'message' => __('messages.student_not_found')], 404);
+            }
+
+            $user = $request->user();
+            if ($user->role === 'teacher') {
+                $teacher = $user->teacher;
+                if (!$teacher) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+                $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                             || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+                if (!$teachesClass) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            } elseif ($user->role === 'supervisor') {
+                $supervisor = $user->supervisor;
+                if (!$supervisor || !$supervisor->classes()->where('id', $student->class_id)->exists()) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
             }
 
             $attendance = Attendance::create([
@@ -125,7 +171,7 @@ class AttendanceController extends Controller
     public function update(Request $request, string $id)
     {
         try {
-            $attendance = Attendance::findOrFail($id);
+            $attendance = Attendance::with('student')->findOrFail($id);
 
             $validator = Validator::make($request->all(), [
                 'status' => 'required|in:present,absent,late,excused',
@@ -138,6 +184,29 @@ class AttendanceController extends Controller
                     'message' => __('messages.validation_failed'),
                     'errors' => $validator->errors()
                 ], 422);
+            }
+
+            $student = $attendance->student;
+            if (!$student || !$student->class_id) {
+                return response()->json(['success' => false, 'message' => __('messages.student_not_found')], 404);
+            }
+
+            $user = $request->user();
+            if ($user->role === 'teacher') {
+                $teacher = $user->teacher;
+                if (!$teacher) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+                $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                             || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+                if (!$teachesClass) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            } elseif ($user->role === 'supervisor') {
+                $supervisor = $user->supervisor;
+                if (!$supervisor || !$supervisor->classes()->where('id', $student->class_id)->exists()) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
             }
 
             $attendance->update([
@@ -164,7 +233,31 @@ class AttendanceController extends Controller
     public function destroy(string $id)
     {
         try {
-            $attendance = Attendance::findOrFail($id);
+            $attendance = Attendance::with('student')->findOrFail($id);
+            
+            $student = $attendance->student;
+            if (!$student || !$student->class_id) {
+                return response()->json(['success' => false, 'message' => __('messages.student_not_found')], 404);
+            }
+
+            $user = $request->user();
+            if ($user->role === 'teacher') {
+                $teacher = $user->teacher;
+                if (!$teacher) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+                $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                             || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+                if (!$teachesClass) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            } elseif ($user->role === 'supervisor') {
+                $supervisor = $user->supervisor;
+                if (!$supervisor || !$supervisor->classes()->where('id', $student->class_id)->exists()) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            }
+
             $attendance->delete();
 
             return response()->json([
@@ -184,21 +277,37 @@ class AttendanceController extends Controller
     public function getAttendanceByStudent($studentId, Request $request)
     {
         try {
-            // Parents can only access attendance for their own children
-            if ($request->user()->role === 'parent') {
-                $student = Student::find($studentId);
-                if (!$student) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => __('messages.student_not_found')
-                    ], 404);
-                }
-                $parent = $request->user()->parent;
+            $user = $request->user();
+            $student = Student::find($studentId);
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.student_not_found')
+                ], 404);
+            }
+
+            if ($user->role === 'parent') {
+                $parent = $user->parent;
                 if (!$parent || $student->parent_id !== $parent->id) {
                     return response()->json([
                         'success' => false,
                         'message' => __('messages.unauthorized')
                     ], 403);
+                }
+            } elseif ($user->role === 'teacher') {
+                $teacher = $user->teacher;
+                if (!$teacher) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+                $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                             || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+                if (!$teachesClass) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            } elseif ($user->role === 'supervisor') {
+                $supervisor = $user->supervisor;
+                if (!$supervisor || !$supervisor->classes()->where('id', $student->class_id)->exists()) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
                 }
             }
 
@@ -235,18 +344,18 @@ class AttendanceController extends Controller
             //filter attendances by current semester
             if ($request->has('semester')) {
                 $attendances = $attendances->filter(function ($attendance) use ($request) {
-                    if (!$attendance->student || !$attendance->student->class || !$attendance->student->class->academic_year) {
+                    if (!$attendance->student || !$attendance->student->class || !$attendance->student->class->academic_year_id) {
                         return false;
                     }
-                    $academicYear = $attendance->student->class->academic_year;
+                    $academicYearId = $attendance->student->class->academic_year_id;
                     $semester = $request->semester;
 
                     if ($semester == 1) {
-                        return in_array($attendance->date->month, [9, 10, 11, 12]) && $academicYear == now()->year;
+                        return in_array($attendance->date->month, [9, 10, 11, 12]) && $academicYearId == now()->year;
                     } elseif ($semester == 2) {
-                        return in_array($attendance->date->month, [1, 2, 3]) && $academicYear == now()->year;
+                        return in_array($attendance->date->month, [1, 2, 3]) && $academicYearId == now()->year;
                     }elseif ($semester == 3) {
-                        return in_array($attendance->date->month, [4, 5, 6]) && $academicYear == now()->year;
+                        return in_array($attendance->date->month, [4, 5, 6]) && $academicYearId == now()->year;
                     }
 
                     return false;
@@ -279,16 +388,60 @@ class AttendanceController extends Controller
         }
 
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($records) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($records, $request) {
+                $user = $request->user();
+                $teacher = null;
+                $supervisor = null;
+
+                if ($user->role === 'teacher') {
+                    $teacher = $user->teacher;
+                    if (!$teacher) {
+                        abort(403, __('messages.unauthorized'));
+                    }
+                } elseif ($user->role === 'supervisor') {
+                    $supervisor = $user->supervisor;
+                    if (!$supervisor) {
+                        abort(403, __('messages.unauthorized'));
+                    }
+                }
+
                 $toUpdate = collect($records)->filter(fn($r) => !empty($r['id']));
                 $toCreate = collect($records)->filter(fn($r) => empty($r['id']));
 
-                // Pre-load all records to update in ONE query instead of N find() calls
+                // Pre-load all records to update
+                $existingMap = collect();
                 if ($toUpdate->isNotEmpty()) {
-                    $existingMap = Attendance::whereIn('id', $toUpdate->pluck('id'))
-                        ->get()
-                        ->keyBy('id');
+                    $existingMap = Attendance::with('student')->whereIn('id', $toUpdate->pluck('id'))->get()->keyBy('id');
+                }
 
+                // Verify authorization for all records
+                foreach ($records as $record) {
+                    $student = null;
+                    if (!empty($record['id'])) {
+                        $attendance = $existingMap->get($record['id']);
+                        $student = $attendance ? $attendance->student : null;
+                    } else {
+                        $student = \App\Models\Student::find($record['student_id']);
+                    }
+
+                    if (!$student || !$student->class_id) {
+                        abort(422, __('messages.student_not_found'));
+                    }
+
+                    if ($teacher) {
+                        $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                                     || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+                        if (!$teachesClass) {
+                            abort(403, __('messages.unauthorized'));
+                        }
+                    } elseif ($supervisor) {
+                        if (!$supervisor->classes()->where('id', $student->class_id)->exists()) {
+                            abort(403, __('messages.unauthorized'));
+                        }
+                    }
+                }
+
+                if ($toUpdate->isNotEmpty()) {
                     foreach ($toUpdate as $record) {
                         $attendance = $existingMap->get($record['id']);
                         if ($attendance) {
@@ -322,6 +475,11 @@ class AttendanceController extends Controller
             });
 
             return response()->json(['success' => true]);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $e->getStatusCode());
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -403,9 +561,9 @@ class AttendanceController extends Controller
                 $query->where('attendances.teacher_id', $request->teacher_id);
             }
 
-            if ($request->has('academic_year')) {
+            if ($request->has('academic_year_id')) {
                 $query->whereHas('student.class', function ($q) use ($request) {
-                    $q->where('academic_year', $request->academic_year);
+                    $q->where('academic_year_id', $request->academic_year_id);
                 });
             }
 
@@ -423,8 +581,8 @@ class AttendanceController extends Controller
                     $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(attendances.date)'), [4, 5, 6]);
                 }
                 $query->whereHas('student.class', function($q) {
-                    $q->where('academic_year', 'like', now()->year . '-%')
-                      ->orWhere('academic_year', 'like', '%-' . now()->year);
+                    $q->where('academic_year_id', 'like', now()->year . '-%')
+                      ->orWhere('academic_year_id', 'like', '%-' . now()->year);
                 });
             }
 
@@ -450,9 +608,9 @@ class AttendanceController extends Controller
             $query = Attendance::with(['student.class', 'subject'])
                 ->where('teacher_id', $teacherId);
 
-            if ($request->has('academic_year')) {
+            if ($request->has('academic_year_id')) {
                 $query->whereHas('student.class', function ($q) use ($request) {
-                    $q->where('academic_year', $request->academic_year);
+                    $q->where('academic_year_id', $request->academic_year_id);
                 });
             }
 
@@ -470,8 +628,8 @@ class AttendanceController extends Controller
                     $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [4, 5, 6]);
                 }
                 $query->whereHas('student.class', function($q) {
-                    $q->where('academic_year', 'like', now()->year . '-%')
-                      ->orWhere('academic_year', 'like', '%-' . now()->year);
+                    $q->where('academic_year_id', 'like', now()->year . '-%')
+                      ->orWhere('academic_year_id', 'like', '%-' . now()->year);
                 });
             }
 
@@ -515,9 +673,9 @@ class AttendanceController extends Controller
             $query = Attendance::with(['student.class', 'subject', 'teacher'])
                 ->where('subject_id', $subjectId);
 
-            if ($request->has('academic_year')) {
+            if ($request->has('academic_year_id')) {
                 $query->whereHas('student.class', function ($q) use ($request) {
-                    $q->where('academic_year', $request->academic_year);
+                    $q->where('academic_year_id', $request->academic_year_id);
                 });
             }
 
@@ -535,8 +693,8 @@ class AttendanceController extends Controller
                     $query->whereIn(\Illuminate\Support\Facades\DB::raw('MONTH(date)'), [4, 5, 6]);
                 }
                 $query->whereHas('student.class', function($q) {
-                    $q->where('academic_year', 'like', now()->year . '-%')
-                      ->orWhere('academic_year', 'like', '%-' . now()->year);
+                    $q->where('academic_year_id', 'like', now()->year . '-%')
+                      ->orWhere('academic_year_id', 'like', '%-' . now()->year);
                 });
             }
 

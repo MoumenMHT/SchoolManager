@@ -6,6 +6,7 @@ import { useToast } from 'primevue/usetoast';
 import TeacherService, { type Teacher, type CreateTeacherDTO, type UpdateTeacherDTO, type TeacherAvailability } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
 import ScheduleService, { type Schedule } from '@/service/ScheduleService';
+import AcademicYearService from '@/service/AcademicYearService';
 import { Column } from 'primevue';
 
 const { t } = useI18n();
@@ -703,7 +704,7 @@ const getCurrentAcademicYear = (): string => {
 const viewSchedule = async (teacherToView: Teacher) => {
   selectedTeacherForSchedule.value = teacherToView;
 
-  // Get unique academic years from teacher's classes
+  // Get unique academic years from teacher's classes & DB
   const uniqueYears = new Set<string>();
   if (teacherToView.classes && Array.isArray(teacherToView.classes)) {
     teacherToView.classes.forEach((cls: any) => {
@@ -712,12 +713,18 @@ const viewSchedule = async (teacherToView: Teacher) => {
       }
     });
   }
+  try {
+    const dbYears = await AcademicYearService.getAcademicYearNames();
+    dbYears.forEach(y => uniqueYears.add(y));
+  } catch (e) {
+    console.error('Failed to fetch DB academic years', e);
+  }
 
   // Convert to array and sort (most recent first)
   availableAcademicYears.value = Array.from(uniqueYears).sort().reverse();
 
   // Set default academic year to current year or first available
-  const currentYear = getCurrentAcademicYear();
+  const currentYear = await AcademicYearService.getCurrentAcademicYear();
   if (availableAcademicYears.value.includes(currentYear)) {
     selectedAcademicYear.value = currentYear;
   } else if (availableAcademicYears.value.length > 0) {

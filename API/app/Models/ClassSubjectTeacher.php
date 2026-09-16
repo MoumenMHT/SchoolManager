@@ -18,10 +18,9 @@ class ClassSubjectTeacher extends Model
         'class_id',
         'subject_id',
         'teacher_id',
-        'academic_year',
+        'academic_year_id',
         'coefficient',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'coefficient' => 'integer',
@@ -51,7 +50,7 @@ class ClassSubjectTeacher extends Model
     // Scopes
     public function scopeForAcademicYear($query, $year)
     {
-        return $query->where('academic_year', $year);
+        return $query->where('academic_year_id', $year);
     }
 
     public function scopeForClass($query, $classId)
@@ -96,5 +95,10 @@ class ClassSubjectTeacher extends Model
         }
 
         return parent::save($options);
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

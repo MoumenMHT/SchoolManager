@@ -15,10 +15,9 @@ class Fee extends Model
         'name',
         'description',
         'base_amount',
-        'academic_year',
+        'academic_year_id',
         'is_active',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'base_amount' => 'decimal:2',
@@ -33,5 +32,10 @@ class Fee extends Model
     public function levels(): BelongsToMany
     {
         return $this->belongsToMany(Level::class, 'fee_levels')->withTimestamps();
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

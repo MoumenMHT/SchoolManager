@@ -19,13 +19,23 @@ class FinancesSeeder extends Seeder
     {
         $this->command->info('💰 Seeding finances (contracts, bills, payments)…');
 
+        // Initialize tenancy so models write with the correct tenant_id
+        $tenant = \App\Models\Tenant::firstOrCreate(
+            ['id' => 'school1'],
+            ['data' => ['name' => 'Default School']]
+        );
+        tenancy()->initialize($tenant);
+
+
+        $academicYearId = \App\Models\AcademicYear::where('is_current', true)->first()->id ?? 1;
+
         // ── 1. Base Fees ──────────────────────────────────────────────────────
         $fees = [
-            ['name' => 'رسوم التسجيل',  'description' => 'رسوم التسجيل السنوية',    'base_amount' => 5000,  'academic_year' => '2025-2026', 'is_active' => true],
-            ['name' => 'رسوم الدراسة',  'description' => 'الأقساط الشهرية',          'base_amount' => 15000, 'academic_year' => '2025-2026', 'is_active' => true],
-            ['name' => 'المطعم',        'description' => 'خدمة الإطعام المدرسي',    'base_amount' => 6000,  'academic_year' => '2025-2026', 'is_active' => true],
-            ['name' => 'النقل المدرسي', 'description' => 'خدمة النقل المدرسي',       'base_amount' => 4000,  'academic_year' => '2025-2026', 'is_active' => true],
-            ['name' => 'الكتب والقرطاسية', 'description' => 'الكتب والأدوات المدرسية', 'base_amount' => 3000, 'academic_year' => '2025-2026', 'is_active' => true],
+            ['name' => 'رسوم التسجيل',  'description' => 'رسوم التسجيل السنوية',    'base_amount' => 5000,  'academic_year_id' => $academicYearId, 'is_active' => true],
+            ['name' => 'رسوم الدراسة',  'description' => 'الأقساط الشهرية',          'base_amount' => 15000, 'academic_year_id' => $academicYearId, 'is_active' => true],
+            ['name' => 'المطعم',        'description' => 'خدمة الإطعام المدرسي',    'base_amount' => 6000,  'academic_year_id' => $academicYearId, 'is_active' => true],
+            ['name' => 'النقل المدرسي', 'description' => 'خدمة النقل المدرسي',       'base_amount' => 4000,  'academic_year_id' => $academicYearId, 'is_active' => true],
+            ['name' => 'الكتب والقرطاسية', 'description' => 'الكتب والأدوات المدرسية', 'base_amount' => 3000, 'academic_year_id' => $academicYearId, 'is_active' => true],
         ];
 
         $createdFees = [];
@@ -112,7 +122,7 @@ class FinancesSeeder extends Seeder
                 // ── 3. Contract ─────────────────────────────────────────────
                 $contract = Contract::create([
                     'parent_id'        => $parent->id,
-                    'academic_year'    => '2025-2026',
+                    'academic_year_id' => $academicYearId,
                     'total_fees'       => $totalContractFees,
                     'monthly_amount'   => $monthlyAmount,
                     'paid_amount'      => 0,

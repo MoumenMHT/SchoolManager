@@ -17,7 +17,7 @@ class GradeModelTest extends TestCase
      */
     public function test_grade_has_correct_fillable_fields(): void
     {
-        $fillable = ['student_id', 'exam_id', 'grade', 'comment', 'tenant_id'];
+        $fillable = ['student_id', 'exam_id', 'grade', 'comment'];
         $grade = new Grade();
 
         $this->assertEquals($fillable, $grade->getFillable());

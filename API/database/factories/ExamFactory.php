@@ -18,7 +18,7 @@ class ExamFactory extends Factory
             'teacher_id'    => Teacher::factory(),
             'exam_type'     => fake()->randomElement(['evaluation_continue', 'devoir_1', 'devoir_2', 'composition']),
             'semester'      => fake()->randomElement(['Trimester 1', 'Trimester 2', 'Trimester 3']),
-            'academic_year' => '2025-2026',
+            'academic_year_id' => \App\Models\AcademicYear::factory(),
             'max_grade'     => 20,
         ];
     }

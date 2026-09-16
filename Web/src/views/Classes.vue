@@ -8,6 +8,7 @@ import TeacherService, { type Teacher } from '@/service/TeacherService';
 import SubjectService, { type Subject } from '@/service/SubjectService';
 import StudentService, { type Student } from '@/service/StudentService';
 import ScheduleService, { type Schedule, type CreateScheduleDTO } from '@/service/ScheduleService';
+import AcademicYearService from '@/service/AcademicYearService';
 
 const { t } = useI18n();
 
@@ -78,24 +79,37 @@ const schoolHours = [
   { hour: 16, label: '16:00 - 17:00' }
 ];
 
-// Helper to get correct current academic year based on current month
+const currentYear = computed(() => new Date().getFullYear());
+const academicYears = ref<string[]>([]);
+
 const getCurrentAcademicYear = (): string => {
+  if (academicYears.value.length > 0) return academicYears.value[0];
   const now = new Date();
   const year = now.getFullYear();
-  const startYear = now.getMonth() < 8 ? year - 1 : year; // Month < 8 means Jan-Aug (previous school year)
+  const startYear = now.getMonth() < 8 ? year - 1 : year;
   return `${startYear}-${startYear + 1}`;
 };
 
-// Computed properties
-const currentYear = computed(() => new Date().getFullYear());
-const academicYears = computed(() => {
-  const years = [];
-  for (let i = -2; i <= 2; i++) {
-    const year = currentYear.value + i;
-    years.push(`${year}-${year + 1}`);
+const loadAcademicYears = async () => {
+  try {
+    const names = await AcademicYearService.getAcademicYearNames();
+    if (names && names.length > 0) {
+      academicYears.value = names;
+    } else {
+      const c = currentYear.value;
+      academicYears.value = [`${c}-${c + 1}`, `${c + 1}-${c + 2}`];
+    }
+  } catch (e) {
+    console.error('Failed to load academic years', e);
   }
-  return years;
-});
+};
+
+const selectedAcademicYear = ref<string | null>(null);
+
+const academicYearFilterOptions = computed(() => [
+  { label: t('common.all_academic_years', 'All Academic Years'), value: null },
+  ...academicYears.value.map(y => ({ label: y, value: y }))
+]);
 
 // Load levels from API
 const apiLevels = ref<any[]>([]);
@@ -121,6 +135,7 @@ const groupedLevels = computed(() => {
 
 // Load classes on mount
 onMounted(async () => {
+  await loadAcademicYears();
   await loadLevels();
   await loadClasses();
   await loadTeachers();
@@ -139,7 +154,8 @@ const loadClasses = async () => {
   try {
     loading.value = true;
     const levelsById = new Map(apiLevels.value.map(level => [level.id, level]));
-    classes.value = await ClassesService.getClasses();
+    const params = selectedAcademicYear.value ? { academic_year: selectedAcademicYear.value } : undefined;
+    classes.value = await ClassesService.getClasses(params);
 
     // Add computed properties for each class
     classes.value = classes.value.map(c => {
@@ -933,15 +949,25 @@ const hideScheduleEditDialog = () => {
       <template #header>
         <div class="flex flex-wrap gap-2 items-center justify-between">
           <h4 class="m-0 text-xl font-semibold">{{ t('classes.manage_classes') }}</h4>
-          <IconField>
-            <InputIcon>
-              <i class="pi pi-search" />
-            </InputIcon>
-            <InputText
-              v-model="filters['global'].value"
-              :placeholder="t('common.search')"
+          <div class="flex items-center gap-3">
+            <Select
+              v-model="selectedAcademicYear"
+              :options="academicYearFilterOptions"
+              optionLabel="label"
+              optionValue="value"
+              class="w-48"
+              @change="loadClasses"
             />
-          </IconField>
+            <IconField>
+              <InputIcon>
+                <i class="pi pi-search" />
+              </InputIcon>
+              <InputText
+                v-model="filters['global'].value"
+                :placeholder="t('common.search')"
+              />
+            </IconField>
+          </div>
         </div>
       </template>
 

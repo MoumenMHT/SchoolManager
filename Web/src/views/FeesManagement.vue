@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast';
 import { FilterMatchMode } from '@primevue/core/api';
 import FeeService from '@/service/FeeService';
 import LevelService from '@/service/LevelService';
+import AcademicYearService from '@/service/AcademicYearService';
 import type { Fee, CreateFeeDTO } from '@/service/FeeService';
 import type { Level } from '@/service/LevelService';
 
@@ -14,6 +15,7 @@ const dt = ref();
 
 const fees = ref<Fee[]>([]);
 const levels = ref<Level[]>([]);
+const dbAcademicYears = ref<string[]>([]);
 const loading = ref(false);
 const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } });
 
@@ -39,17 +41,30 @@ const academicYears = computed(() => {
 });
 
 const availableAcademicYears = computed(() => {
-  const currentYear = new Date().getFullYear();
-  const years = new Set<string>();
-  for (let i = -2; i <= 3; i++) {
-    const startYear = currentYear + i;
-    years.add(`${startYear}-${startYear + 1}`);
-  }
+  const years = new Set<string>(dbAcademicYears.value);
   fees.value.forEach(f => {
     if (f.academic_year) years.add(f.academic_year);
   });
+  if (years.size === 0) {
+    const currentYear = new Date().getFullYear();
+    for (let i = -2; i <= 3; i++) {
+      const startYear = currentYear + i;
+      years.add(`${startYear}-${startYear + 1}`);
+    }
+  }
   return Array.from(years).sort().reverse();
 });
+
+const loadAcademicYears = async () => {
+  try {
+    const names = await AcademicYearService.getAcademicYearNames();
+    if (names && names.length > 0) {
+      dbAcademicYears.value = names;
+    }
+  } catch (e) {
+    console.error('Failed to load academic years', e);
+  }
+};
 
 const loadFees = async () => {
   loading.value = true;
@@ -70,13 +85,17 @@ const loadLevels = async () => {
   }
 };
 
-onMounted(() => {
+const activeAcademicYear = ref<string>('');
+
+onMounted(async () => {
+  activeAcademicYear.value = await AcademicYearService.getCurrentAcademicYear();
+  loadAcademicYears();
   loadFees();
   loadLevels();
 });
 
 const openNew = () => {
-  fee.value = { is_active: true, academic_year: getAcademicYear() };
+  fee.value = { is_active: true, academic_year: activeAcademicYear.value || availableAcademicYears.value[0] || getAcademicYear() };
   submitted.value = false;
   feeDialog.value = true;
 };
@@ -197,6 +216,7 @@ const levelsByFee = (f: Fee): string => {
 };
 
 const getAcademicYear = () => {
+  if (activeAcademicYear.value) return activeAcademicYear.value;
   const now = new Date();
   const y = now.getFullYear();
   const m = now.getMonth();

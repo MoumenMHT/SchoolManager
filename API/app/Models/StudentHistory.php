@@ -16,11 +16,10 @@ class StudentHistory extends Model
     protected $fillable = [
         'student_id',
         'class_id',
-        'academic_year',
+        'academic_year_id',
         'enrolled_at',
         'left_at',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'enrolled_at' => 'date',
@@ -35,5 +34,10 @@ class StudentHistory extends Model
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

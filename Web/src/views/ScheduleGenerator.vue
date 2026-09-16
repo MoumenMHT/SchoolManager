@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast';
 import { useI18n } from 'vue-i18n';
 import ScheduleService, { type GenerateScheduleResponse } from '@/service/ScheduleService';
 import ClassesService from '@/service/ClassesService';
+import AcademicYearService from '@/service/AcademicYearService';
 
 const { t } = useI18n();
 const toast = useToast();
@@ -21,6 +22,7 @@ const loading = ref(false);
 const exporting = ref(false);
 const summary = ref<GenerateScheduleResponse | null>(null);
 const academicYear = ref(getDefaultAcademicYear());
+const availableAcademicYears = ref<string[]>([]);
 const clearExisting = ref(true);
 const assignmentsCount = ref<number>(0);
 
@@ -32,6 +34,23 @@ const loadAssignmentsCount = async () => {
     assignmentsCount.value = 0;
   }
 };
+
+onMounted(async () => {
+  try {
+    const names = await AcademicYearService.getAcademicYearNames();
+    if (names && names.length > 0) {
+      availableAcademicYears.value = names;
+      academicYear.value = names[0];
+    } else {
+      const def = getDefaultAcademicYear();
+      academicYear.value = def;
+      availableAcademicYears.value = [def];
+    }
+  } catch (e) {
+    console.error('Failed to load academic years', e);
+  }
+  await loadAssignmentsCount();
+});
 
 const saveProblemsToStorage = (summaryData: GenerateScheduleResponse) => {
   if (summaryData.unfilled?.length) {
@@ -189,7 +208,7 @@ onMounted(async () => {
     <div class="grid grid-cols-12 gap-4 mb-4">
       <div class="col-span-12 md:col-span-4">
         <label class="block font-semibold mb-2">{{ t('classes.academic_year') }}</label>
-        <InputText v-model="academicYear" class="w-full" placeholder="2025-2026" />
+        <Select v-model="academicYear" :options="availableAcademicYears" class="w-full" @change="loadAssignmentsCount" />
       </div>
 
       <div class="col-span-12 md:col-span-4 flex items-end">

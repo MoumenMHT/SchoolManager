@@ -60,6 +60,9 @@ const handleLogin = async () => {
   clearErrors();
 
   try {
+    // Initialize CSRF protection for Sanctum SPA authentication
+    await apiService.initCsrf();
+    
     const response = await apiService.login(username.value, password.value);
 
     if (response.success) {

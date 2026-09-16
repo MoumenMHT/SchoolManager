@@ -53,8 +53,8 @@ class SchoolClassService {
   /**
    * Get all classes
    */
-  async getClasses(): Promise<SchoolClass[]> {
-    const response = await apiService.get<SchoolClass[]>('/classes');
+  async getClasses(params?: { academic_year?: string }): Promise<SchoolClass[]> {
+    const response = await apiService.get<SchoolClass[]>('/classes', params);
     console.log('Fetched classes:', response.data);
     return response.data || [];
   }

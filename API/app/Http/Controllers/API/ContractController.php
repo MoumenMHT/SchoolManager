@@ -34,17 +34,43 @@ class ContractController extends Controller
     public function store(Request $request)
     {
         try {
+            if (!$request->has('academic_year_id') && $request->filled('academic_year')) {
+                $ayVal = $request->input('academic_year');
+                $ayId = is_numeric($ayVal) ? (int)$ayVal : \App\Models\AcademicYear::where('name', $ayVal)->value('id');
+                if (!$ayId) {
+                    $tenantId = tenant('id') ?? $request->user()?->tenant_id;
+                    $ay = \App\Models\AcademicYear::firstOrCreate(
+                        ['name' => $ayVal, 'tenant_id' => $tenantId],
+                        [
+                            'start_date' => now()->startOfYear(),
+                            'end_date' => now()->endOfYear(),
+                            'tenant_id' => $tenantId
+                        ]
+                    );
+                    $ayId = $ay->id;
+                }
+                $request->merge(['academic_year_id' => $ayId]);
+            }
             $validator = Validator::make($request->all(), [
                 'parent_id'               => 'required|exists:parents,id',
                 'student_fees'            => 'required|array|min:1',
                 'student_fees.*.student_id' => 'required|exists:students,id',
                 'student_fees.*.fee_ids'  => 'required|array|min:1',
                 'student_fees.*.fee_ids.*'=> 'exists:fees,id',
-                'academic_year'           => 'required|string',
+                'academic_year_id' => 'required|exists:academic_years,id',
                 'start_date'              => 'required|date',
                 'end_date'                => 'required|date|after:start_date',
                 'discount_type'           => 'nullable|string',
-                'discount_value'          => 'nullable|numeric|min:0',
+                'discount_value'          => [
+                    'nullable',
+                    'numeric',
+                    'min:0',
+                    function ($attribute, $value, $fail) use ($request) {
+                        if ($request->discount_type === 'percentage' && $value > 100) {
+                            $fail('Percentage discount cannot exceed 100%.');
+                        }
+                    }
+                ],
                 'discount_reason'         => 'nullable|string',
                 'notes'                   => 'nullable|string',
                 'is_active'               => 'boolean',
@@ -56,6 +82,21 @@ class ContractController extends Controller
                     'message' => __('messages.validation_failed'),
                     'errors'  => $validator->errors()
                 ], 422);
+            }
+
+            $studentIds = collect($request->student_fees)->pluck('student_id')->unique()->toArray();
+            $invalidStudents = \App\Models\Student::whereIn('id', $studentIds)
+                ->where(function($q) use ($request) {
+                    $q->whereNull('parent_id')
+                      ->orWhere('parent_id', '!=', $request->parent_id);
+                })
+                ->exists();
+
+            if ($invalidStudents) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.unauthorized')
+                ], 403);
             }
 
             DB::beginTransaction();
@@ -90,7 +131,7 @@ class ContractController extends Controller
             // Create contract
             $contract = Contract::create([
                 'parent_id'        => $request->parent_id,
-                'academic_year'    => $request->academic_year,
+                'academic_year_id'    => $request->academic_year_id,
                 'total_fees'       => $totalFees,
                 'discount_type'    => $request->discount_type,
                 'discount_value'   => $request->discount_value ?? 0,
@@ -165,7 +206,7 @@ class ContractController extends Controller
                 'student_fees.*.student_id' => 'required|exists:students,id',
                 'student_fees.*.fee_ids'    => 'required|array|min:1',
                 'student_fees.*.fee_ids.*'  => 'exists:fees,id',
-                'academic_year'             => 'required|string',
+                'academic_year_id' => 'required|exists:academic_years,id',
                 'start_date'                => 'required|date',
                 'end_date'                  => 'required|date|after:start_date',
                 'discount_type'             => 'nullable|string',
@@ -181,6 +222,18 @@ class ContractController extends Controller
                     'message' => __('messages.validation_failed'),
                     'errors'  => $validator->errors()
                 ], 422);
+            }
+
+            $studentIds = collect($request->student_fees)->pluck('student_id')->unique()->toArray();
+            $invalidStudents = \App\Models\Student::whereIn('id', $studentIds)
+                ->where('parent_id', '!=', $contract->parent_id)
+                ->exists();
+
+            if ($invalidStudents) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.unauthorized')
+                ], 403);
             }
 
             DB::beginTransaction();
@@ -210,7 +263,7 @@ class ContractController extends Controller
             $remainingAmount = max(0, $finalAmount - $contract->paid_amount);
 
             $contract->update([
-                'academic_year'    => $request->academic_year,
+                'academic_year_id'    => $request->academic_year_id,
                 'total_fees'       => $totalFees,
                 'discount_type'    => $request->discount_type,
                 'discount_value'   => $request->discount_value ?? 0,
@@ -286,12 +339,13 @@ class ContractController extends Controller
     public function show(Request $request, $id)
     {
         try {
-            $contract = Contract::with(['parent.studentFees.fee', 'parent.studentFees.student', 'bills', 'payments.allocations'])
-                ->findOrFail($id);
+            $contract = Contract::with(['parent.studentFees.fee', 'parent.studentFees.student', 'bills', 'payments'])->findOrFail($id);
 
+            // Parents can only view their own contracts
             if ($request->user()->role === 'parent') {
                 $parent = $request->user()->parent;
-                if (!$parent || $contract->parent_id !== $parent->id) {
+                if (!$parent || $contract->parent_id != $parent->id) {
+                    \Log::info("Parent check failed", ['contract_parent' => $contract->parent_id, 'user_parent' => $parent->id ?? null]);
                     return response()->json([
                         'success' => false,
                         'message' => __('messages.unauthorized')
@@ -335,8 +389,8 @@ class ContractController extends Controller
                 }
             }
 
-            if ($request->has('academic_year')) {
-                $query->where('academic_year', $request->academic_year);
+            if ($request->has('academic_year_id')) {
+                $query->where('academic_year_id', $request->academic_year_id);
             }
 
             if ($request->has('status')) {

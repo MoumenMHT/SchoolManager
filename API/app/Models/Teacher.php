@@ -23,8 +23,7 @@ class Teacher extends Model
         'salary',
         'contract_type',
         'weekly_hours',
-        'tenant_id',
-    ];
+        ];
 
     protected $hidden = [
         'salary',
@@ -62,14 +61,14 @@ class Teacher extends Model
     public function classes(): BelongsToMany
     {
         return $this->belongsToMany(SchoolClass::class, 'class_subject_teacher', 'teacher_id', 'class_id')
-            ->withPivot('subject_id', 'academic_year', 'coefficient')
+            ->withPivot('subject_id', 'academic_year_id', 'coefficient')
             ->withTimestamps();
     }
 
     public function subjects(): BelongsToMany
     {
         return $this->belongsToMany(Subject::class, 'class_subject_teacher', 'teacher_id', 'subject_id')
-            ->withPivot('class_id', 'academic_year', 'coefficient')
+            ->withPivot('class_id', 'academic_year_id', 'coefficient')
             ->withTimestamps();
     }
 

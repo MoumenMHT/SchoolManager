@@ -81,6 +81,19 @@ class SubjectController extends Controller
     public function show(string $id)
     {
         $subject = \App\Models\Subject::findOrFail($id);
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $subject->load('levels');
+            $hasLevelsInCycle = $subject->levels->contains(function ($level) use ($directorCycle) {
+                return $level->cycle === $directorCycle;
+            });
+            if (!$hasLevelsInCycle && $subject->levels->count() > 0) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => $subject
@@ -101,6 +114,18 @@ class SubjectController extends Controller
     public function update(Request $request, string $id)
     {
         $subject = \App\Models\Subject::findOrFail($id);
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $subject->load('levels');
+            $hasLevelsInCycle = $subject->levels->contains(function ($level) use ($directorCycle) {
+                return $level->cycle === $directorCycle;
+            });
+            if (!$hasLevelsInCycle && $subject->levels->count() > 0) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:subjects,name',
@@ -142,6 +167,18 @@ class SubjectController extends Controller
     public function destroy(string $id)
     {
         $subject = \App\Models\Subject::findOrFail($id);
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $subject->load('levels');
+            $hasLevelsInCycle = $subject->levels->contains(function ($level) use ($directorCycle) {
+                return $level->cycle === $directorCycle;
+            });
+            if (!$hasLevelsInCycle && $subject->levels->count() > 0) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
         $subject->delete();
 
         return response()->json([

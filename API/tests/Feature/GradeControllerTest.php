@@ -24,7 +24,16 @@ class GradeControllerTest extends TestCase
         $teacher = Teacher::factory()->create(['user_id' => $user->id]);
         $token   = $user->createToken('test-token')->plainTextToken;
 
-        $student = Student::factory()->create();
+        $academicYear = \App\Models\AcademicYear::factory()->create();
+        $class = \App\Models\SchoolClass::factory()->create(['academic_year_id' => $academicYear->id]);
+        $student = Student::factory()->create(['class_id' => $class->id]);
+        $subject = Subject::factory()->create();
+        $teacher->classes()->attach($class->id, [
+            'subject_id' => $subject->id,
+            'academic_year_id' => $academicYear->id,
+            'coefficient' => 1
+        ]);
+        
         $exam    = Exam::factory()->create(['teacher_id' => $teacher->id, 'max_grade' => 20]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
@@ -52,7 +61,16 @@ class GradeControllerTest extends TestCase
         $teacher = Teacher::factory()->create(['user_id' => $user->id]);
         $token   = $user->createToken('test-token')->plainTextToken;
 
-        $students = Student::factory()->count(3)->create();
+        $academicYear = \App\Models\AcademicYear::factory()->create();
+        $class = \App\Models\SchoolClass::factory()->create(['academic_year_id' => $academicYear->id]);
+        $subject = Subject::factory()->create();
+        $teacher->classes()->attach($class->id, [
+            'subject_id' => $subject->id,
+            'academic_year_id' => $academicYear->id,
+            'coefficient' => 1
+        ]);
+
+        $students = Student::factory()->count(3)->create(['class_id' => $class->id]);
         $exam     = Exam::factory()->create(['teacher_id' => $teacher->id, 'max_grade' => 20]);
 
         $grades = $students->map(function ($student) use ($exam) {
@@ -78,7 +96,7 @@ class GradeControllerTest extends TestCase
      */
     public function test_can_get_student_grades(): void
     {
-        $user  = User::factory()->create(['role' => 'teacher']);
+        $user  = User::factory()->create(['role' => 'admin']);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $student = Student::factory()->create();
@@ -95,7 +113,7 @@ class GradeControllerTest extends TestCase
      */
     public function test_can_get_student_report_card(): void
     {
-        $user  = User::factory()->create(['role' => 'teacher']);
+        $user  = User::factory()->create(['role' => 'admin']);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $student = Student::factory()->create();

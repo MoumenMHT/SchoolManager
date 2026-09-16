@@ -25,7 +25,7 @@ class FeeFactory extends Factory
             'name'          => $name,
             'description'   => fake()->sentence(),
             'base_amount'   => $amount + fake()->numberBetween(-200, 200),
-            'academic_year' => '2025-2026',
+            'academic_year_id' => \App\Models\AcademicYear::factory(),
             'is_active'     => true,
         ];
     }
@@ -38,7 +38,7 @@ class FeeFactory extends Factory
     public function previousYear(): static
     {
         return $this->state(fn () => [
-            'academic_year' => '2024-2025',
+            'academic_year_id' => \App\Models\AcademicYear::factory(),
             'is_active'     => false,
         ]);
     }

@@ -120,7 +120,7 @@ class StudentController extends Controller
                 StudentHistory::create([
                     'student_id' => $student->id,
                     'class_id'   => $student->class_id,
-                    'academic_year' => $class->academic_year ?? date('Y') . '-' . (date('Y') + 1),
+                    'academic_year_id' => $class->academic_year_id ?? date('Y') . '-' . (date('Y') + 1),
                     'enrolled_at'   => $student->enrollment_date
                         ? $student->enrollment_date->toDateString()
                         : now()->toDateString(),
@@ -215,7 +215,7 @@ class StudentController extends Controller
                     StudentHistory::create([
                         'student_id'   => $student->id,
                         'class_id'     => $request->class_id,
-                        'academic_year' => $class->academic_year ?? date('Y') . '-' . (date('Y') + 1),
+                        'academic_year_id' => $class->academic_year_id ?? date('Y') . '-' . (date('Y') + 1),
                         'enrolled_at'  => now()->toDateString(),
                         'left_at'      => null,
                     ]);

@@ -199,7 +199,15 @@ class SubjectCoefficientController extends Controller
      */
     public function update(Request $request, $id): JsonResponse
     {
-        $coefficient = LevelSubject::findOrFail($id);
+        $coefficient = LevelSubject::with('level')->findOrFail($id);
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            if ($coefficient->level && $coefficient->level->cycle !== $directorCycle) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
 
         $validated = $request->validate([
             'coefficient' => 'sometimes|required|integer|min:1|max:10',
@@ -220,7 +228,15 @@ class SubjectCoefficientController extends Controller
      */
     public function destroy($id): JsonResponse
     {
-        $coefficient = LevelSubject::findOrFail($id);
+        $coefficient = LevelSubject::with('level')->findOrFail($id);
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            if ($coefficient->level && $coefficient->level->cycle !== $directorCycle) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
         $coefficient->delete();
 
         return response()->json([

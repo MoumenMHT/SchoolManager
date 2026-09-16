@@ -7,6 +7,7 @@ import apiService from '@/service/ApiService';
 import ApiService from '@/service/ApiService';
 import AttendanceService, { type AttendanceRecord } from '@/service/AttendanceService';
 import GradeService, { type GradeRecord } from '@/service/GradeService';
+import AcademicYearService from '@/service/AcademicYearService';
 
 const route = useRoute();
 const router = useRouter();
@@ -98,10 +99,17 @@ function computeAcademicYear(): string {
 async function loadClass() {
   classLoading.value = true;
   try {
+    const activeYear = await AcademicYearService.getCurrentAcademicYear();
     const response = await ApiService.get<any[]>('/teacher/classes');
     const raw: any[] = (response.data as any)?.data ?? response.data ?? [];
     const list = Array.isArray(raw) ? raw : Object.values(raw);
     classData.value = list.find((c: any) => Number(c.id) === classId.value) ?? null;
+
+    if (activeYear) {
+      gradeAcademicYear.value = activeYear;
+    } else if (classData.value?.academic_year) {
+      gradeAcademicYear.value = classData.value.academic_year;
+    }
 
     if (classData.value && subjects.value.length >= 1) {
       gradeSubjectId.value = subjects.value[0].id;

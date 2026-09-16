@@ -11,6 +11,18 @@ use Illuminate\Support\Facades\Validator;
 
 class ExamController extends Controller
 {
+    private function resolveAcademicYearId(Request $request): ?int
+    {
+        $val = $request->input('academic_year_id') ?? $request->input('academic_year');
+        if (!$val || $val === 'all') {
+            return null;
+        }
+        if (is_numeric($val)) {
+            return (int) $val;
+        }
+        return \App\Models\AcademicYear::where('name', $val)->value('id');
+    }
+
     /** GET /api/exams */
     public function index(Request $request)
     {
@@ -19,7 +31,8 @@ class ExamController extends Controller
         if ($request->filled('subject_id'))   $query->where('subject_id', $request->integer('subject_id'));
         if ($request->filled('teacher_id'))   $query->where('teacher_id', $request->integer('teacher_id'));
         if ($request->filled('semester'))     $query->where('semester', $request->input('semester'));
-        if ($request->filled('academic_year'))$query->where('academic_year', $request->input('academic_year'));
+        $ayId = $this->resolveAcademicYearId($request);
+        if ($ayId)                            $query->where('academic_year_id', $ayId);
         if ($request->filled('exam_type'))    $query->where('exam_type', $request->input('exam_type'));
         if ($request->filled('class_id')) {
             $query->whereHas('classes', fn($q) => $q->where('classes.id', $request->integer('class_id')));
@@ -36,8 +49,9 @@ class ExamController extends Controller
         if ($request->filled('semester') && $request->input('semester') !== 'all') {
             $query->where('semester', $request->input('semester'));
         }
-        if ($request->filled('academic_year') && $request->input('academic_year') !== 'all') {
-            $query->where('academic_year', $request->input('academic_year'));
+        $ayId = $this->resolveAcademicYearId($request);
+        if ($ayId) {
+            $query->where('academic_year_id', $ayId);
         }
         if ($request->filled('class_id')) {
             $classId = $request->integer('class_id');
@@ -71,7 +85,7 @@ class ExamController extends Controller
             'teacher_id'    => 'required|exists:teachers,id',
             'exam_type'     => 'required|string|max:255',
             'semester'      => 'required|string|max:255',
-            'academic_year' => 'required|string|max:255',
+            'academic_year_id' => 'required|exists:academic_years,id',
             'max_grade'     => 'nullable|numeric|min:0',
             'class_ids'     => 'nullable|array',
             'class_ids.*'   => 'exists:classes,id',
@@ -89,7 +103,7 @@ class ExamController extends Controller
             'teacher_id'    => $request->teacher_id,
             'exam_type'     => $request->exam_type,
             'semester'      => $request->semester,
-            'academic_year' => $request->academic_year,
+            'academic_year_id' => $request->academic_year_id,
             'max_grade'     => $request->input('max_grade', 20),
         ]);
 
@@ -121,12 +135,19 @@ class ExamController extends Controller
     /** PUT /api/exams/{exam} */
     public function update(Request $request, Exam $exam)
     {
+        $user = $request->user();
+        if ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher || $exam->teacher_id !== $teacher->id) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
         $validator = Validator::make($request->all(), [
             'subject_id'    => 'sometimes|exists:subjects,id',
             'teacher_id'    => 'sometimes|exists:teachers,id',
             'exam_type'     => 'sometimes|string|max:255',
             'semester'      => 'sometimes|string|max:255',
-            'academic_year' => 'sometimes|string|max:255',
+            'academic_year_id' => 'sometimes|exists:academic_years,id',
             'max_grade'     => 'nullable|numeric|min:0',
             'class_ids'     => 'nullable|array',
             'class_ids.*'   => 'exists:classes,id',
@@ -140,7 +161,7 @@ class ExamController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $exam->update($request->only(['subject_id', 'teacher_id', 'exam_type', 'semester', 'academic_year', 'max_grade']));
+        $exam->update($request->only(['subject_id', 'teacher_id', 'exam_type', 'semester', 'academic_year_id', 'max_grade']));
 
         if ($request->has('class_ids')) {
             $exam->classes()->sync($request->class_ids ?? []);
@@ -179,8 +200,16 @@ class ExamController extends Controller
     }
 
     /** DELETE /api/exams/{exam} */
-    public function destroy(Exam $exam)
+    public function destroy(Request $request, Exam $exam)
     {
+        $user = $request->user();
+        if ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher || $exam->teacher_id !== $teacher->id) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
+
         $exam->delete();
         return response()->json(['success' => true, 'message' => 'Exam deleted.']);
     }

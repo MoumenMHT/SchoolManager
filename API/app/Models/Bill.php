@@ -19,8 +19,7 @@ class Bill extends Model
         'status',
         'due_date',
         'note',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'amount_due' => 'decimal:2',

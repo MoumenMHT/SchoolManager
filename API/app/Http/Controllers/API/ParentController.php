@@ -256,7 +256,7 @@ class ParentController extends Controller
         }
 
         // Create user account
-        $user = \App\Models\User::create([
+        $user = \App\Models\User::forceCreate([
             'username' => $request->username,
             'password' => bcrypt($request->password),
             'role' => 'parent',

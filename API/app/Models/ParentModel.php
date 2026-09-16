@@ -22,8 +22,7 @@ class ParentModel extends Model
         'email',
         'cin',
         'profession',
-        'tenant_id',
-    ];
+        ];
 
     // Relationships
     public function user(): BelongsTo

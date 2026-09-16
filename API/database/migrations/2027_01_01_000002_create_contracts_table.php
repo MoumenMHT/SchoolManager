@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('parent_id')->constrained('parents')->onDelete('cascade');
             $table->foreignId('old_contract_id')->nullable()->constrained('contracts')->onDelete('cascade');
             $table->string('contract_number')->unique();
-            $table->string('academic_year', 60);
+            $table->foreignId('academic_year_id')->nullable()->constrained('academic_years')->nullOnDelete();
             $table->decimal('total_fees', 10, 2);
             $table->string('discount_type', 60)->nullable();
             $table->decimal('discount_value', 10, 2)->default(0);

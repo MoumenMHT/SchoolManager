@@ -17,8 +17,7 @@ class Schedule extends Model
         'start_time',
         'end_time',
         'room',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'start_time' => 'datetime:H:i',

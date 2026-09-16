@@ -22,6 +22,7 @@ use App\Http\Controllers\API\ContractController;
 use App\Http\Controllers\API\BillController;
 use App\Http\Controllers\API\SupervisorController;
 use App\Http\Controllers\API\LevelController;
+use App\Http\Controllers\API\AcademicYearController;
 
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
@@ -54,6 +55,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin,secretariat,primary_director,cem_director,lycee_director,accountant')->group(function () {
         // Level management
         Route::apiResource('levels', LevelController::class)->except(['index', 'show']);
+        
+        // Academic Years
+        Route::apiResource('academic-years', AcademicYearController::class);
+        Route::put('academic-years/{academic_year}/current', [AcademicYearController::class, 'setCurrent']);
+
         Route::post('/levels/{level}/assign-subjects', [LevelController::class, 'assignSubjects']);
 
         // Student management - specific routes MUST come before apiResource
@@ -138,6 +144,9 @@ Route::middleware('auth:sanctum')->group(function () {
         });
         Route::apiResource('contracts', ContractController::class);
         
+        // Webhook Processing Route (Phase 3)
+        Route::post('/webhooks/payment', [PaymentController::class, 'webhook']);
+
         // Payment Processing Routes (Phase 3)
         Route::prefix('payments')->group(function () {
             Route::post('/calculate', [PaymentController::class, 'calculatePayment']);

@@ -21,12 +21,10 @@ class UserModelTest extends TestCase
             'username',
             'email',
             'password',
-            'role',
             'phone',
             'address',
             'is_active',
-            'tenant_id',
-        ];
+            ];
 
         $user = new User();
 

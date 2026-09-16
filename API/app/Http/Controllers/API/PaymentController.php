@@ -71,7 +71,7 @@ class PaymentController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'contract_id' => 'required|exists:contracts,id',
-                'amount' => 'required|numeric|min:0',
+                'amount' => 'required|numeric|gt:0',
                 'payment_type' => 'required|string|in:cash,bank_transfer,cheque,online',
                 'paid_date' => 'required|date',
                 'note' => 'nullable|string'
@@ -87,7 +87,7 @@ class PaymentController extends Controller
 
             DB::beginTransaction();
 
-            $contract = Contract::findOrFail($request->contract_id);
+            $contract = Contract::lockForUpdate()->findOrFail($request->contract_id);
 
             // Create payment record
             $payment = Payment::create([
@@ -104,6 +104,7 @@ class PaymentController extends Controller
             $unpaidBills = Bill::where('contract_id', $contract->id)
                 ->where('status', '!=', 'paid')
                 ->orderBy('due_date', 'asc')
+                ->lockForUpdate()
                 ->get();
 
             foreach ($unpaidBills as $bill) {
@@ -166,6 +167,16 @@ class PaymentController extends Controller
         try {
             $payment = Payment::with(['contract', 'allocations.bill'])->findOrFail($id);
             
+            $user = $request->user();
+            if ($user->role === 'parent') {
+                $parent = $user->parent;
+                if (!$parent || $payment->contract->parent_id !== $parent->id) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            } elseif (in_array($user->role, ['teacher', 'supervisor', 'student'])) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+            
             return response()->json([
                 'success' => true,
                 'data' => $payment
@@ -208,6 +219,11 @@ class PaymentController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $user = $request->user();
+        if (in_array($user->role, ['parent', 'teacher', 'supervisor', 'student'])) {
+            return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+        }
+
         try {
             $payment = Payment::findOrFail($id);
             
@@ -244,8 +260,13 @@ class PaymentController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
+        $user = $request->user();
+        if (in_array($user->role, ['parent', 'teacher', 'supervisor', 'student'])) {
+            return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -309,7 +330,7 @@ class PaymentController extends Controller
                 'contract_number' => $payment->contract->contract_number,
                 'parent_name' => $payment->contract->parent->user->name ?? 
                                 ($payment->contract->parent->first_name . ' ' . $payment->contract->parent->last_name),
-                'academic_year' => $payment->contract->academic_year,
+                'academic_year_id' => $payment->contract->academic_year_id,
                 'allocated_to' => $payment->allocations->map(function ($allocation) {
                     return [
                         'bill_id' => $allocation->bill_id,
@@ -444,7 +465,7 @@ class PaymentController extends Controller
 
             $statistics = [
                 'contract_number' => $contract->contract_number,
-                'academic_year' => $contract->academic_year,
+                'academic_year_id' => $contract->academic_year_id,
                 'total_contract_amount' => $contract->total_fees - $contract->discount_value,
                 'total_paid' => $contract->paid_amount,
                 'total_remaining' => $contract->remaining_amount,
@@ -558,7 +579,7 @@ class PaymentController extends Controller
                 return [
                     'contract_id' => $contract->id,
                     'contract_number' => $contract->contract_number,
-                    'academic_year' => $contract->academic_year,
+                    'academic_year_id' => $contract->academic_year_id,
                     'total_amount' => $contract->total_fees - $contract->discount_value,
                     'paid_amount' => $contract->paid_amount,
                     'remaining_amount' => $contract->remaining_amount,
@@ -599,9 +620,9 @@ class PaymentController extends Controller
                 $query->whereBetween('paid_date', [$request->start_date, $request->end_date]);
             }
 
-            if ($request->has('academic_year')) {
+            if ($request->has('academic_year_id')) {
                 $query->whereHas('contract', function ($q) use ($request) {
-                    $q->where('academic_year', $request->academic_year);
+                    $q->where('academic_year_id', $request->academic_year_id);
                 });
             }
 
@@ -620,8 +641,8 @@ class PaymentController extends Controller
                 }),
                 'contracts_summary' => Contract::with('parent.user')
                     ->where('status', 'active')
-                    ->when($request->has('academic_year'), function ($q) use ($request) {
-                        $q->where('academic_year', $request->academic_year);
+                    ->when($request->has('academic_year_id'), function ($q) use ($request) {
+                        $q->where('academic_year_id', $request->academic_year_id);
                     })
                     ->get()
                     ->map(function ($contract) {
@@ -787,5 +808,23 @@ class PaymentController extends Controller
                 'error'   => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
+    }
+
+    /**
+     * Handle payment provider webhooks
+     */
+    public function webhook(Request $request)
+    {
+        $signature = $request->header('X-Signature');
+        $secret = config('services.payment.webhook_secret', 'testing_secret');
+        
+        $expectedSignature = hash_hmac('sha256', $request->getContent(), $secret);
+        
+        if (!$signature || !hash_equals($expectedSignature, (string)$signature)) {
+            return response()->json(['success' => false, 'message' => 'Invalid signature'], 403);
+        }
+
+        // Process webhook (mock implementation)
+        return response()->json(['success' => true]);
     }
 }

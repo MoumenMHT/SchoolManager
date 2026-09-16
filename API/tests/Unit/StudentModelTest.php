@@ -30,8 +30,7 @@ class StudentModelTest extends TestCase
             'enrollment_date',
             'medical_info',
             'is_active',
-            'tenant_id',
-        ];
+            ];
 
         $student = new Student();
 

@@ -23,8 +23,16 @@ class AttendanceControllerTest extends TestCase
         $teacher = Teacher::factory()->create(['user_id' => $user->id]);
         $token   = $user->createToken('test-token')->plainTextToken;
 
-        $student = Student::factory()->create();
+        $academicYear = \App\Models\AcademicYear::factory()->create();
+        $class = \App\Models\SchoolClass::factory()->create(['academic_year_id' => $academicYear->id]);
+        $student = Student::factory()->create(['class_id' => $class->id]);
         $subject = Subject::factory()->create();
+        
+        $teacher->classes()->attach($class->id, [
+            'subject_id' => $subject->id,
+            'academic_year_id' => $academicYear->id,
+            'coefficient' => 1
+        ]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/attendances', [
@@ -50,9 +58,20 @@ class AttendanceControllerTest extends TestCase
     public function test_can_get_student_attendance(): void
     {
         $user  = User::factory()->create(['role' => 'teacher']);
+        $teacher = Teacher::factory()->create(['user_id' => $user->id]);
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $student     = Student::factory()->create();
+        $academicYear = \App\Models\AcademicYear::factory()->create();
+        $class = \App\Models\SchoolClass::factory()->create(['academic_year_id' => $academicYear->id]);
+        $student = Student::factory()->create(['class_id' => $class->id]);
+        $subject = Subject::factory()->create();
+        
+        $teacher->classes()->attach($class->id, [
+            'subject_id' => $subject->id,
+            'academic_year_id' => $academicYear->id,
+            'coefficient' => 1
+        ]);
+
         $attendances = Attendance::factory()->count(10)->create(['student_id' => $student->id]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
@@ -84,9 +103,21 @@ class AttendanceControllerTest extends TestCase
     public function test_can_update_attendance(): void
     {
         $user  = User::factory()->create(['role' => 'teacher']);
+        $teacher = Teacher::factory()->create(['user_id' => $user->id]);
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $attendance = Attendance::factory()->create(['status' => 'present']);
+        $academicYear = \App\Models\AcademicYear::factory()->create();
+        $class = \App\Models\SchoolClass::factory()->create(['academic_year_id' => $academicYear->id]);
+        $student = Student::factory()->create(['class_id' => $class->id]);
+        $subject = Subject::factory()->create();
+        
+        $teacher->classes()->attach($class->id, [
+            'subject_id' => $subject->id,
+            'academic_year_id' => $academicYear->id,
+            'coefficient' => 1
+        ]);
+
+        $attendance = Attendance::factory()->create(['status' => 'present', 'student_id' => $student->id]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->putJson('/api/attendances/' . $attendance->id, [

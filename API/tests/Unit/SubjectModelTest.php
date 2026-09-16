@@ -16,7 +16,7 @@ class SubjectModelTest extends TestCase
      */
     public function test_subject_has_correct_fillable_fields(): void
     {
-        $fillable = ['name', 'code', 'description', 'tenant_id'];
+        $fillable = ['name', 'code', 'description'];
         $subject = new Subject();
 
         $this->assertEquals($fillable, $subject->getFillable());

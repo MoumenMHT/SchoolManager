@@ -15,8 +15,7 @@ class TeacherSubject extends Model
     protected $fillable = [
         'teacher_id',
         'subject_id',
-        'tenant_id',
-    ];
+        ];
 
     // Relationships
     public function teacher(): BelongsTo

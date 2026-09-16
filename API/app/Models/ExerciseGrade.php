@@ -15,8 +15,7 @@ class ExerciseGrade extends Model
         'grade_id',
         'exam_exercise_id',
         'note',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'note' => 'decimal:2',

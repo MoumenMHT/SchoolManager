@@ -16,8 +16,7 @@ class ExamExercise extends Model
         'exam_id',
         'level_name',
         'max_note',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'max_note' => 'decimal:2',

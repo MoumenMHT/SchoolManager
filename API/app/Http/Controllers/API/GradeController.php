@@ -19,6 +19,18 @@ use App\Services\GradingService;
 
 class GradeController extends Controller
 {
+    private function resolveAcademicYearId(Request $request): ?int
+    {
+        $val = $request->input('academic_year_id') ?? $request->input('academic_year');
+        if (!$val || $val === 'all') {
+            return null;
+        }
+        if (is_numeric($val)) {
+            return (int) $val;
+        }
+        return \App\Models\AcademicYear::where('name', $val)->value('id');
+    }
+
     private function applyGradeFilters(Builder $query, Request $request): Builder
     {
         $user = $request->user();
@@ -45,8 +57,9 @@ class GradeController extends Controller
             $query->whereHas('exam', fn($q) => $q->where('semester', $request->input('semester')));
         }
 
-        if ($request->filled('academic_year')) {
-            $query->whereHas('exam', fn($q) => $q->where('academic_year', $request->input('academic_year')));
+        $ayId = $this->resolveAcademicYearId($request);
+        if ($ayId) {
+            $query->whereHas('exam', fn($q) => $q->where('academic_year_id', $ayId));
         }
 
         if ($request->filled('exam_type')) {
@@ -111,6 +124,28 @@ class GradeController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $student = Student::with('class')->find($request->student_id);
+        $user = $request->user();
+
+        if ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+            if ($student && $student->class_id) {
+                $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                             || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+                if (!$teachesClass) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            }
+        } elseif ($user->role === 'supervisor') {
+            $supervisor = $user->supervisor;
+            if (!$supervisor || ($student && $student->class && $student->class->supervisor_id !== $supervisor->id)) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
+
         $exam = Exam::find($request->exam_id);
         if ($request->grade > $exam->max_grade) {
             return response()->json(['success' => false, 'message' => __('messages.grade_exceeds_max')], 422);
@@ -143,15 +178,34 @@ class GradeController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
-        $grade = Grade::with(['student', 'exam.subject', 'exam.teacher', 'exerciseGrades.exercise'])->find($id);
+        $grade = Grade::with(['student.class', 'exam.subject', 'exam.teacher', 'exerciseGrades.exercise'])->find($id);
 
         if (!$grade) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.grade_not_found')
             ], 404);
+        }
+
+        $user = $request->user();
+        if ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+            $teachesClass = $grade->student && $grade->student->class_id ? ($teacher->classes()->where('class_id', $grade->student->class_id)->exists() || $teacher->mainClasses()->where('id', $grade->student->class_id)->exists()) : false;
+            $isExamCreator = $grade->exam && $grade->exam->teacher_id === $teacher->id;
+            
+            if (!$teachesClass && !$isExamCreator) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        } elseif ($user->role === 'supervisor') {
+            $supervisor = $user->supervisor;
+            if (!$supervisor || !$grade->student || !$grade->student->class || $grade->student->class->supervisor_id !== $supervisor->id) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
         }
 
         return response()->json([
@@ -173,13 +227,23 @@ class GradeController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $grade = Grade::find($id);
+        $grade = Grade::with(['student.class', 'exam'])->find($id);
         
         if (!$grade) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.grade_not_found')
             ], 404);
+        }
+
+        $user = $request->user();
+        if ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher || !$grade->exam || $grade->exam->teacher_id !== $teacher->id) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        } elseif ($user->role === 'supervisor') {
+            return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -218,15 +282,25 @@ class GradeController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id, Request $request)
     {
-        $grade = Grade::find($id);
+        $grade = Grade::with('exam')->find($id);
         
         if (!$grade) {
             return response()->json([
                 'success' => false,
                 'message' => __('messages.grade_not_found')
             ], 404);
+        }
+
+        $user = $request->user();
+        if ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher || !$grade->exam || $grade->exam->teacher_id !== $teacher->id) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        } elseif ($user->role === 'supervisor') {
+            return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
         }
 
         $grade->delete();
@@ -243,7 +317,7 @@ class GradeController extends Controller
      */
     public function getStudentGrades(string $studentId, Request $request)
     {
-        $student = Student::find($studentId);
+        $student = Student::with('class')->find($studentId);
 
         if (!$student) {
             return response()->json([
@@ -252,14 +326,28 @@ class GradeController extends Controller
             ], 404);
         }
 
-        // Parents can only access grades for their own children
-        if ($request->user()->role === 'parent') {
-            $parent = $request->user()->parent;
+        // Role-based access control (IDOR prevention)
+        $user = $request->user();
+        if ($user->role === 'parent') {
+            $parent = $user->parent;
             if (!$parent || $student->parent_id !== $parent->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('messages.unauthorized')
-                ], 403);
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        } elseif ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+            $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                         || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+            if (!$teachesClass) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        } elseif ($user->role === 'supervisor') {
+            $supervisor = $user->supervisor;
+            $class = $student->class;
+            if (!$supervisor || !$class || $class->supervisor_id !== $supervisor->id) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
             }
         }
 
@@ -269,8 +357,8 @@ class GradeController extends Controller
         if ($request->has('semester')) {
             $query->whereHas('exam', fn($q) => $q->where('semester', $request->semester));
         }
-        if ($request->has('academic_year')) {
-            $query->whereHas('exam', fn($q) => $q->where('academic_year', $request->academic_year));
+        if ($request->has('academic_year_id')) {
+            $query->whereHas('exam', fn($q) => $q->where('academic_year_id', $request->academic_year_id));
         }
         if ($request->has('subject_id')) {
             $query->whereHas('exam', fn($q) => $q->where('subject_id', $request->subject_id));
@@ -302,38 +390,64 @@ class GradeController extends Controller
             ], 404);
         }
 
-        if ($request->user()->role === 'parent') {
-            $parent = $request->user()->parent;
+        // Role-based access control (IDOR prevention)
+        $user = $request->user();
+        if ($user->role === 'parent') {
+            $parent = $user->parent;
             if (!$parent || $student->parent_id !== $parent->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => __('messages.unauthorized')
-                ], 403);
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        } elseif ($user->role === 'teacher') {
+            $teacher = $user->teacher;
+            if (!$teacher) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+            $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                         || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+            if (!$teachesClass) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        } elseif ($user->role === 'supervisor') {
+            $supervisor = $user->supervisor;
+            $class = $student->class;
+            if (!$supervisor || !$class || $class->supervisor_id !== $supervisor->id) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
             }
         }
 
         $validator = Validator::make($request->all(), [
             'semester' => 'required|string',
-            'academic_year' => 'required|string',
+            'academic_year_id' => 'nullable',
+            'academic_year' => 'nullable',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $averages = \App\Models\StudentAverage::with('subject')
-            ->where('student_id', $studentId)
-            ->where('trimester', $request->semester)
-            ->where('academic_year', $request->academic_year)
-            ->get();
+        $ayId = $this->resolveAcademicYearId($request);
 
-        $rawGrades = \App\Models\Grade::with('exam.teacher')
+        $averagesQuery = \App\Models\StudentAverage::with('subject')
             ->where('student_id', $studentId)
-            ->whereHas('exam', fn($q) => $q
+            ->where('trimester', $request->semester);
+        if ($ayId) {
+            $averagesQuery->where('academic_year_id', $ayId);
+        }
+        $averages = $averagesQuery->get();
+
+        $rawGradesQuery = \App\Models\Grade::with('exam.teacher')
+            ->where('student_id', $studentId);
+        if ($ayId) {
+            $rawGradesQuery->whereHas('exam', fn($q) => $q
                 ->where('semester', $request->semester)
-                ->where('academic_year', $request->academic_year)
-            )
-            ->get();
+                ->where('academic_year_id', $ayId)
+            );
+        } else {
+            $rawGradesQuery->whereHas('exam', fn($q) => $q
+                ->where('semester', $request->semester)
+            );
+        }
+        $rawGrades = $rawGradesQuery->get();
         $gradesBySubject = $rawGrades->groupBy(fn($g) => $g->exam?->subject_id);
 
         $subjectAverages = $averages->where('record_type', 'subject')->values();
@@ -375,7 +489,7 @@ class GradeController extends Controller
             'data' => [
                 'student' => $student,
                 'semester' => $request->semester,
-                'academic_year' => $request->academic_year,
+                'academic_year_id' => $request->academic_year_id,
                 'subjects' => $formattedSubjects,
                 'overall_average' => $overallAverageRow ? $overallAverageRow->average : 0,
             ]
@@ -394,8 +508,8 @@ class GradeController extends Controller
         if ($request->has('semester')) {
             $query->whereHas('exam', fn($q) => $q->where('semester', $request->semester));
         }
-        if ($request->has('academic_year')) {
-            $query->whereHas('exam', fn($q) => $q->where('academic_year', $request->academic_year));
+        if ($request->has('academic_year_id')) {
+            $query->whereHas('exam', fn($q) => $q->where('academic_year_id', $request->academic_year_id));
         }
         if ($request->has('subject_id')) {
             $query->whereHas('exam', fn($q) => $q->where('subject_id', $request->subject_id));
@@ -434,8 +548,8 @@ class GradeController extends Controller
         if ($request->has('semester')) {
             $query->whereHas('exam', fn($q) => $q->where('semester', $request->semester));
         }
-        if ($request->has('academic_year')) {
-            $query->whereHas('exam', fn($q) => $q->where('academic_year', $request->academic_year));
+        if ($request->has('academic_year_id')) {
+            $query->whereHas('exam', fn($q) => $q->where('academic_year_id', $request->academic_year_id));
         }
         if ($request->has('class_id')) {
             $query->whereHas('student', fn($q) => $q->where('class_id', $request->class_id));
@@ -499,6 +613,36 @@ class GradeController extends Controller
 
                 if ($gradeData['grade'] > $exam->max_grade) {
                     $errors[] = ['index' => $index, 'message' => "Grade {$gradeData['grade']} exceeds max grade {$exam->max_grade}"];
+                    continue;
+                }
+
+                $user = $request->user();
+                if ($user->role === 'teacher') {
+                    $teacher = $user->teacher;
+                    if (!$teacher) {
+                        $errors[] = ['index' => $index, 'message' => __('messages.unauthorized')];
+                        continue;
+                    }
+                    if (isset($gradeData['id']) && $gradeData['id']) {
+                        if ($exam->teacher_id !== $teacher->id) {
+                            $errors[] = ['index' => $index, 'message' => __('messages.unauthorized')];
+                            continue;
+                        }
+                    } else {
+                        $student = Student::find($gradeData['student_id']);
+                        if (!$student || !$student->class_id) {
+                            $errors[] = ['index' => $index, 'message' => __('messages.unauthorized')];
+                            continue;
+                        }
+                        $teachesClass = $teacher->classes()->where('class_id', $student->class_id)->exists() 
+                                     || $teacher->mainClasses()->where('id', $student->class_id)->exists();
+                        if (!$teachesClass) {
+                            $errors[] = ['index' => $index, 'message' => __('messages.unauthorized')];
+                            continue;
+                        }
+                    }
+                } elseif ($user->role === 'supervisor') {
+                    $errors[] = ['index' => $index, 'message' => __('messages.unauthorized')];
                     continue;
                 }
 
@@ -617,7 +761,8 @@ class GradeController extends Controller
         $validator = Validator::make($request->all(), [
             'subject_id'    => 'nullable|exists:subjects,id',
             'class_id'      => 'nullable|exists:classes,id',
-            'academic_year' => 'required|string',
+            'academic_year_id' => 'nullable',
+            'academic_year' => 'nullable',
             'semester'      => 'nullable|string',
             'exam_type'     => 'nullable|string',
             'teacher_id'    => 'nullable|exists:teachers,id',
@@ -629,8 +774,12 @@ class GradeController extends Controller
 
         $query = \App\Models\ExerciseGrade::join('exam_exercises', 'exam_exercises.id', '=', 'exercise_grades.exam_exercise_id')
             ->join('exams', 'exams.id', '=', 'exam_exercises.exam_id')
-            ->join('grades', 'grades.id', '=', 'exercise_grades.grade_id')
-            ->where('exams.academic_year', $request->input('academic_year'));
+            ->join('grades', 'grades.id', '=', 'exercise_grades.grade_id');
+
+        $ayId = $this->resolveAcademicYearId($request);
+        if ($ayId) {
+            $query->where('exams.academic_year_id', $ayId);
+        }
 
         if ($request->filled('subject_id')) {
             $query->where('exams.subject_id', $request->input('subject_id'));
@@ -690,20 +839,24 @@ class GradeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'semester' => 'required|string',
-            'academic_year' => 'required|string',
+            'academic_year_id' => 'nullable',
+            'academic_year' => 'nullable',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $rankingsRecords = \App\Models\StudentAverage::with('student')
+        $ayId = $this->resolveAcademicYearId($request);
+
+        $rankingsQuery = \App\Models\StudentAverage::with('student')
             ->where('class_id', $classId)
             ->where('record_type', 'overall')
-            ->where('trimester', $request->semester)
-            ->where('academic_year', $request->academic_year)
-            ->orderByDesc('average')
-            ->get();
+            ->where('trimester', $request->semester);
+        if ($ayId) {
+            $rankingsQuery->where('academic_year_id', $ayId);
+        }
+        $rankingsRecords = $rankingsQuery->orderByDesc('average')->get();
 
         $rankings = $rankingsRecords->map(function ($row, $index) {
             return [
@@ -723,7 +876,7 @@ class GradeController extends Controller
             'data' => [
                 'class_id' => $classId,
                 'semester' => $request->semester,
-                'academic_year' => $request->academic_year,
+                'academic_year_id' => $ayId,
                 'rankings' => $rankings,
             ]
         ]);
@@ -741,7 +894,8 @@ class GradeController extends Controller
             'teacher_id' => 'nullable|integer|exists:teachers,id',
             'class_id' => 'nullable|integer|exists:classes,id',
             'semester' => 'nullable|string|max:255',
-            'academic_year' => 'nullable|string|max:255',
+            'academic_year_id' => 'nullable',
+            'academic_year' => 'nullable',
             'exam_type' => 'nullable|string|max:255',
         ]);
 
@@ -752,20 +906,25 @@ class GradeController extends Controller
         $user = $request->user();
         $cycle = ($user && method_exists($user, 'isDirector') && $user->isDirector()) ? $user->directorCycle() : 'global';
 
+        $ayId = $this->resolveAcademicYearId($request);
+
+        $tenantId = $user ? ($user->tenant_id ?? 'default') : 'default';
+
         $filters = [
+            'tenant_id' => $tenantId,
             'student_id' => $request->input('student_id', 'all'),
             'subject_id' => $request->input('subject_id', 'all'),
             'teacher_id' => $request->input('teacher_id', 'all'),
             'class_id' => $request->input('class_id', 'all'),
             'semester' => $request->input('semester', 'all'),
-            'academic_year' => $request->input('academic_year', 'all'),
+            'academic_year_id' => $ayId ?? $request->input('academic_year', 'all'),
             'exam_type' => $request->input('exam_type', 'all'),
             'cycle' => $cycle,
         ];
 
         $cacheKey = 'grades:analytics:overview:' . md5(json_encode($filters));
 
-        $payload = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($request) {
+        $payload = Cache::remember($cacheKey, now()->addMinutes(2), function () use ($request) {
             // All analytics queries need the exams join for max_grade / subject / teacher resolution
             $normalizedExpression = 'CASE WHEN exams.max_grade > 0 THEN (grades.grade / exams.max_grade) * 20 ELSE 0 END';
 
@@ -874,8 +1033,8 @@ class GradeController extends Controller
                 ->groupBy('grades.student_id', 'exams.subject_id');
             $this->applyGradeFilters($subjAvgQuery, $request);
 
-            $passRateMap = DB::table(DB::raw('(' . $subjAvgQuery->toSql() . ') as sub'))
-                ->mergeBindings($subjAvgQuery->getQuery())
+            $passRateMap = DB::query()
+                ->fromSub($subjAvgQuery, 'sub')
                 ->selectRaw('student_id')
                 ->selectRaw('ROUND(AVG(CASE WHEN subj_avg >= 10 THEN 100 ELSE 0 END), 2) as pass_rate')
                 ->groupBy('student_id')

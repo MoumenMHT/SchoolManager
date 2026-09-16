@@ -25,7 +25,7 @@ class ContractFactory extends Factory
 
         return [
             'parent_id'        => ParentModel::factory(),
-            'academic_year'    => '2025-2026',
+            'academic_year_id'    => \App\Models\AcademicYear::factory(),
             'total_fees'       => $grossTotal,
             'discount_type'    => $discPct > 0 ? 'percentage' : null,
             'discount_value'   => $discAmt,

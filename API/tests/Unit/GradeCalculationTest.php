@@ -21,8 +21,7 @@ class GradeCalculationTest extends TestCase
             'student_id' => $student->id,
             'exam_id' => $exam->id,
             'grade' => 15.5,
-            'comment' => 'Good job',
-            'tenant_id' => $this->tenant->id
+            'comment' => 'Good job'
         ]);
 
         $this->assertEquals(15.5, $grade->grade);

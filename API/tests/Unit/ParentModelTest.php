@@ -17,7 +17,7 @@ class ParentModelTest extends TestCase
      */
     public function test_parent_has_correct_fillable_fields(): void
     {
-        $fillable = ['user_id', 'first_name', 'last_name', 'phone', 'email', 'cin', 'profession', 'tenant_id'];
+        $fillable = ['user_id', 'first_name', 'last_name', 'phone', 'email', 'cin', 'profession'];
         $parent = new ParentModel();
         
         $this->assertEquals($fillable, $parent->getFillable());

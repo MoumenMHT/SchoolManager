@@ -18,7 +18,7 @@ class ClassSubjectTeacherFactory extends Factory
             'class_id' => SchoolClass::factory(),
             'subject_id' => Subject::factory(),
             'teacher_id' => Teacher::factory(),
-            'academic_year' => '2025-2026',
+            'academic_year_id' => \App\Models\AcademicYear::factory(),
             'coefficient' => fake()->numberBetween(1, 5),
         ];
     }

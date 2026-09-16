@@ -15,8 +15,7 @@ class Subject extends Model
         'name',
         'code',
         'description',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         //
@@ -41,14 +40,14 @@ class Subject extends Model
     public function classes(): BelongsToMany
     {
         return $this->belongsToMany(SchoolClass::class, 'class_subject_teacher')
-            ->withPivot('teacher_id', 'academic_year', 'coefficient')
+            ->withPivot('teacher_id', 'academic_year_id', 'coefficient')
             ->withTimestamps();
     }
 
     public function teachers(): BelongsToMany
     {
         return $this->belongsToMany(Teacher::class, 'class_subject_teacher')
-            ->withPivot('class_id', 'academic_year', 'coefficient')
+            ->withPivot('class_id', 'academic_year_id', 'coefficient')
             ->withTimestamps();
     }
 

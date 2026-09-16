@@ -60,7 +60,15 @@ class AttendanceSeeder extends Seeder
 
     public function run(): void
     {
-        $this->command->info('Seeding Attendance for June 2026...');
+        $this->command->info('Seeding Attendance for June 2027...');
+
+        // Initialize tenancy so models write with the correct tenant_id
+        $tenant = \App\Models\Tenant::firstOrCreate(
+            ['id' => 'school1'],
+            ['data' => ['name' => 'Default School']]
+        );
+        tenancy()->initialize($tenant);
+        $this->tenantId = $tenant->id;
 
         $classes  = SchoolClass::where('is_active', true)->get();
         $students = Student::where('is_active', true)->get();
@@ -101,11 +109,16 @@ class AttendanceSeeder extends Seeder
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    //  Tenant ID (set during run())
+    // ─────────────────────────────────────────────────────────────────────
+    private string $tenantId = 'school1';
+
+    // ─────────────────────────────────────────────────────────────────────
     //  Step 2 – Create CST Assignments
     // ─────────────────────────────────────────────────────────────────────
     private function createCSTAssignments($classes): void
     {
-        $academicYear = '2025-2026';
+        $academicYearId = \App\Models\AcademicYear::where('is_current', true)->first()->id ?? 1;
 
         foreach ($classes as $class) {
             $levelSubjects = LevelSubject::where('level_id', $class->level_id)->get();
@@ -114,7 +127,7 @@ class AttendanceSeeder extends Seeder
                 $this->command->warn("No level subjects for class {$class->name}. Using all subjects as fallback.");
                 $subjects = Subject::all();
                 foreach ($subjects as $subject) {
-                    $this->upsertCST($class, $subject->id, $class->main_teacher_id ?? Teacher::first()?->id, $academicYear, 1);
+                    $this->upsertCST($class, $subject->id, $class->main_teacher_id ?? Teacher::first()?->id, $academicYearId, 1);
                 }
                 continue;
             }
@@ -125,14 +138,14 @@ class AttendanceSeeder extends Seeder
                     $this->command->warn("No teacher for subject {$ls->subject_id} in class {$class->name}. Skipping.");
                     continue;
                 }
-                $this->upsertCST($class, $ls->subject_id, $teacher->id, $academicYear, $ls->coefficient ?? 1);
+                $this->upsertCST($class, $ls->subject_id, $teacher->id, $academicYearId, $ls->coefficient ?? 1);
             }
         }
 
         $this->command->info('CST assignments created: ' . ClassSubjectTeacher::count());
     }
 
-    private function upsertCST($class, int $subjectId, ?int $teacherId, string $academicYear, int $coeff): void
+    private function upsertCST($class, int $subjectId, ?int $teacherId, int $academicYearId, int $coeff): void
     {
         if (!$teacherId) {
             return;
@@ -140,7 +153,7 @@ class AttendanceSeeder extends Seeder
 
         $exists = ClassSubjectTeacher::where('class_id', $class->id)
             ->where('subject_id', $subjectId)
-            ->where('academic_year', $academicYear)
+            ->where('academic_year_id', $academicYearId)
             ->exists();
 
         if (!$exists) {
@@ -148,7 +161,7 @@ class AttendanceSeeder extends Seeder
                 'class_id'      => $class->id,
                 'subject_id'    => $subjectId,
                 'teacher_id'    => $teacherId,
-                'academic_year' => $academicYear,
+                'academic_year_id' => $academicYearId,
                 'coefficient'   => $coeff,
             ]);
         }
@@ -302,6 +315,7 @@ class AttendanceSeeder extends Seeder
                         'status'      => $status,
                         'time'        => $time,
                         'reason'      => $reason,
+                        'tenant_id'   => $this->tenantId,
                         'created_at'  => $now,
                         'updated_at'  => $now,
                     ];
@@ -327,8 +341,8 @@ class AttendanceSeeder extends Seeder
     private function getJuneSchoolDays(): array
     {
         $days    = [];
-        $current = Carbon::create(2026, 6, 1);
-        $end     = Carbon::create(2026, 6, 30);
+        $current = Carbon::create(2027, 6, 1);
+        $end     = Carbon::create(2027, 6, 30);
 
         // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu
         $schoolDayNums = [0, 1, 2, 3, 4];

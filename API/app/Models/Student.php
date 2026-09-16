@@ -23,8 +23,7 @@ class Student extends Model
         'enrollment_date',
         'medical_info',
         'is_active',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'birth_date' => 'date',

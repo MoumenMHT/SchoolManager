@@ -73,7 +73,7 @@ class AuthController extends Controller
             default => now()->addHours(24),
         };
 
-        $token = $matchedUser->createToken('auth_token', ['*'], $expiresAt)->plainTextToken;
+        \Illuminate\Support\Facades\Auth::guard('web')->login($matchedUser, true);
 
         $userData = $matchedUser->toArray();
         if ($matchedUser->role === 'parent' && $matchedUser->parent) {
@@ -82,9 +82,7 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'token' => $token,
             'tenant_id' => $matchedUser->tenant_id,
-            'token_type' => 'Bearer',
             'user' => $userData
         ]);
     }
@@ -131,15 +129,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Set token expiration based on role
-        $expiresAt = match($user->role) {
-            'admin' => now()->addHours(8),      // 8 hours for admins
-            'teacher' => now()->addDays(7),     // 7 days for teachers
-            'parent' => now()->addDays(7),      // 7 days for parents
-            default => now()->addDay(),         // 24 hours default
-        };
-
-        $token = $user->createToken('auth_token', ['*'], $expiresAt)->plainTextToken;
+        \Illuminate\Support\Facades\Auth::guard('web')->login($user, true);
 
         // Load related data based on role
         $userData = $user->toArray();
@@ -154,8 +144,6 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'token' => $token,
-            'token_type' => 'Bearer',
             'user' => $userData
         ]);
     }
@@ -208,7 +196,7 @@ class AuthController extends Controller
             }
         }
 
-        $user = User::create([
+        $user = User::forceCreate([
             'username' => $request->username,
             'password' => Hash::make($request->password),
             'role' => $request->role,
@@ -251,7 +239,19 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        if ($user) {
+            $token = $user->currentAccessToken();
+            if ($token && method_exists($token, 'delete')) {
+                $token->delete();
+            }
+        }
+        
+        \Illuminate\Support\Facades\Auth::guard('web')->logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json([
             'success' => true,

@@ -10,19 +10,17 @@ class ApiService {
     this.baseURL = config.apiBaseUrl;
     this.api = axios.create({
       baseURL: this.baseURL,
+      withCredentials: true,
+      withXSRFToken: true,
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
     });
 
-    // Request interceptor to add token
+    // Request interceptor to add tenant and locale
     this.api.interceptors.request.use(
       (config) => {
-        const token = this.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
         const locale = localStorage.getItem('locale') || 'en';
         config.headers['Accept-Language'] = locale;
 
@@ -31,8 +29,9 @@ class ApiService {
         const isCentralRoute = config.url?.startsWith('/central') || config.url?.startsWith('central');
         
         // Failsafe for users who have old sessions without a tenant_id
-        if (!tenantId && !isCentralRoute && token && config.url !== '/central/login') {
-            this.removeToken();
+        const user = this.getUser();
+        if (!tenantId && !isCentralRoute && user && config.url !== '/central/login') {
+            this.clearSession();
             window.location.href = '/auth/login';
             return Promise.reject(new Error('Missing tenant ID. Please log in again.'));
         }
@@ -56,11 +55,11 @@ class ApiService {
         if (error.response?.status === 401) {
           const requestUrl = error.config?.url || '';
           const isLoginRequest = /\/login\/?$/.test(requestUrl);
-          const hasToken = !!this.getToken();
+          const hasUser = !!this.getUser();
 
           // Keep login form errors on the same page; only force redirect for expired authenticated sessions.
-          if (!isLoginRequest && hasToken) {
-            this.removeToken();
+          if (!isLoginRequest && hasUser) {
+            this.clearSession();
             if (window.location.pathname !== '/auth/login') {
               window.location.href = '/auth/login';
             }
@@ -85,18 +84,14 @@ class ApiService {
     return tenantId ? `${tenantId}_${key}` : key;
   }
 
-  // Token management
+  // Token management (Tokens no longer stored in localStorage for XSS protection)
   private getToken(): string | null {
-    return localStorage.getItem(this.getNamespacedKey('auth_token'));
+    return null; // Disabled for Web SPA
   }
 
-  public setToken(token: string): void {
-    localStorage.setItem(this.getNamespacedKey('auth_token'), token);
-  }
-
-  public removeToken(): void {
-    localStorage.removeItem(this.getNamespacedKey('auth_token'));
+  public clearSession(): void {
     localStorage.removeItem(this.getNamespacedKey('user'));
+    localStorage.removeItem('current_tenant_id');
   }
 
   // User management
@@ -110,13 +105,19 @@ class ApiService {
   }
 
   // Authentication methods
+  async initCsrf(): Promise<void> {
+    // For local dev, Laravel Sanctum CSRF endpoint is usually on the same host/port as API
+    // but without the /api prefix.
+    const sanctumUrl = this.baseURL.replace(/\/api\/?$/, '');
+    await axios.get(`${sanctumUrl}/sanctum/csrf-cookie`, { withCredentials: true });
+  }
+
   async login(username: string, password: string): Promise<AuthResponse> {
     const response = await this.api.post<AuthResponse>('/central/login', { username, password });
-    if (response.data.success && response.data.token) {
+    if (response.data.success) {
       if ((response.data as any).tenant_id) {
         this.setTenantId((response.data as any).tenant_id);
       }
-      this.setToken(response.data.token);
       this.setUser(response.data.user);
     }
     return response.data;
@@ -126,7 +127,7 @@ class ApiService {
     try {
       await this.api.post('/logout');
     } finally {
-      this.removeToken();
+      this.clearSession();
     }
   }
 
@@ -167,7 +168,7 @@ class ApiService {
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return !!this.getUser();
   }
 }
 

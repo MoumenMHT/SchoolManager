@@ -14,8 +14,7 @@ class PaymentAllocation extends Model
         'payment_id',
         'bill_id',
         'amount',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'amount' => 'decimal:2',

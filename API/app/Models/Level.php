@@ -19,8 +19,7 @@ class Level extends Model
         'name',
         'sort_order',
         'is_active',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'year_number' => 'integer',

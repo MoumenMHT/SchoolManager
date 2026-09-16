@@ -20,13 +20,21 @@ class ExamsAndGradesSeeder extends Seeder
     {
         $this->command->info('🎓 Seeding exams, exercises, and grades (3 trimesters)…');
 
+        // Initialize tenancy so models write with the correct tenant_id
+        $tenant = \App\Models\Tenant::firstOrCreate(
+            ['id' => 'school1'],
+            ['data' => ['name' => 'Default School']]
+        );
+        tenancy()->initialize($tenant);
+        $tenantId = $tenant->id;
+
         $classes = SchoolClass::with(['students'])->get();
         if ($classes->isEmpty()) {
             $this->command->warn('No classes found. Run the base seeder first.');
             return;
         }
 
-        $academicYear = '2025-2026';
+        $academicYearId = \App\Models\AcademicYear::where('is_current', true)->first()->id ?? 1;
         $semesters    = ['Trimester 1', 'Trimester 2', 'Trimester 3'];
         $examTypes    = [
             'devoir_1'    => ['max' => 20, 'exercises' => [['n' => 'تمرين 1', 'm' => 8], ['n' => 'تمرين 2', 'm' => 8], ['n' => 'تمرين 3', 'm' => 4]]],
@@ -35,12 +43,12 @@ class ExamsAndGradesSeeder extends Seeder
         ];
 
         // ── 1 query: all assignments grouped by class ─────────────────────
-        $assignments = ClassSubjectTeacher::where('academic_year', $academicYear)
+        $assignments = ClassSubjectTeacher::where('academic_year_id', $academicYearId)
             ->get()
             ->groupBy('class_id');
 
         // ── 1 query: existing exams → hash map to skip firstOrCreate SELECT ─
-        $existingExams = Exam::where('academic_year', $academicYear)
+        $existingExams = Exam::where('academic_year_id', $academicYearId)
             ->get()
             ->keyBy(fn($e) => "{$e->subject_id}|{$e->teacher_id}|{$e->exam_type}|{$e->semester}");
 
@@ -80,7 +88,7 @@ class ExamsAndGradesSeeder extends Seeder
                                 'teacher_id'    => $assignment->teacher_id,
                                 'exam_type'     => $type,
                                 'semester'      => $semester,
-                                'academic_year' => $academicYear,
+                                'academic_year_id' => $academicYearId,
                                 'max_grade'     => $def['max'],
                             ]);
                             $existingExams[$examKey] = $exam;
@@ -99,7 +107,14 @@ class ExamsAndGradesSeeder extends Seeder
                         if ($wasNew) {
                             $batch = [];
                             foreach ($def['exercises'] as $ex) {
-                                $batch[] = ['exam_id' => $exam->id, 'level_name' => $ex['n'], 'max_note' => $ex['m'], 'created_at' => now(), 'updated_at' => now()];
+                                $batch[] = [
+                                    'exam_id' => $exam->id,
+                                    'level_name' => $ex['n'],
+                                    'max_note' => $ex['m'],
+                                    'tenant_id' => $tenantId,
+                                    'created_at' => now(),
+                                    'updated_at' => now()
+                                ];
                             }
                             ExamExercise::insert($batch);
                         }
@@ -130,6 +145,7 @@ class ExamsAndGradesSeeder extends Seeder
                                 'student_id' => $student->id,
                                 'exam_id'    => $exam->id,
                                 'grade'      => min(round($totalScore, 2), (float) $exam->max_grade),
+                                'tenant_id'  => $tenantId,
                                 'created_at' => $now,
                                 'updated_at' => $now,
                             ]);
@@ -141,6 +157,7 @@ class ExamsAndGradesSeeder extends Seeder
                                     'grade_id'         => $gradeId,
                                     'exam_exercise_id' => $exId,
                                     'note'             => $score,
+                                    'tenant_id'        => $tenantId,
                                     'created_at'       => $now,
                                     'updated_at'       => $now,
                                 ];

@@ -290,11 +290,19 @@ import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import ApiService from '@/service/ApiService';
 import GradeService from '@/service/GradeService';
+import AcademicYearService from '@/service/AcademicYearService';
 
 const { t } = useI18n();
 const toast = useToast();
 const confirm = useConfirm();
 
+const getDefaultYearFallback = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  return now.getMonth() >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+};
+
+const activeAcademicYear = ref<string>(getDefaultYearFallback());
 const loading = ref(false);
 const saving = ref(false);
 const teacherId = ref<number | null>(null);
@@ -355,10 +363,7 @@ const editExamForm = ref<any>({
 
 // ─── Computed ──────────────────────────────────────────────────────────────────
 const currentAcademicYear = computed(() => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+  return activeAcademicYear.value;
 });
 
 const availableLevels = computed(() => {
@@ -401,6 +406,7 @@ const editExamMaxGrade = computed(() => {
 
 // ─── Methods ───────────────────────────────────────────────────────────────────
 onMounted(async () => {
+  activeAcademicYear.value = await AcademicYearService.getCurrentAcademicYear();
   await loadClasses();
 });
 

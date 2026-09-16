@@ -20,7 +20,7 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        $academicYear = $request->get('academic_year', date('Y') . '-' . (date('Y') + 1));
+        $academicYearId = $request->get('academic_year_id', date('Y') . '-' . (date('Y') + 1));
         
         $user = auth()->user();
         $isDirector = $user && method_exists($user, 'isDirector') && $user->isDirector();
@@ -46,7 +46,7 @@ class DashboardController extends Controller
         
         // Total classes
         $classQuery = SchoolClass::where('is_active', true)
-            ->where('academic_year', $academicYear);
+            ->where('academic_year_id', $academicYearId);
         if ($isDirector) {
             $classQuery->whereHas('levelProfile', function ($q) use ($directorCycle) {
                 $q->where('cycle', $directorCycle);
@@ -62,25 +62,25 @@ class DashboardController extends Controller
             $paymentRate = 0;
             $recentPayments = [];
         } else {
-            $totalRevenue = Payment::whereHas('contract', function ($q) use ($academicYear) {
-                    $q->where('academic_year', $academicYear);
+            $totalRevenue = Payment::whereHas('contract', function ($q) use ($academicYearId) {
+                    $q->where('academic_year_id', $academicYearId);
                 })
                 ->where('status', 'completed')
                 ->sum('amount');
                 
-            $pendingPayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
-                    $q->where('academic_year', $academicYear);
+            $pendingPayments = Payment::whereHas('contract', function ($q) use ($academicYearId) {
+                    $q->where('academic_year_id', $academicYearId);
                 })
                 ->where('status', 'pending')
                 ->sum('amount');
                 
-            $latePayments = Payment::whereHas('contract', function ($q) use ($academicYear) {
-                    $q->where('academic_year', $academicYear);
+            $latePayments = Payment::whereHas('contract', function ($q) use ($academicYearId) {
+                    $q->where('academic_year_id', $academicYearId);
                 })
                 ->where('status', 'late')
                 ->sum('amount');
 
-            $totalExpected = Contract::where('academic_year', $academicYear)
+            $totalExpected = Contract::where('academic_year_id', $academicYearId)
                 ->sum(DB::raw('total_fees - discount_value'));
             $paymentRate = $totalExpected > 0 ? ($totalRevenue / $totalExpected) * 100 : 0;
             
@@ -111,8 +111,8 @@ class DashboardController extends Controller
             : 0;
 
         // Average grades (current academic year)
-        $gradeQuery = Grade::whereHas('exam', function ($q) use ($academicYear) {
-            $q->where('academic_year', $academicYear);
+        $gradeQuery = Grade::whereHas('exam', function ($q) use ($academicYearId) {
+            $q->where('academic_year_id', $academicYearId);
         });
         if ($isDirector) {
              $gradeQuery->whereHas('student.class.levelProfile', function ($q) use ($directorCycle) {
@@ -123,7 +123,7 @@ class DashboardController extends Controller
 
         // Students by class
         $studentsByClassQuery = SchoolClass::where('is_active', true)
-            ->where('academic_year', $academicYear);
+            ->where('academic_year_id', $academicYearId);
         if ($isDirector) {
             $studentsByClassQuery->whereHas('levelProfile', function ($q) use ($directorCycle) {
                 $q->where('cycle', $directorCycle);

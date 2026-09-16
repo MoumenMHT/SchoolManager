@@ -17,8 +17,7 @@ class Grade extends Model
         'exam_id',
         'grade',
         'comment',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'grade' => 'decimal:2',
@@ -63,5 +62,10 @@ class Grade extends Model
     {
         $maxGrade = $this->exam?->max_grade ?? 20;
         return $maxGrade > 0 ? ($this->grade / $maxGrade) * 20 : 0;
+    }
+
+    public function academicYear()
+    {
+        return $this->belongsTo(AcademicYear::class);
     }
 }

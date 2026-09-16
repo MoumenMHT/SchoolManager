@@ -9,6 +9,7 @@ use App\Models\SchoolClass;
 use App\Models\Attendance;
 use App\Models\Schedule;
 use App\Models\ClassSubjectTeacher;
+use App\Models\AcademicYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -16,6 +17,23 @@ use Illuminate\Support\Facades\DB;
 
 class SupervisorController extends Controller
 {
+    private function resolveAcademicYearId(Request $request): ?int
+    {
+        $val = $request->input('academic_year_id') ?? $request->input('academic_year');
+        if (!$val || $val === 'all') {
+            return null;
+        }
+        if (is_numeric($val)) {
+            return (int) $val;
+        }
+        $user = auth()->user() ?? $request->user();
+        $tenantId = $user ? $user->tenant_id : null;
+        $q = AcademicYear::where('name', $val);
+        if ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        }
+        return $q->value('id');
+    }
     // ─── Admin CRUD ───────────────────────────────────────────────
 
     public function index()
@@ -78,7 +96,7 @@ class SupervisorController extends Controller
         try {
             return DB::transaction(function () use ($request) {
                 // Create user account
-                $user = User::create([
+                $user = User::forceCreate([
                     'username' => $request->username,
                     'password' => Hash::make($request->password),
                     'role' => 'supervisor',
@@ -120,7 +138,19 @@ class SupervisorController extends Controller
     public function show($id)
     {
         try {
-            $supervisor = Supervisor::with(['user', 'classes.students'])->findOrFail($id);
+            $supervisor = Supervisor::with(['user', 'classes.students', 'classes.levelProfile'])->findOrFail($id);
+
+            $user = auth()->user();
+            if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+                $directorCycle = $user->directorCycle();
+                $hasClassesInCycle = $supervisor->classes->contains(function ($class) use ($directorCycle) {
+                    return $class->levelProfile && $class->levelProfile->cycle === $directorCycle;
+                });
+                if (!$hasClassesInCycle && $supervisor->classes->count() > 0) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            }
+
             return response()->json(['success' => true, 'data' => $supervisor]);
         } catch (\Exception $e) {
             return response()->json([
@@ -135,6 +165,18 @@ class SupervisorController extends Controller
     {
         try {
             $supervisor = Supervisor::findOrFail($id);
+
+            $user = auth()->user();
+            if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+                $directorCycle = $user->directorCycle();
+                $supervisor->load('classes.levelProfile');
+                $hasClassesInCycle = $supervisor->classes->contains(function ($class) use ($directorCycle) {
+                    return $class->levelProfile && $class->levelProfile->cycle === $directorCycle;
+                });
+                if (!$hasClassesInCycle && $supervisor->classes->count() > 0) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            }
 
             $validator = Validator::make($request->all(), [
                 'first_name' => 'sometimes|string|max:255',
@@ -221,6 +263,18 @@ class SupervisorController extends Controller
         try {
             $supervisor = Supervisor::findOrFail($id);
 
+            $user = auth()->user();
+            if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+                $directorCycle = $user->directorCycle();
+                $supervisor->load('classes.levelProfile');
+                $hasClassesInCycle = $supervisor->classes->contains(function ($class) use ($directorCycle) {
+                    return $class->levelProfile && $class->levelProfile->cycle === $directorCycle;
+                });
+                if (!$hasClassesInCycle && $supervisor->classes->count() > 0) {
+                    return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+                }
+            }
+
             // Remove supervisor from classes
             SchoolClass::where('supervisor_id', $supervisor->id)
                 ->update(['supervisor_id' => null]);
@@ -257,11 +311,26 @@ class SupervisorController extends Controller
                 return response()->json(['success' => false, 'message' => 'No supervisor profile linked'], 404);
             }
 
-            $classes = SchoolClass::where('supervisor_id', $supervisor->id)
-                ->with(['students' => function ($q) {
-                    $q->where('is_active', true)->orderBy('last_name');
-                }, 'levelProfile'])
-                ->get();
+            $ayId = $this->resolveAcademicYearId($request);
+            if (!$ayId) {
+                $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                    ->where('is_current', true)
+                    ->value('id');
+                if (!$ayId) {
+                    $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                        ->orderBy('start_date', 'desc')
+                        ->value('id');
+                }
+            }
+
+            $query = SchoolClass::where('supervisor_id', $supervisor->id);
+            if ($ayId) {
+                $query->where('academic_year_id', $ayId);
+            }
+
+            $classes = $query->with(['students' => function ($q) {
+                $q->where('is_active', true)->orderBy('last_name');
+            }, 'levelProfile'])->get();
 
             $classIds = $classes->pluck('id');
 
@@ -311,11 +380,26 @@ class SupervisorController extends Controller
 
             $today = now()->format('Y-m-d');
 
-            $classes = SchoolClass::where('supervisor_id', $supervisor->id)
-                ->with(['students' => function ($q) {
-                    $q->where('is_active', true);
-                }])
-                ->get();
+            $ayId = $this->resolveAcademicYearId($request);
+            if (!$ayId) {
+                $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                    ->where('is_current', true)
+                    ->value('id');
+                if (!$ayId) {
+                    $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                        ->orderBy('start_date', 'desc')
+                        ->value('id');
+                }
+            }
+
+            $query = SchoolClass::where('supervisor_id', $supervisor->id);
+            if ($ayId) {
+                $query->where('academic_year_id', $ayId);
+            }
+
+            $classes = $query->with(['students' => function ($q) {
+                $q->where('is_active', true);
+            }])->get();
 
             $classData = [];
             foreach ($classes as $class) {
@@ -395,6 +479,11 @@ class SupervisorController extends Controller
                     'current_time' => now()->format('H:i'),
                 ]
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('messages.class_not_found')
+            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

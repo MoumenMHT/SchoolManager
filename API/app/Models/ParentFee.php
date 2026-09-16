@@ -16,8 +16,7 @@ class ParentFee extends Model
         'parent_id',
         'student_id',
         'fee_id',
-        'tenant_id',
-    ];
+        ];
 
     public function parent()
     {

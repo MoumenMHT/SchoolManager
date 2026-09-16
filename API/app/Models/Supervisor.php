@@ -19,8 +19,7 @@ class Supervisor extends Model
         'phone',
         'hire_date',
         'status',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'hire_date' => 'date',

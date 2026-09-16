@@ -143,10 +143,16 @@ class UserController extends Controller
             'address' => 'nullable|string',
         ]);
 
+        $currentUser = auth()->user();
+        $restrictedRoles = ['admin', 'primary_director', 'cem_director', 'lycee_director'];
+        if ($currentUser && $currentUser->role !== 'admin' && in_array($validated['role'], $restrictedRoles)) {
+            return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+        }
+
         $validated['password'] = Hash::make($validated['password']);
         $validated['is_active'] = $request->input('is_active', true);
 
-        $user = User::create($validated);
+        $user = User::forceCreate($validated);
 
         return response()->json($user, 201);
     }
@@ -183,13 +189,21 @@ class UserController extends Controller
             'address' => 'nullable|string',
         ]);
 
+        if (isset($validated['role'])) {
+            $currentUser = auth()->user();
+            $restrictedRoles = ['admin', 'primary_director', 'cem_director', 'lycee_director'];
+            if ($currentUser && $currentUser->role !== 'admin' && in_array($validated['role'], $restrictedRoles)) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
+
         if (!empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
         }
 
-        $user->update($validated);
+        $user->forceFill($validated)->save();
 
         return response()->json($user);
     }

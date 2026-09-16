@@ -53,21 +53,38 @@ class DatabaseSeeder extends Seeder
     private int $userCounter  = 1;
     private int $studentCodeCounter = 1000;
 
+    /** The tenant ID to seed into. Change this to target a different school. */
+    private string $tenantId = 'school1';
+    /** The academic year used throughout. */
+    private string $academicYear = '2026-2027';
+    private int $academicYearId;
+
     public function run(): void
     {
         $this->command->info('🌱 Starting comprehensive database seeding...');
 
         // Ensure a default tenant exists and initialize it
         $tenant = \App\Models\Tenant::firstOrCreate(
-            ['id' => 'school1'],
+            ['id' => $this->tenantId],
             ['data' => ['name' => 'Default School']]
         );
         tenancy()->initialize($tenant);
+        $this->command->info("🏠 Tenant context: {$this->tenantId}");
 
         if (User::where('username', 'admin')->exists()) {
             $this->command->warn('⚠ Seed already exists – dropping all data and re-seeding.');
             $this->truncateAll();
         }
+
+        $academicYearRecord = \App\Models\AcademicYear::firstOrCreate([
+            'tenant_id' => $this->tenantId,
+            'name' => $this->academicYear,
+        ], [
+            'start_date' => '2026-09-01',
+            'end_date' => '2027-06-30',
+            'is_current' => true,
+        ]);
+        $this->academicYearId = $academicYearRecord->id;
 
         $this->disableFkChecks();
         DB::beginTransaction();
@@ -123,6 +140,9 @@ class DatabaseSeeder extends Seeder
         // 10. Finances (contracts, bills, payments)
         $this->call(FinancesSeeder::class);
 
+        // 11. Attendance records
+        $this->call(AttendanceSeeder::class);
+
         $this->command->info('🎉 Full seed complete!');
     }
 
@@ -153,19 +173,32 @@ class DatabaseSeeder extends Seeder
     private function truncateAll(): void
     {
         $this->disableFkChecks();
-        $tables = [
-            'payment_allocations', 'payments', 'bills', 'contracts',
-            'parents_fees', 'exercise_grades', 'grades', 'exam_exercises',
-            'class_exam', 'exams', 'student_averages', 'student_history',
-            'attendances', 'schedules', 'class_subject_teacher',
-            'teacher_availabilities', 'teacher_subjects',
-            'students', 'parents', 'classes', 'supervisors',
-            'teachers', 'fee_levels', 'fees', 'level_subjects', 'levels',
-            'subjects', 'personal_access_tokens', 'users',
+
+        // Pivot / junction tables – no tenant_id column, full clear
+        $pivotTables = [
+            'payment_allocations', 'class_exam',
+            'teacher_availabilities', 'personal_access_tokens',
         ];
-        foreach ($tables as $t) {
+        foreach ($pivotTables as $t) {
             DB::table($t)->delete();
         }
+
+        // Tenant-scoped tables – only wipe this school's data
+        $tenantTables = [
+            'payments', 'bills', 'contracts',
+            'parents_fees', 'exercise_grades', 'grades', 'exam_exercises',
+            'exams', 'student_averages', 'student_history',
+            'attendances', 'schedules', 'class_subject_teacher',
+            'teacher_subjects',
+            'students', 'parents', 'classes', 'supervisors',
+            'teachers', 'fee_levels', 'fees', 'level_subjects', 'levels',
+            'subjects', 'users',
+        ];
+        $tenantId = $this->tenantId;
+        foreach ($tenantTables as $t) {
+            DB::table($t)->where('tenant_id', $tenantId)->delete();
+        }
+
         $this->enableFkChecks();
     }
 
@@ -518,7 +551,7 @@ class DatabaseSeeder extends Seeder
                     'name'           => $level->name . ' ' . $letter,
                     'level'          => $level->name,
                     'level_id'       => $level->id,
-                    'academic_year'  => '2025-2026',
+                    'academic_year_id'  => $this->academicYearId,
                     'capacity'       => 30,
                     'main_teacher_id'=> $teacher->id,
                     'supervisor_id'  => $primarySupervisor->id,
@@ -545,7 +578,7 @@ class DatabaseSeeder extends Seeder
                     'name'           => $level->name . ' ' . $letter,
                     'level'          => $level->name,
                     'level_id'       => $level->id,
-                    'academic_year'  => '2025-2026',
+                    'academic_year_id'  => $this->academicYearId,
                     'capacity'       => 35,
                     'main_teacher_id'=> $mainTeacher->id,
                     'supervisor_id'  => $supervisor->id,
@@ -592,7 +625,7 @@ class DatabaseSeeder extends Seeder
                     'class_id'     => $class->id,
                     'subject_id'   => $subject->id,
                     'teacher_id'   => $teacher->id,
-                    'academic_year'=> '2025-2026',
+                    'academic_year_id'=> $this->academicYearId,
                     'coefficient'  => $coeff,
                 ]);
             }
@@ -612,7 +645,7 @@ class DatabaseSeeder extends Seeder
                     'class_id'     => $class->id,
                     'subject_id'   => $subject->id,
                     'teacher_id'   => $teacher->id,
-                    'academic_year'=> '2025-2026',
+                    'academic_year_id'=> $this->academicYearId,
                     'coefficient'  => $coeff,
                 ]);
             }

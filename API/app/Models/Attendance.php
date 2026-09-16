@@ -19,8 +19,7 @@ class Attendance extends Model
         'status',
         'time',
         'reason',
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'date' => 'date:Y-m-d',

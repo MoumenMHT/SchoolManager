@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast';
 import ParentService from '@/service/ParentService';
 import FeeService from '@/service/FeeService';
 import ContractService from '@/service/ContractService';
+import AcademicYearService from '@/service/AcademicYearService';
 import type { Parent } from '@/service/ParentService';
 import type { Fee } from '@/service/FeeService';
 import type { Contract } from '@/service/ContractService';
@@ -15,6 +16,7 @@ const toast = useToast();
 
 const parents = ref<Parent[]>([]);
 const availableFees = ref<Fee[]>([]);
+const availableAcademicYears = ref<string[]>([]);
 const loading = ref(false);
 const submitting = ref(false);
 const submitted = ref(false);
@@ -75,9 +77,15 @@ const getDefaultAcademicYear = () => {
 onMounted(async () => {
   loading.value = true;
   try {
-    // We no longer load parents on mount to save time.
-    // AutoComplete will search on demand.
-    academicYear.value = getDefaultAcademicYear();
+    const names = await AcademicYearService.getAcademicYearNames();
+    if (names && names.length > 0) {
+      availableAcademicYears.value = names;
+      academicYear.value = names[0];
+    } else {
+      const def = getDefaultAcademicYear();
+      academicYear.value = def;
+      availableAcademicYears.value = [def];
+    }
     await loadFees();
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), detail: t('common.failed_to_load_data', 'Failed to load data'), life: 3000 });
@@ -454,7 +462,7 @@ const editContract = async (contract: Contract) => {
           <div class="flex flex-col gap-4">
             <div>
               <label class="block font-medium mb-2">{{ t('common.academic_year', 'Academic Year') }} *</label>
-              <InputText v-model="academicYear" class="w-full" :placeholder="getDefaultAcademicYear()" />
+              <Select v-model="academicYear" :options="availableAcademicYears" class="w-full" :placeholder="t('common.select_academic_year', 'Select Academic Year')" />
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>

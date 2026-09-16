@@ -6,6 +6,7 @@ import ApiService from '@/service/ApiService';
 import AttendanceService from '@/service/AttendanceService';
 import GradeService from '@/service/GradeService';
 import ScheduleService from '@/service/ScheduleService';
+import AcademicYearService from '@/service/AcademicYearService';
 
 const toast = useToast();
 const { t } = useI18n();
@@ -14,6 +15,7 @@ const { t } = useI18n();
 const loading = ref(false);
 const teacherId = ref<number | null>(null);
 const myClasses = ref<any[]>([]);
+const activeAcademicYear = ref<string>('');
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
 const scheduleDialog = ref(false);
@@ -84,10 +86,7 @@ const semesterOptions = [
 
 // ─── Computed ─────────────────────────────────────────────────────────────────
 const currentAcademicYear = computed(() => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+  return activeAcademicYear.value;
 });
 
 const attendanceSubjectOptions = computed(() => selectedClass.value?.subjects || []);
@@ -102,6 +101,7 @@ onMounted(async () => {
 const init = async () => {
   loading.value = true;
   try {
+    activeAcademicYear.value = await AcademicYearService.getCurrentAcademicYear();
     const meResp = await ApiService.getCurrentUser();
     const user = (meResp as any).data ?? meResp;
     teacherId.value = user?.teacher?.id ?? null;

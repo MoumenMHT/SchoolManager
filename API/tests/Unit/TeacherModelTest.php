@@ -30,8 +30,7 @@ class TeacherModelTest extends TestCase
             'salary',
             'contract_type',
             'weekly_hours',
-            'tenant_id',
-        ];
+            ];
 
         $teacher = new Teacher();
 

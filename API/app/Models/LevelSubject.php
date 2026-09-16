@@ -17,8 +17,7 @@ class LevelSubject extends Model
         'coefficient',
         'weekly_sessions_required',
         'weekly_hours', // Personalized weekly hours
-        'tenant_id',
-    ];
+        ];
 
     protected $casts = [
         'coefficient' => 'integer',

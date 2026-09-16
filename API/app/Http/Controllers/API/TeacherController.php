@@ -7,12 +7,30 @@ use Illuminate\Http\Request;
 use App\Models\Teacher;
 use App\Models\ClassSubjectTeacher;
 use App\Models\Student;
+use App\Models\AcademicYear;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 
 class TeacherController extends Controller
 {
+    private function resolveAcademicYearId(Request $request): ?int
+    {
+        $val = $request->input('academic_year_id') ?? $request->input('academic_year');
+        if (!$val || $val === 'all') {
+            return null;
+        }
+        if (is_numeric($val)) {
+            return (int) $val;
+        }
+        $user = auth()->user() ?? $request->user();
+        $tenantId = $user ? $user->tenant_id : null;
+        $q = AcademicYear::where('name', $val);
+        if ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        }
+        return $q->value('id');
+    }
     /**
      * Display a listing of the resource.
      */
@@ -163,6 +181,18 @@ class TeacherController extends Controller
             ], 404);
         }
 
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $teacher->load('classes.levelProfile');
+            $hasClassesInCycle = $teacher->classes->contains(function ($class) use ($directorCycle) {
+                return $class->levelProfile && $class->levelProfile->cycle === $directorCycle;
+            });
+            if (!$hasClassesInCycle && $teacher->classes->count() > 0) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
+
         $teacher->makeVisible(['cin', 'salary']);
         $teacher->load('user:id,email,phone'); // Load email and phone fields from the related user
         $teacher->load('teachableSubjects'); // Load subjects relationship
@@ -218,6 +248,18 @@ class TeacherController extends Controller
                 'success' => false,
                 'message' => __('messages.teacher_not_found')
             ], 404);
+        }
+
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $teacher->load('classes.levelProfile');
+            $hasClassesInCycle = $teacher->classes->contains(function ($class) use ($directorCycle) {
+                return $class->levelProfile && $class->levelProfile->cycle === $directorCycle;
+            });
+            if (!$hasClassesInCycle && $teacher->classes->count() > 0) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
         }
 
         if ($request->first_name && $request->last_name) {
@@ -286,6 +328,18 @@ class TeacherController extends Controller
             ], 404);
         }
 
+        $user = auth()->user();
+        if ($user && method_exists($user, 'isDirector') && $user->isDirector()) {
+            $directorCycle = $user->directorCycle();
+            $teacher->load('classes.levelProfile');
+            $hasClassesInCycle = $teacher->classes->contains(function ($class) use ($directorCycle) {
+                return $class->levelProfile && $class->levelProfile->cycle === $directorCycle;
+            });
+            if (!$hasClassesInCycle && $teacher->classes->count() > 0) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+        }
+
         $teacher->delete();
 
         return response()->json([
@@ -310,9 +364,29 @@ class TeacherController extends Controller
             ], 404);
         }
 
-        $assignments = ClassSubjectTeacher::with(['class.students', 'subject'])
-            ->where('teacher_id', $teacher->id)
-            ->get();
+        $ayId = $this->resolveAcademicYearId($request);
+        if (!$ayId) {
+            $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                ->where('is_current', true)
+                ->value('id');
+            if (!$ayId) {
+                $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                    ->orderBy('start_date', 'desc')
+                    ->value('id');
+            }
+        }
+
+        $query = ClassSubjectTeacher::with(['class.students', 'subject'])
+            ->where('teacher_id', $teacher->id);
+
+        if ($ayId) {
+            $query->where(function ($q) use ($ayId) {
+                $q->where('academic_year_id', $ayId)
+                  ->orWhereHas('class', fn($cq) => $cq->where('academic_year_id', $ayId));
+            });
+        }
+
+        $assignments = $query->get();
 
         $classes = $assignments->groupBy('class_id')->map(function ($classAssignments) {
             $class = $classAssignments->first()->class;
@@ -348,9 +422,27 @@ class TeacherController extends Controller
             ], 404);
         }
 
-        $classIds = ClassSubjectTeacher::where('teacher_id', $teacher->id)
-            ->pluck('class_id')
-            ->unique();
+        $ayId = $this->resolveAcademicYearId($request);
+        if (!$ayId) {
+            $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                ->where('is_current', true)
+                ->value('id');
+            if (!$ayId) {
+                $ayId = AcademicYear::where('tenant_id', $user->tenant_id)
+                    ->orderBy('start_date', 'desc')
+                    ->value('id');
+            }
+        }
+
+        $query = ClassSubjectTeacher::where('teacher_id', $teacher->id);
+        if ($ayId) {
+            $query->where(function ($q) use ($ayId) {
+                $q->where('academic_year_id', $ayId)
+                  ->orWhereHas('class', fn($cq) => $cq->where('academic_year_id', $ayId));
+            });
+        }
+
+        $classIds = $query->pluck('class_id')->unique();
 
         $students = Student::whereIn('class_id', $classIds)
             ->with('class:id,name,level')
