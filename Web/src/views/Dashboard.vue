@@ -17,18 +17,11 @@ const loading         = ref(true);
 
 const error           = ref<string | null>(null);
 
-const getAcademicYear = () => {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const startYear = now.getMonth() < 8 ? currentYear - 1 : currentYear;
-  return `${startYear}-${startYear + 1}`;
-};
-
 const loadDashboardData = async () => {
   try {
     loading.value = true;
     error.value = null;
-    dashboardStats.value = await dashboardService.getStats(getAcademicYear());
+    dashboardStats.value = await dashboardService.getStats();
   } catch (err: any) {
     error.value = err.response?.data?.message || t('dashboard.failed_load');
     console.error('Dashboard error:', err);

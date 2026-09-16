@@ -37,9 +37,9 @@ const lateBillsCount = computed(() => {
 const nextDueDate = computed(() => {
     if (!dashboardData.value) return null;
     const dates = dashboardData.value
-        .map(item => item.next_due_date)
-        .filter(date => date)
-        .map(date => new Date(date))
+        .map((item) => item.next_due_date)
+        .filter((date) => date)
+        .map((date) => new Date(date))
         .sort((a, b) => a - b);
     return dates.length > 0 ? dates[0] : null;
 });
@@ -48,18 +48,15 @@ const nextDueDate = computed(() => {
 const recentActivity = computed(() => {
     if (!dashboardData.value) return [];
     return dashboardData.value
-        .filter(item => item.last_payment)
-        .map(item => item.last_payment)
+        .filter((item) => item.last_payment)
+        .map((item) => item.last_payment)
         .sort((a, b) => new Date(b.paid_date) - new Date(a.paid_date)); // Sort newest first
 });
 
 const loadDashboard = async () => {
     loading.value = true;
     try {
-        const [dashRes, childRes] = await Promise.all([
-            ParentPortalService.getDashboard(),
-            ParentPortalService.getMyChildren()
-        ]);
+        const [dashRes, childRes] = await Promise.all([ParentPortalService.getDashboard(), ParentPortalService.getMyChildren()]);
         dashboardData.value = dashRes;
         childrenData.value = childRes;
     } catch (error) {
@@ -89,7 +86,7 @@ onMounted(() => {
                 </div>
             </div>
         </div>
-        
+
         <div class="col-span-12 lg:col-span-6 xl:col-span-3">
             <div class="card mb-0">
                 <div class="flex justify-between mb-4">
@@ -145,8 +142,7 @@ onMounted(() => {
                     <li v-for="(payment, i) in recentActivity" :key="i" class="flex items-center py-3 border-b border-surface">
                         <span class="text-surface-900 dark:text-surface-0 leading-normal">
                             <span class="font-semibold text-primary block">{{ payment.amount }} DZD</span>
-                            <span class="text-muted-color text-sm">{{ t('parent_portal.paid_on') }} {{ new Date(payment.paid_date).toLocaleDateString() }} 
-                            {{ t('parent_portal.via') }} {{ payment.payment_type.replace('_', ' ') }}</span>
+                            <span class="text-muted-color text-sm">{{ t('parent_portal.paid_on') }} {{ new Date(payment.paid_date).toLocaleDateString() }} {{ t('parent_portal.via') }} {{ payment.payment_type.replace('_', ' ') }}</span>
                         </span>
                     </li>
                 </ul>
@@ -164,7 +160,7 @@ onMounted(() => {
             </div>
         </div>
     </div>
-    
+
     <div v-else-if="loading" class="flex justify-center items-center py-8">
         <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
     </div>

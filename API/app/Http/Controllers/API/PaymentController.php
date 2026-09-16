@@ -620,11 +620,14 @@ class PaymentController extends Controller
                 $query->whereBetween('paid_date', [$request->start_date, $request->end_date]);
             }
 
-            if ($request->has('academic_year_id')) {
-                $query->whereHas('contract', function ($q) use ($request) {
-                    $q->where('academic_year_id', $request->academic_year_id);
-                });
+            $academicYearId = $request->get('academic_year_id');
+            if (!$academicYearId) {
+                $academicYearId = \App\Models\AcademicYear::where('is_current', true)->value('id');
             }
+
+            $query->whereHas('contract', function ($q) use ($academicYearId) {
+                $q->where('academic_year_id', $academicYearId);
+            });
 
             $payments = $query->get();
 
@@ -641,9 +644,7 @@ class PaymentController extends Controller
                 }),
                 'contracts_summary' => Contract::with('parent.user')
                     ->where('status', 'active')
-                    ->when($request->has('academic_year_id'), function ($q) use ($request) {
-                        $q->where('academic_year_id', $request->academic_year_id);
-                    })
+                    ->where('academic_year_id', $academicYearId)
                     ->get()
                     ->map(function ($contract) {
                         return [

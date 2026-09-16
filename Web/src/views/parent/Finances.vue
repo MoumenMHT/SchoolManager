@@ -13,11 +13,8 @@ const loading = ref(true);
 const loadFinances = async () => {
     loading.value = true;
     try {
-        const [contractsData, billsData] = await Promise.all([
-            ParentPortalService.getContracts(),
-            ParentPortalService.getBills()
-        ]);
-        
+        const [contractsData, billsData] = await Promise.all([ParentPortalService.getContracts(), ParentPortalService.getBills()]);
+
         contracts.value = contractsData;
         bills.value = billsData;
     } catch (error) {
@@ -35,11 +32,16 @@ const formatDate = (dateString) => {
 
 const getBillStatusSeverity = (status) => {
     switch (status) {
-        case 'paid': return 'success';
-        case 'partial': return 'info';
-        case 'late': return 'danger';
-        case 'unpaid': return 'warn';
-        default: return 'info';
+        case 'paid':
+            return 'success';
+        case 'partial':
+            return 'info';
+        case 'late':
+            return 'danger';
+        case 'unpaid':
+            return 'warn';
+        default:
+            return 'info';
     }
 };
 
@@ -53,11 +55,11 @@ onMounted(() => {
         <div class="col-span-12">
             <div class="card">
                 <h5 class="text-surface-900 dark:text-surface-0 font-semibold mb-6">{{ $t('finances.title') }}</h5>
-                
+
                 <div v-if="loading" class="flex justify-center items-center py-8">
                     <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
                 </div>
-                
+
                 <TabView v-else>
                     <TabPanel :header="$t('finances.contracts_tab')">
                         <DataTable :value="contracts" :paginator="true" :rows="10" showGridlines>
@@ -79,7 +81,7 @@ onMounted(() => {
                             </template>
                         </DataTable>
                     </TabPanel>
-                    
+
                     <TabPanel :header="$t('finances.pending_bills_tab')">
                         <DataTable :value="bills" :paginator="true" :rows="10" showGridlines>
                             <Column field="month_year" :header="$t('finances.description_col')">
@@ -111,7 +113,6 @@ onMounted(() => {
                         </DataTable>
                     </TabPanel>
                 </TabView>
-                
             </div>
         </div>
     </div>

@@ -25,18 +25,11 @@ const billsLoading    = ref(true);
 const paymentError    = ref<string | null>(null);
 const billsError      = ref<string | null>(null);
 
-const getAcademicYear = () => {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const startYear = now.getMonth() < 8 ? currentYear - 1 : currentYear;
-  return `${startYear}-${startYear + 1}`;
-};
-
 const loadPaymentReport = async () => {
   try {
     paymentLoading.value = true;
     paymentError.value = null;
-    financialReport.value = await dashboardService.getFinancialReports({ academic_year: getAcademicYear() });
+    financialReport.value = await dashboardService.getFinancialReports();
   } catch (err: any) {
     paymentError.value = err.response?.data?.message || t('dashboard.failed_payment');
     console.error('Payment report error:', err);

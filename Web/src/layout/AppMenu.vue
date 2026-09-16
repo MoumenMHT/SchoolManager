@@ -117,14 +117,14 @@ const model = computed(() => {
 
         if (isAdmin.value || isSecretariat.value) {
             const adminItems = [];
-            
+
             if (isAdmin.value) {
                 adminItems.push({ label: t('nav.academic_years', 'Academic Years'), icon: 'pi pi-fw pi-calendar', to: '/academic-years' });
                 adminItems.push({ label: t('nav.directors', 'Directors'), icon: 'pi pi-fw pi-star', to: '/directors' });
                 adminItems.push({ label: t('nav.secretaries', 'Secretariats'), icon: 'pi pi-fw pi-desktop', to: '/secretariats' });
                 adminItems.push({ label: t('nav.accountants', 'Accountants'), icon: 'pi pi-fw pi-wallet', to: '/accountants' });
             }
-            
+
             adminItems.push({ label: t('nav.user_management', 'User Management'), icon: 'pi pi-fw pi-key', to: '/user-management' });
 
             sections.push({ label: t('nav.administration', 'Administration'), items: adminItems });

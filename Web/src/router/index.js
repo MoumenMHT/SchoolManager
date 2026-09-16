@@ -335,7 +335,7 @@ router.beforeEach((to, from, next) => {
         } else if (userRole === 'accountant') {
             // Accountant can access payment-related paths
             const accountantPaths = ['/payments', '/fees', '/contracts', '/bills'];
-            if (!accountantPaths.some(p => to.path.startsWith(p))) {
+            if (!accountantPaths.some((p) => to.path.startsWith(p))) {
                 next(roleHome);
                 return;
             }

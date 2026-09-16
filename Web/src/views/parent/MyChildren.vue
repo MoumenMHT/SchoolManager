@@ -42,12 +42,12 @@ onMounted(() => {
                 <div v-if="loading" class="flex justify-center items-center py-8">
                     <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
                 </div>
-                
+
                 <div v-else-if="children.length === 0" class="text-center p-8 bg-surface-50 dark:bg-surface-800 rounded-border mt-4">
                     <i class="pi pi-info-circle text-4xl mb-4 text-muted-color"></i>
                     <p class="text-surface-900 dark:text-surface-0">{{ t('parent_portal.no_children_enrolled') }}</p>
                 </div>
-                
+
                 <div v-else class="grid grid-cols-12 gap-4 mt-6">
                     <div class="col-span-12 md:col-span-6 lg:col-span-4" v-for="child in children" :key="child.id">
                         <div class="card border border-surface shadow-none hover:shadow-md cursor-pointer transition-all duration-200 h-full flex flex-col justify-between" @click="viewDetails(child.id)">
@@ -58,7 +58,7 @@ onMounted(() => {
                                     </div>
                                 </div>
                                 <h6 class="text-center text-xl mb-2 text-surface-900 dark:text-surface-0">{{ child.first_name }} {{ child.last_name }}</h6>
-                                <p class="text-center text-muted-color">{{ child.class?.name || (child.level?.name + ' - ' + child.grade) || t('parent_portal.registration_pending') }}</p>
+                                <p class="text-center text-muted-color">{{ child.class?.name || child.level?.name + ' - ' + child.grade || t('parent_portal.registration_pending') }}</p>
                             </div>
                             <div class="mt-6 w-full flex justify-center">
                                 <Button :label="t('parent_portal.view_details')" icon="pi pi-search" class="p-button-outlined p-button-sm" />
