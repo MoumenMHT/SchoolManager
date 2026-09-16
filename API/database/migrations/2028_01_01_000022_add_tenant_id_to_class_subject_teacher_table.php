@@ -23,7 +23,7 @@ return new class extends Migration
         Schema::table('class_subject_teacher', function (Blueprint $table) {
             $table->foreign('class_id')->references('id')->on('classes')->onDelete('cascade');
             $table->unique(
-                ['tenant_id', 'class_id', 'subject_id', 'teacher_id', 'academic_year'],
+                ['tenant_id', 'class_id', 'subject_id', 'teacher_id', 'academic_year_id'],
                 'cst_tenant_unique'
             );
         });
@@ -35,7 +35,7 @@ return new class extends Migration
             $table->dropUnique('cst_tenant_unique');
             $table->dropForeign(['tenant_id']);
             $table->dropColumn('tenant_id');
-            $table->unique(['class_id', 'subject_id', 'teacher_id', 'academic_year'], 'class_subject_teacher_unique');
+            $table->unique(['class_id', 'subject_id', 'teacher_id', 'academic_year_id'], 'class_subject_teacher_unique');
         });
     }
 };

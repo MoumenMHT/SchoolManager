@@ -144,7 +144,8 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'user' => $userData
+            'user' => $userData,
+            'tenant_id' => $user->tenant_id
         ]);
     }
 

@@ -26,6 +26,15 @@ use App\Http\Controllers\API\AcademicYearController;
 
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
+Route::get('/test-auth', function () {
+    return response()->json([
+        'user' => auth('web')->user(),
+        'id' => auth('web')->id(),
+        'check' => auth('web')->check(),
+        'session_id' => request()->session()->getId()
+    ]);
+});
+
 Route::group([
     'prefix' => 't/{tenant}',
     'middleware' => [InitializeTenancyByPath::class],

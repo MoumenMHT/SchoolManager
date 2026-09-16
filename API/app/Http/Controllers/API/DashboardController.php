@@ -39,7 +39,9 @@ class DashboardController extends Controller
         $totalStudents = $studentQuery->count();
         
         // Total teachers
-        $teacherQuery = Teacher::where('is_active', true);
+        $teacherQuery = Teacher::whereHas('user', function ($q) {
+            $q->where('is_active', true);
+        });
         if ($isDirector) {
             $teacherQuery->whereHas('subjects.classes.levelProfile', function ($q) use ($directorCycle) {
                 $q->where('cycle', $directorCycle);

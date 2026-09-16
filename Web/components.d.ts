@@ -32,7 +32,6 @@ declare module 'vue' {
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
     MonthlyRevenueWidget: typeof import('./src/components/dashboard/MonthlyRevenueWidget.vue')['default']
-    MultiSelect: typeof import('primevue/multiselect')['default']
     NotificationsWidget: typeof import('./src/components/dashboard/NotificationsWidget.vue')['default']
     OverdueBillsWidget: typeof import('./src/components/dashboard/OverdueBillsWidget.vue')['default']
     Password: typeof import('primevue/password')['default']
@@ -46,12 +45,10 @@ declare module 'vue' {
     RevenueStreamWidget: typeof import('./src/components/dashboard/RevenueStreamWidget.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
     StatsWidget: typeof import('./src/components/dashboard/StatsWidget.vue')['default']
     StudentsByClassWidget: typeof import('./src/components/dashboard/StudentsByClassWidget.vue')['default']
     Tag: typeof import('primevue/tag')['default']
-    Textarea: typeof import('primevue/textarea')['default']
     Toast: typeof import('primevue/toast')['default']
     Toolbar: typeof import('primevue/toolbar')['default']
     TopbarWidget: typeof import('./src/components/landing/TopbarWidget.vue')['default']
@@ -59,7 +56,6 @@ declare module 'vue' {
     UpcomingDuesWidget: typeof import('./src/components/dashboard/UpcomingDuesWidget.vue')['default']
   }
   export interface ComponentCustomProperties {
-    KeyFilter: typeof import('primevue/keyfilter')['default']
     StyleClass: typeof import('primevue/styleclass')['default']
     Tooltip: typeof import('primevue/tooltip')['default']
   }

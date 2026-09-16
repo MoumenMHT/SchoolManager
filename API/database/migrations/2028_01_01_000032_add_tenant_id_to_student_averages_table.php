@@ -20,13 +20,13 @@ return new class extends Migration
 
         Schema::table('student_averages', function (Blueprint $table) {
             $table->string('trimester', 20)->change();
-            $table->string('academic_year', 20)->change();
+            // $table->string('academic_year', 20)->change();
         });
 
         Schema::table('student_averages', function (Blueprint $table) {
             $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
             $table->unique(
-                ['tenant_id', 'student_id', 'subject_id', 'record_type', 'trimester', 'academic_year'],
+                ['tenant_id', 'student_id', 'subject_id', 'record_type', 'trimester', 'academic_year_id'],
                 'student_averages_tenant_unique'
             );
         });
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->dropForeign(['tenant_id']);
             $table->dropColumn('tenant_id');
             $table->unique(
-                ['student_id', 'subject_id', 'record_type', 'trimester', 'academic_year'],
+                ['student_id', 'subject_id', 'record_type', 'trimester', 'academic_year_id'],
                 'student_averages_unique_idx'
             );
         });
