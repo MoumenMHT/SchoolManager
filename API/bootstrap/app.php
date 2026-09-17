@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
+            'tenant.active' => \App\Http\Middleware\CheckTenantActive::class,
+            'superadmin' => \App\Http\Middleware\SuperAdminOnly::class,
         ]);
         
         $middleware->api(prepend: [
@@ -27,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->appendToGroup('api', [
             \App\Http\Middleware\SetLocale::class,
+            \App\Http\Middleware\ResolveAcademicYear::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

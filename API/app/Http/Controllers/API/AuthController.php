@@ -67,6 +67,25 @@ class AuthController extends Controller
             ], 403);
         }
 
+        // Superadmin bypasses tenant checks entirely
+        if (!$matchedUser->isSuperAdmin()) {
+            // Check if the user's tenant is active
+            $userTenant = \App\Models\Tenant::find($matchedUser->tenant_id);
+            if ($userTenant && !$userTenant->is_active) {
+                $isSchoolAdmin = in_array($matchedUser->role, ['admin', 'primary_director', 'cem_director', 'lycee_director']);
+                $message = $isSchoolAdmin
+                    ? __('messages.subscription_expired_admin')
+                    : __('messages.tenant_inactive_user');
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'tenant_inactive' => true,
+                    'is_school_admin' => $isSchoolAdmin,
+                ], 403);
+            }
+        }
+
         $expiresAt = match($matchedUser->role) {
             'parent' => now()->addDays(30),
             'teacher' => now()->addDays(7),

@@ -13,10 +13,23 @@ const isSupervisor = computed(() => userRole.value === 'supervisor');
 const isSecretariat = computed(() => userRole.value === 'secretariat');
 const isAccountant = computed(() => userRole.value === 'accountant');
 const isParent = computed(() => userRole.value === 'parent');
+const isSuperAdmin = computed(() => userRole.value === 'superadmin');
 const isDirector = computed(() => ['primary_director', 'cem_director', 'lycee_director'].includes(userRole.value));
 
 const model = computed(() => {
     const sections = [];
+
+    if (isSuperAdmin.value) {
+        sections.push({
+            label: t('nav.platform_administration', 'Platform Administration'),
+            items: [
+                { label: t('nav.dashboard', 'Dashboard'), icon: 'pi pi-fw pi-chart-bar', to: '/platform/dashboard' },
+                { label: t('nav.schools', 'Schools'), icon: 'pi pi-fw pi-building', to: '/platform/schools' },
+                { label: t('nav.platform_payments', 'Platform Payments'), icon: 'pi pi-fw pi-credit-card', to: '/platform/payments' }
+            ]
+        });
+        return sections; // Only platform administration for super admin
+    }
 
     if (isParent.value) {
         sections.push({

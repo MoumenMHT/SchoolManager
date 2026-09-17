@@ -35,6 +35,7 @@ class GradeControllerTest extends TestCase
         ]);
         
         $exam    = Exam::factory()->create(['teacher_id' => $teacher->id, 'max_grade' => 20]);
+        $exam->classes()->attach($class->id);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson('/api/grades', [
@@ -72,6 +73,7 @@ class GradeControllerTest extends TestCase
 
         $students = Student::factory()->count(3)->create(['class_id' => $class->id]);
         $exam     = Exam::factory()->create(['teacher_id' => $teacher->id, 'max_grade' => 20]);
+        $exam->classes()->attach($class->id);
 
         $grades = $students->map(function ($student) use ($exam) {
             return [

@@ -202,4 +202,9 @@ return [
     'failed_generate_report'              => 'Failed to generate financial report',
     'failed_calculate_payment'            => 'Failed to calculate payment',
     'failed_retrieve_payment_history'     => 'Failed to retrieve payment history',
+
+    // Tenant / Platform
+    'tenant_inactive'                     => 'This school account is currently inactive. Please contact the platform administrator.',
+    'tenant_inactive_user'                => 'Your school no longer has access to the platform. Please contact your director.',
+    'subscription_expired_admin'          => 'Your subscription has expired. Please contact support to renew it.',
 ];

@@ -28,9 +28,11 @@ class ApiService {
         const tenantId = this.getTenantId();
         const isCentralRoute = config.url?.startsWith('/central') || config.url?.startsWith('central');
         
-        // Failsafe for users who have old sessions without a tenant_id
+        // Failsafe for users who have old sessions without a tenant_id (excluding superadmins)
         const user = this.getUser();
-        if (!tenantId && !isCentralRoute && user && config.url !== '/central/login') {
+        const isSuperAdmin = user?.role === 'superadmin';
+        
+        if (!tenantId && !isCentralRoute && user && !isSuperAdmin && config.url !== '/central/login') {
             this.clearSession();
             window.location.href = '/auth/login';
             return Promise.reject(new Error('Missing tenant ID. Please log in again.'));
@@ -125,7 +127,10 @@ class ApiService {
 
   async logout(): Promise<void> {
     try {
-      await this.api.post('/logout');
+      const user = this.getUser();
+      const isSuperAdmin = user?.role === 'superadmin';
+      const logoutUrl = isSuperAdmin ? '/central/logout' : '/logout';
+      await this.api.post(logoutUrl);
     } finally {
       this.clearSession();
     }

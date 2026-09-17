@@ -256,9 +256,24 @@ const router = createRouter({
                     component: () => import('@/views/pages/Documentation.vue')
                 },
                 {
+                    path: '/platform/dashboard',
+                    name: 'platform-dashboard',
+                    component: () => import('@/views/platform/SuperAdminDashboard.vue')
+                },
+                {
                     path: '/platform/schools',
                     name: 'platform-schools',
                     component: () => import('@/views/platform/Schools.vue')
+                },
+                {
+                    path: '/platform/schools/:id',
+                    name: 'platform-tenant-detail',
+                    component: () => import('@/views/platform/TenantDetail.vue')
+                },
+                {
+                    path: '/platform/payments',
+                    name: 'platform-payments',
+                    component: () => import('@/views/platform/PlatformPayments.vue')
                 }
             ]
         },
@@ -303,7 +318,7 @@ router.beforeEach((to, from, next) => {
     else if (userRole === 'accountant') roleHome = '/payments';
     else if (userRole === 'supervisor') roleHome = '/supervisor/panel';
     else if (userRole === 'parent') roleHome = '/parent/dashboard';
-    else if (userRole === 'superadmin') roleHome = '/platform/schools';
+    else if (userRole === 'superadmin') roleHome = '/platform/dashboard';
 
     // If trying to access auth page while logged in, redirect to role home
     if (isAuthRoute && isAuthenticated) {

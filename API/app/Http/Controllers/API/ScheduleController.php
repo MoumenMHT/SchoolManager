@@ -995,6 +995,14 @@ class ScheduleController extends Controller
     public function generateAll(Request $request)
     {
         try {
+            $academicYearId = $request->input('academic_year_id');
+            if (!$academicYearId && $request->input('academic_year')) {
+                $academicYearId = \App\Models\AcademicYear::where('name', $request->input('academic_year'))->value('id');
+                if ($academicYearId) {
+                    $request->merge(['academic_year_id' => $academicYearId]);
+                }
+            }
+
             $validator = Validator::make($request->all(), [
                 'academic_year_id' => 'required|exists:academic_years,id',
                 'clear_existing' => 'nullable|boolean',

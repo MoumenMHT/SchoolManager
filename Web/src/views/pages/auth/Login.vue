@@ -96,17 +96,23 @@ const handleLogin = async () => {
     console.error('Login error:', error);
 
     const errorMessage = error.response?.data?.message || t('login.invalid_credentials');
+    const errorType = error.response?.data?.error_type;
 
-    toast.add({
-      severity: 'error',
-      summary: t('login.login_failed'),
-      detail: errorMessage,
-      life: 5000
-    });
+    if (errorType === 'tenant_inactive') {
+        inactiveMessage.value = errorMessage;
+        showInactiveDialog.value = true;
+    } else {
+        toast.add({
+        severity: 'error',
+        summary: t('login.login_failed'),
+        detail: errorMessage,
+        life: 5000
+        });
 
-    // Set field errors if available
-    if (error.response?.data?.errors) {
-      errors.value = error.response.data.errors;
+        // Set field errors if available
+        if (error.response?.data?.errors) {
+        errors.value = error.response.data.errors;
+        }
     }
   } finally {
     loading.value = false;
@@ -119,6 +125,8 @@ const handleKeyPress = (event: KeyboardEvent) => {
     handleLogin();
   }
 };
+const showInactiveDialog = ref(false);
+const inactiveMessage = ref('');
 </script>
 
 <template>
@@ -198,6 +206,16 @@ const handleKeyPress = (event: KeyboardEvent) => {
             </div>
         </div>
     </div>
+
+    <Dialog v-model:visible="showInactiveDialog" modal header="Access Denied" :style="{ width: '400px' }">
+        <div class="flex flex-col items-center justify-center p-4 text-center">
+            <i class="pi pi-ban text-red-500 text-5xl mb-4"></i>
+            <p class="m-0 text-lg font-medium">{{ inactiveMessage }}</p>
+        </div>
+        <template #footer>
+            <Button label="Close" icon="pi pi-times" text @click="showInactiveDialog = false" />
+        </template>
+    </Dialog>
 </template>
 
 <style scoped>

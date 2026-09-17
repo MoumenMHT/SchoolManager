@@ -270,7 +270,17 @@ class PaymentController extends Controller
         try {
             DB::beginTransaction();
 
-            $payment = Payment::with(['contract', 'allocations.bill'])->findOrFail($id);
+            $payment = Payment::with(['allocations.bill'])->lockForUpdate()->findOrFail($id);
+
+            if ($payment->status === 'refunded') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.cannot_delete_refunded_payment', ['default' => 'Cannot delete a payment that has been refunded.'])
+                ], 422);
+            }
+            
+            $contract = Contract::lockForUpdate()->findOrFail($payment->contract_id);
             
             // Reverse all allocations
             foreach ($payment->allocations as $allocation) {
@@ -280,7 +290,6 @@ class PaymentController extends Controller
             }
 
             // Update contract
-            $contract = $payment->contract;
             $contract->paid_amount -= $payment->amount;
             $contract->remaining_amount += $payment->amount;
             
@@ -376,9 +385,26 @@ class PaymentController extends Controller
 
             DB::beginTransaction();
 
-            $payment = Payment::with(['contract', 'allocations.bill'])->findOrFail($id);
+            $payment = Payment::with(['allocations.bill'])->lockForUpdate()->findOrFail($id);
+
+            if ($payment->status === 'refunded') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.payment_already_refunded', ['default' => 'Payment has already been refunded'])
+                ], 422);
+            }
+
+            if ($payment->payment_type === 'refund') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.cannot_refund_a_refund', ['default' => 'Cannot refund a refund payment'])
+                ], 422);
+            }
 
             if ($request->refund_amount > $payment->amount) {
+                DB::rollBack();
                 return response()->json([
                     'success' => false,
                     'message' => __('messages.refund_exceeds_payment')
@@ -418,7 +444,7 @@ class PaymentController extends Controller
             }
 
             // Update contract
-            $contract = $payment->contract;
+            $contract = Contract::lockForUpdate()->findOrFail($payment->contract_id);
             $contract->paid_amount -= $request->refund_amount;
             $contract->remaining_amount += $request->refund_amount;
             

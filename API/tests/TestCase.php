@@ -19,7 +19,7 @@ abstract class TestCase extends BaseTestCase
         if ($usesDatabase) {
             $this->tenant = \App\Models\Tenant::firstOrCreate(
                 ['id' => 'test_school'],
-                ['data' => ['name' => 'Test School']]
+                ['is_active' => true, 'data' => ['name' => 'Test School']]
             );
 
             tenancy()->initialize($this->tenant);

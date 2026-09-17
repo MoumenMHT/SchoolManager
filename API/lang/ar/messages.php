@@ -202,4 +202,9 @@ return [
     'failed_generate_report'              => 'فشل إنشاء التقرير المالي',
     'failed_calculate_payment'            => 'فشل حساب الدفع',
     'failed_retrieve_payment_history'     => 'فشل استرداد سجل المدفوعات',
+
+    // Tenant / Platform
+    'tenant_inactive'                     => 'حساب هذه المدرسة غير نشط حاليًا. يرجى الاتصال بمدير المنصة.',
+    'tenant_inactive_user'                => 'لم يعد لمدرستك حق الوصول إلى المنصة. يرجى الاتصال بمديرك.',
+    'subscription_expired_admin'          => 'انتهت صلاحية اشتراكك. يرجى الاتصال بالدعم لتجديده.',
 ];

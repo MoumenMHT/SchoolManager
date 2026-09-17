@@ -112,12 +112,13 @@ class AttendanceController extends Controller
                 }
             }
 
-            $attendance = Attendance::create([
+            $attendance = Attendance::updateOrCreate([
                 'student_id' => $request->student_id,
                 'subject_id' => $request->subject_id,
-                'teacher_id' => $request->teacher_id,
                 'schedule_id' => $request->schedule_id,
                 'date' => $request->date ?? now()->format('Y-m-d'),
+            ], [
+                'teacher_id' => $request->teacher_id,
                 'time' => now()->format('H:i:s'),
                 'status' => $request->status,
                 'reason' => $request->reason,
@@ -230,7 +231,7 @@ class AttendanceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         try {
             $attendance = Attendance::with('student')->findOrFail($id);

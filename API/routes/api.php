@@ -37,7 +37,7 @@ Route::get('/test-auth', function () {
 
 Route::group([
     'prefix' => 't/{tenant}',
-    'middleware' => [InitializeTenancyByPath::class],
+    'middleware' => [InitializeTenancyByPath::class, 'tenant.active'],
 ], function () {
 
 // Public routes

@@ -202,4 +202,9 @@ return [
     'failed_generate_report'              => 'Échec de la génération du rapport financier',
     'failed_calculate_payment'            => 'Échec du calcul du paiement',
     'failed_retrieve_payment_history'     => 'Échec de la récupération de l\'historique des paiements',
+
+    // Tenant / Platform
+    'tenant_inactive'                     => 'Le compte de cette école est actuellement inactif. Veuillez contacter l\'administrateur de la plateforme.',
+    'tenant_inactive_user'                => 'Votre école n\'a plus accès à la plateforme. Veuillez contacter votre directeur.',
+    'subscription_expired_admin'          => 'Votre abonnement a expiré. Veuillez contacter le support pour le renouveler.',
 ];

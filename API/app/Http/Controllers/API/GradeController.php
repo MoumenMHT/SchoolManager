@@ -125,11 +125,15 @@ class GradeController extends Controller
         }
 
         $student = Student::with('class')->find($request->student_id);
+        $exam = Exam::with('classes')->find($request->exam_id);
         $user = $request->user();
 
         if ($user->role === 'teacher') {
             $teacher = $user->teacher;
             if (!$teacher) {
+                return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
+            }
+            if ($exam->teacher_id !== $teacher->id) {
                 return response()->json(['success' => false, 'message' => __('messages.unauthorized')], 403);
             }
             if ($student && $student->class_id) {
@@ -146,19 +150,33 @@ class GradeController extends Controller
             }
         }
 
-        $exam = Exam::find($request->exam_id);
+        if ($student && $student->class_id) {
+            $examClassIds = $exam->classes->pluck('id')->toArray();
+            if (!in_array($student->class_id, $examClassIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.exam_not_assigned_to_class', ['default' => 'This exam is not assigned to the student\'s class.'])
+                ], 422);
+            }
+        }
+
         if ($request->grade > $exam->max_grade) {
             return response()->json(['success' => false, 'message' => __('messages.grade_exceeds_max')], 422);
         }
 
-        $grade = Grade::create([
-            'student_id' => $request->student_id,
-            'exam_id'    => $request->exam_id,
-            'grade'      => $request->grade,
-            'comment'    => $request->comment,
-        ]);
+        $grade = Grade::updateOrCreate(
+            [
+                'student_id' => $request->student_id,
+                'exam_id'    => $request->exam_id,
+            ],
+            [
+                'grade'      => $request->grade,
+                'comment'    => $request->comment,
+            ]
+        );
 
         if ($request->filled('exercise_grades')) {
+            $grade->exerciseGrades()->delete();
             foreach ($request->exercise_grades as $eg) {
                 $grade->exerciseGrades()->create([
                     'exam_exercise_id' => $eg['exam_exercise_id'],
@@ -984,7 +1002,7 @@ class GradeController extends Controller
             $teacherQuery = Grade::query()
                 ->join('exams', 'exams.id', '=', 'grades.exam_id')
                 ->join('teachers', 'teachers.id', '=', 'exams.teacher_id')
-                ->selectRaw('exams.teacher_id as id, CONCAT(teachers.first_name, " ", teachers.last_name) as label')
+                ->selectRaw("exams.teacher_id as id, CONCAT(teachers.first_name, ' ', teachers.last_name) as label")
                 ->selectRaw('COUNT(*) as count')
                 ->selectRaw('AVG(' . $normalizedExpression . ') as average')
                 ->selectRaw('AVG(CASE WHEN ' . $normalizedExpression . ' >= 10 THEN 1 ELSE 0 END) * 100 as pass_rate')
@@ -1012,7 +1030,7 @@ class GradeController extends Controller
                 ->join('students', 'students.id', '=', 'grades.student_id')
                 ->join('classes', 'classes.id', '=', 'students.class_id')
                 ->selectRaw('grades.student_id as id')
-                ->selectRaw('CONCAT(students.first_name, " ", students.last_name) as label')
+                ->selectRaw("CONCAT(students.first_name, ' ', students.last_name) as label")
                 ->selectRaw('students.class_id as class_id')
                 ->selectRaw('classes.name as class_name')
                 ->selectRaw('COUNT(*) as count')
