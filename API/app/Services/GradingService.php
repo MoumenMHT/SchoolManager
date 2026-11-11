@@ -66,17 +66,17 @@ class GradingService
      * Synchronize all computed averages for a student in a specific trimester into the database.
      * This handles both individual Subject averages and the Overall trimester average.
      */
-    public static function synchronizeAverages(\App\Models\Student $student, ?string $trimester, ?string $academicYear): void
+    public static function synchronizeAverages(\App\Models\Student $student, ?string $trimester, ?string $academicYearId): void
     {
-        if (!$trimester || !$academicYear) {
+        if (!$trimester || !$academicYearId) {
             return;
         }
         // Load grades joined through the exam so we can access subject_id, exam_type etc.
         $grades = \App\Models\Grade::with('exam')
             ->where('student_id', $student->id)
-            ->whereHas('exam', function ($q) use ($trimester, $academicYear) {
+            ->whereHas('exam', function ($q) use ($trimester, $academicYearId) {
                 $q->where('semester', $trimester)
-                  ->where('academic_year', $academicYear);
+                  ->where('academic_year_id', $academicYearId);
             })
             ->get();
 
@@ -108,7 +108,7 @@ class GradingService
                 'subject_id'  => $subjectId,
                 'record_type' => 'subject',
                 'trimester'   => $trimester,
-                'academic_year' => $academicYear,
+                'academic_year_id' => $academicYearId,
             ], [
                 'class_id' => $classId,
                 'average'  => $average,
@@ -122,7 +122,7 @@ class GradingService
         \App\Models\StudentAverage::where('student_id', $student->id)
             ->where('record_type', 'subject')
             ->where('trimester', $trimester)
-            ->where('academic_year', $academicYear)
+            ->where('academic_year_id', $academicYearId)
             ->whereNotIn('subject_id', $classSubjects)
             ->delete();
 
@@ -135,7 +135,7 @@ class GradingService
                 'subject_id'  => null,
                 'record_type' => 'overall',
                 'trimester'   => $trimester,
-                'academic_year' => $academicYear,
+                'academic_year_id' => $academicYearId,
             ], [
                 'class_id' => $classId,
                 'average'  => $overallAverage,
@@ -143,7 +143,7 @@ class GradingService
         } else {
             \App\Models\StudentAverage::where('student_id', $student->id)
                 ->where('trimester', $trimester)
-                ->where('academic_year', $academicYear)
+                ->where('academic_year_id', $academicYearId)
                 ->delete();
         }
     }

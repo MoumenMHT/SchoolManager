@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\Fee;
 use App\Models\Contract;
 use App\Models\Payment;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -76,7 +77,7 @@ class ComprehensiveAuthorizationTest extends TestCase
 
         // Catch the expected exceptions or 403s
         foreach ($this->allRoles as $role) {
-            auth()->forgetGuards();
+            Auth::forgetGuards();
             $user = User::factory()->create(['role' => $role, 'tenant_id' => $this->tenant->id]);
             $token = $user->createToken('test')->plainTextToken;
 

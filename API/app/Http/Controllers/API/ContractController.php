@@ -10,6 +10,7 @@ use App\Models\Fee;
 use App\Models\Bill;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ContractController extends Controller
@@ -345,7 +346,7 @@ class ContractController extends Controller
             if ($request->user()->role === 'parent') {
                 $parent = $request->user()->parent;
                 if (!$parent || $contract->parent_id != $parent->id) {
-                    \Log::info("Parent check failed", ['contract_parent' => $contract->parent_id, 'user_parent' => $parent->id ?? null]);
+                    Log::info("Parent check failed", ['contract_parent' => $contract->parent_id, 'user_parent' => $parent->id ?? null]);
                     return response()->json([
                         'success' => false,
                         'message' => __('messages.unauthorized')

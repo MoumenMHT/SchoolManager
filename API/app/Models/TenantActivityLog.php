@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 
 class TenantActivityLog extends Model
 {
@@ -44,7 +45,7 @@ class TenantActivityLog extends Model
             'tenant_id' => $tenantId,
             'action' => $action,
             'details' => $details,
-            'performed_by' => $userId ?? auth()->id(),
+            'performed_by' => $userId ?? Auth::id(),
         ]);
     }
 
